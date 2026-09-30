@@ -2,14 +2,40 @@ pipeline {
     agent any
 
     stages {
-        stage('Update README') {
+        stage('Install Dependencies') {
             steps {
-                // Lệnh thêm chữ "hello world" vào cuối file README.md
-                sh 'echo "hello world" >> README.md'
-                
-                // (Tùy chọn) In nội dung file ra màn hình log để kiểm tra
-                sh 'cat README.md'
+                echo '=== Bước 1: Cài đặt thư viện dependencies cho Frontend ==='
+                dir('frontend') {
+                    sh 'npm install'
+                }
             }
+        }
+
+        stage('Test Frontend') {
+            steps {
+                echo '=== Bước 2: Chạy kiểm thử tự động (Kiểm tra nút Đăng ký, Đăng nhập) ==='
+                dir('frontend') {
+                    sh 'npm test'
+                }
+            }
+        }
+
+        stage('Build Frontend') {
+            steps {
+                echo '=== Bước 3: Biên dịch dự án React sang thư mục dist ==='
+                dir('frontend') {
+                    sh 'npm run build'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '🎉 Pipeline CI/CD thành công: Mã nguồn đã vượt qua kiểm thử và build thành công!'
+        }
+        failure {
+            echo '❌ Pipeline thất bại: Vui lòng kiểm tra lại log chi tiết ở bước lỗi.'
         }
     }
 }
