@@ -1,0 +1,153 @@
+:root {
+  /* ===== LIGHT MODE (Be ấm) ===== */
+  --color-background: #FDFBF7;
+  --color-surface: #F5F0E8;
+  --color-surface-dim: #F5F0E8;
+  --color-surface-bright: #FFFFFF;
+  --color-surface-container-low: #FAF6EF;
+  --color-surface-container: #F5F0E8;
+  --color-surface-container-high: #EDE6DA;
+  --color-surface-container-highest: #E3D9C9;
+  
+  --color-on-surface: #2B2620;
+  --color-on-surface-variant: #6B5F4E;
+  --color-outline: #A89B85;
+  --color-outline-variant: #E3D9C9;
+  
+  --color-primary: #8B6F47;
+  --color-primary-hover: #6F5838;
+  --color-on-primary: #FFFFFF;
+  --color-primary-container: #F0E6D6;
+  --color-on-primary-container: #3A2E1E;
+  
+  --color-secondary: #A67B5B;
+  --color-on-secondary: #FFFFFF;
+  --color-secondary-container: #F5E6D3;
+  --color-on-secondary-container: #3D2A1A;
+  
+  --color-tertiary: #C9A961;
+  --color-error: #C0392B;
+  --color-success: #6B8E5A;
+  --color-warning: #D4933A;
+
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --radius-sm: 4px;
+  --radius-default: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+  
+  --shadow-sm: 0 1px 3px rgba(43, 38, 32, 0.06);
+  --shadow-md: 0 4px 12px rgba(43, 38, 32, 0.08);
+  --shadow-lg: 0 10px 30px rgba(43, 38, 32, 0.15);
+}
+
+[data-theme="dark"] {
+  /* ===== DARK MODE (Cà phê đêm) ===== */
+  --color-background: #1C1916;
+  --color-surface: #2A2722;
+  --color-surface-dim: #161311;
+  --color-surface-bright: #2E2A25;
+  --color-surface-container-low: #22201C;
+  --color-surface-container: #2A2722;
+  --color-surface-container-high: #332F29;
+  --color-surface-container-highest: #3D3831;
+  
+  --color-on-surface: #EDE6DA;
+  --color-on-surface-variant: #B8AC98;
+  --color-outline: #8A7E6B;
+  --color-outline-variant: #4A4338;
+  
+  --color-primary: #C4A67A;
+  --color-primary-hover: #D4B48C;
+  --color-on-primary: #3A2E1E;
+  --color-primary-container: #5A4A32;
+  --color-on-primary-container: #F0E6D6;
+  
+  --color-secondary: #D4B48C;
+  --color-on-secondary: #3D2A1A;
+  --color-secondary-container: #6B5238;
+  --color-on-secondary-container: #F5E6D3;
+  
+  --color-tertiary: #E0C68A;
+  --color-error: #E88B7E;
+  --color-success: #9BB88A;
+  --color-warning: #E8B36A;
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--color-background);
+  color: var(--color-on-surface);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Button styles following design.md specs */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  padding: 10px 18px;
+  border-radius: var(--radius-default);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(139, 111, 71, 0.25);
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: var(--color-primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-primary-container);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--color-primary);
+}
+
+.btn-ghost:hover {
+  background-color: var(--color-surface);
+}
