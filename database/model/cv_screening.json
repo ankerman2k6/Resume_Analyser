@@ -1,0 +1,1558 @@
+{
+  "collections": {
+    "cv_screening.applications": {
+      "ns": "cv_screening.applications",
+      "jsonSchema": {
+        "bsonType": "object",
+        "required": [
+          "_id",
+          "appliedAt",
+          "candidateId",
+          "cvId",
+          "jobId",
+          "status",
+          "statusHistory",
+          "updatedAt"
+        ],
+        "properties": {
+          "_id": {
+            "bsonType": "objectId"
+          },
+          "appliedAt": {
+            "bsonType": "date"
+          },
+          "candidateId": {
+            "bsonType": "objectId"
+          },
+          "cvId": {
+            "bsonType": "objectId"
+          },
+          "jobId": {
+            "bsonType": "objectId"
+          },
+          "status": {
+            "bsonType": "string"
+          },
+          "statusHistory": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "changedAt": {
+                  "bsonType": "date"
+                },
+                "changedBy": {
+                  "bsonType": "objectId"
+                },
+                "note": {
+                  "bsonType": "string"
+                },
+                "status": {
+                  "bsonType": "string"
+                }
+              },
+              "required": [
+                "changedAt",
+                "changedBy",
+                "status"
+              ]
+            }
+          },
+          "updatedAt": {
+            "bsonType": "date"
+          }
+        }
+      }
+    },
+    "cv_screening.candidate_profiles": {
+      "ns": "cv_screening.candidate_profiles",
+      "jsonSchema": {
+        "bsonType": "object",
+        "required": [
+          "_id",
+          "avatarUrl",
+          "createdAt",
+          "fullName",
+          "location",
+          "phone",
+          "updatedAt",
+          "userId"
+        ],
+        "properties": {
+          "_id": {
+            "bsonType": "objectId"
+          },
+          "avatarUrl": {
+            "bsonType": "string"
+          },
+          "createdAt": {
+            "bsonType": "date"
+          },
+          "fullName": {
+            "bsonType": "string"
+          },
+          "location": {
+            "bsonType": "object",
+            "properties": {
+              "city": {
+                "bsonType": "string"
+              },
+              "country": {
+                "bsonType": "string"
+              }
+            },
+            "required": [
+              "city",
+              "country"
+            ]
+          },
+          "phone": {
+            "bsonType": "string"
+          },
+          "updatedAt": {
+            "bsonType": "date"
+          },
+          "userId": {
+            "bsonType": "objectId"
+          }
+        }
+      }
+    },
+    "cv_screening.companies": {
+      "ns": "cv_screening.companies",
+      "jsonSchema": {
+        "bsonType": "object",
+        "required": [
+          "_id",
+          "createdAt",
+          "description",
+          "industry",
+          "locations",
+          "logoUrl",
+          "name",
+          "size",
+          "updatedAt",
+          "website"
+        ],
+        "properties": {
+          "_id": {
+            "bsonType": "objectId"
+          },
+          "createdAt": {
+            "bsonType": "date"
+          },
+          "description": {
+            "bsonType": "string"
+          },
+          "industry": {
+            "bsonType": "string"
+          },
+          "locations": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "address": {
+                  "bsonType": "string"
+                },
+                "city": {
+                  "bsonType": "string"
+                },
+                "country": {
+                  "bsonType": "string"
+                }
+              },
+              "required": [
+                "address",
+                "city",
+                "country"
+              ]
+            }
+          },
+          "logoUrl": {
+            "bsonType": "string"
+          },
+          "name": {
+            "bsonType": "string"
+          },
+          "size": {
+            "bsonType": "string"
+          },
+          "updatedAt": {
+            "bsonType": "date"
+          },
+          "website": {
+            "bsonType": "string"
+          }
+        }
+      }
+    },
+    "cv_screening.cv_analyses": {
+      "ns": "cv_screening.cv_analyses",
+      "jsonSchema": {
+        "bsonType": "object",
+        "required": [
+          "_id",
+          "analyzedAt",
+          "applicationId",
+          "cvId",
+          "jobId",
+          "matchedSkills",
+          "missingSkills",
+          "modelVersion",
+          "recommendation",
+          "scores",
+          "strengths",
+          "weaknesses"
+        ],
+        "properties": {
+          "_id": {
+            "bsonType": "objectId"
+          },
+          "analyzedAt": {
+            "bsonType": "date"
+          },
+          "applicationId": {
+            "bsonType": "objectId"
+          },
+          "cvId": {
+            "bsonType": "objectId"
+          },
+          "jobId": {
+            "bsonType": "objectId"
+          },
+          "matchedSkills": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "string"
+            }
+          },
+          "missingSkills": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "string"
+            }
+          },
+          "modelVersion": {
+            "bsonType": "string"
+          },
+          "recommendation": {
+            "bsonType": "string"
+          },
+          "scores": {
+            "bsonType": "object",
+            "properties": {
+              "certificates": {
+                "bsonType": "int"
+              },
+              "education": {
+                "bsonType": "int"
+              },
+              "experience": {
+                "bsonType": "int"
+              },
+              "overall": {
+                "bsonType": "int"
+              },
+              "projects": {
+                "bsonType": "int"
+              },
+              "skills": {
+                "bsonType": "int"
+              }
+            },
+            "required": [
+              "certificates",
+              "education",
+              "experience",
+              "overall",
+              "projects",
+              "skills"
+            ]
+          },
+          "strengths": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "string"
+            }
+          },
+          "weaknesses": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "string"
+            }
+          }
+        }
+      }
+    },
+    "cv_screening.cv_templates": {
+      "ns": "cv_screening.cv_templates",
+      "jsonSchema": {
+        "bsonType": "object",
+        "required": [
+          "_id",
+          "createdAt",
+          "createdBy",
+          "description",
+          "name",
+          "status",
+          "templateUrl",
+          "thumbnailUrl",
+          "updatedAt"
+        ],
+        "properties": {
+          "_id": {
+            "bsonType": "objectId"
+          },
+          "createdAt": {
+            "bsonType": "date"
+          },
+          "createdBy": {
+            "bsonType": "objectId"
+          },
+          "description": {
+            "bsonType": "string"
+          },
+          "name": {
+            "bsonType": "string"
+          },
+          "status": {
+            "bsonType": "string"
+          },
+          "templateUrl": {
+            "bsonType": "string"
+          },
+          "thumbnailUrl": {
+            "bsonType": "string"
+          },
+          "updatedAt": {
+            "bsonType": "date"
+          }
+        }
+      }
+    },
+    "cv_screening.cvs": {
+      "ns": "cv_screening.cvs",
+      "jsonSchema": {
+        "bsonType": "object",
+        "required": [
+          "_id",
+          "candidateId",
+          "createdAt",
+          "parseInfo",
+          "personalInfo",
+          "skills",
+          "source",
+          "templateId",
+          "title",
+          "updatedAt"
+        ],
+        "properties": {
+          "_id": {
+            "bsonType": "objectId"
+          },
+          "activities": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "description": {
+                  "bsonType": "string"
+                },
+                "endDate": {
+                  "bsonType": "string"
+                },
+                "organization": {
+                  "bsonType": "string"
+                },
+                "role": {
+                  "bsonType": "string"
+                },
+                "startDate": {
+                  "bsonType": "string"
+                }
+              },
+              "required": [
+                "description",
+                "endDate",
+                "organization",
+                "role",
+                "startDate"
+              ]
+            }
+          },
+          "awards": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "date": {
+                  "bsonType": "string"
+                },
+                "description": {
+                  "bsonType": "string"
+                },
+                "issuer": {
+                  "bsonType": "string"
+                },
+                "title": {
+                  "bsonType": "string"
+                }
+              },
+              "required": [
+                "date",
+                "description",
+                "issuer",
+                "title"
+              ]
+            }
+          },
+          "candidateId": {
+            "bsonType": "objectId"
+          },
+          "certificates": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "credentialId": {
+                  "bsonType": "string"
+                },
+                "credentialUrl": {
+                  "bsonType": "string"
+                },
+                "expirationDate": {
+                  "bsonType": "string"
+                },
+                "issueDate": {
+                  "bsonType": "string"
+                },
+                "issuer": {
+                  "bsonType": "string"
+                },
+                "name": {
+                  "bsonType": "string"
+                }
+              },
+              "required": [
+                "credentialId",
+                "issueDate",
+                "issuer",
+                "name"
+              ]
+            }
+          },
+          "createdAt": {
+            "bsonType": "date"
+          },
+          "customSections": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "items": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "object",
+                    "properties": {
+                      "description": {
+                        "bsonType": "string"
+                      },
+                      "field": {
+                        "bsonType": "string"
+                      }
+                    },
+                    "required": [
+                      "description",
+                      "field"
+                    ]
+                  }
+                },
+                "title": {
+                  "bsonType": "string"
+                }
+              },
+              "required": [
+                "items",
+                "title"
+              ]
+            }
+          },
+          "education": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "degree": {
+                  "bsonType": "string"
+                },
+                "description": {
+                  "bsonType": "string"
+                },
+                "endDate": {
+                  "bsonType": "string"
+                },
+                "gpa": {
+                  "bsonType": "object",
+                  "properties": {
+                    "scale": {
+                      "bsonType": "int"
+                    },
+                    "value": {
+                      "bsonType": "double"
+                    }
+                  },
+                  "required": [
+                    "scale",
+                    "value"
+                  ]
+                },
+                "institution": {
+                  "bsonType": "string"
+                },
+                "major": {
+                  "bsonType": "string"
+                },
+                "startDate": {
+                  "bsonType": "string"
+                },
+                "status": {
+                  "bsonType": "string"
+                }
+              },
+              "required": [
+                "degree",
+                "endDate",
+                "institution",
+                "major",
+                "startDate",
+                "status"
+              ]
+            }
+          },
+          "experience": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "achievements": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "string"
+                  }
+                },
+                "company": {
+                  "bsonType": "string"
+                },
+                "current": {
+                  "bsonType": "bool"
+                },
+                "description": {
+                  "bsonType": "string"
+                },
+                "employmentType": {
+                  "bsonType": "string"
+                },
+                "endDate": {
+                  "bsonType": "string"
+                },
+                "location": {
+                  "bsonType": "string"
+                },
+                "position": {
+                  "bsonType": "string"
+                },
+                "startDate": {
+                  "bsonType": "string"
+                },
+                "technologies": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "string"
+                  }
+                }
+              },
+              "required": [
+                "achievements",
+                "company",
+                "current",
+                "description",
+                "employmentType",
+                "location",
+                "position",
+                "startDate",
+                "technologies"
+              ]
+            }
+          },
+          "languages": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "certificate": {
+                  "bsonType": "string"
+                },
+                "level": {
+                  "bsonType": "string"
+                },
+                "name": {
+                  "bsonType": "string"
+                },
+                "score": {
+                  "bsonType": "string"
+                }
+              },
+              "required": [
+                "level",
+                "name"
+              ]
+            }
+          },
+          "links": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "type": {
+                  "bsonType": "string"
+                },
+                "url": {
+                  "bsonType": "string"
+                }
+              },
+              "required": [
+                "type",
+                "url"
+              ]
+            }
+          },
+          "parseInfo": {
+            "bsonType": "object",
+            "properties": {
+              "parsedAt": {
+                "bsonType": "date"
+              },
+              "parserVersion": {
+                "bsonType": "string"
+              },
+              "status": {
+                "bsonType": "string"
+              }
+            },
+            "required": [
+              "parsedAt",
+              "parserVersion",
+              "status"
+            ]
+          },
+          "personalInfo": {
+            "bsonType": "object",
+            "properties": {
+              "address": {
+                "bsonType": "object",
+                "properties": {
+                  "city": {
+                    "bsonType": "string"
+                  },
+                  "country": {
+                    "bsonType": "string"
+                  }
+                },
+                "required": [
+                  "city",
+                  "country"
+                ]
+              },
+              "email": {
+                "bsonType": "string"
+              },
+              "fullName": {
+                "bsonType": "string"
+              },
+              "phone": {
+                "bsonType": "string"
+              }
+            },
+            "required": [
+              "address",
+              "email",
+              "fullName",
+              "phone"
+            ]
+          },
+          "projects": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "achievements": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "string"
+                  }
+                },
+                "description": {
+                  "bsonType": "string"
+                },
+                "endDate": {
+                  "bsonType": "string"
+                },
+                "links": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "object",
+                    "properties": {
+                      "type": {
+                        "bsonType": "string"
+                      },
+                      "url": {
+                        "bsonType": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "url"
+                    ]
+                  }
+                },
+                "name": {
+                  "bsonType": "string"
+                },
+                "role": {
+                  "bsonType": "string"
+                },
+                "startDate": {
+                  "bsonType": "string"
+                },
+                "technologies": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "string"
+                  }
+                }
+              },
+              "required": [
+                "achievements",
+                "description",
+                "links",
+                "name",
+                "role",
+                "startDate",
+                "technologies"
+              ]
+            }
+          },
+          "publications": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "description": {
+                  "bsonType": "string"
+                },
+                "publishedDate": {
+                  "bsonType": "string"
+                },
+                "publisher": {
+                  "bsonType": "string"
+                },
+                "title": {
+                  "bsonType": "string"
+                },
+                "url": {
+                  "bsonType": "string"
+                }
+              },
+              "required": [
+                "description",
+                "publishedDate",
+                "publisher",
+                "title",
+                "url"
+              ]
+            }
+          },
+          "references": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "email": {
+                  "bsonType": "string"
+                },
+                "name": {
+                  "bsonType": "string"
+                },
+                "organization": {
+                  "bsonType": "string"
+                },
+                "phone": {
+                  "bsonType": "string"
+                },
+                "position": {
+                  "bsonType": "string"
+                }
+              },
+              "required": [
+                "email",
+                "name",
+                "organization",
+                "phone",
+                "position"
+              ]
+            }
+          },
+          "skills": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "category": {
+                  "bsonType": "string"
+                },
+                "level": {
+                  "bsonType": "string"
+                },
+                "name": {
+                  "bsonType": "string"
+                },
+                "yearsOfExperience": {
+                  "bsonType": "int"
+                }
+              },
+              "required": [
+                "category",
+                "name"
+              ]
+            }
+          },
+          "source": {
+            "bsonType": "object",
+            "properties": {
+              "fileName": {
+                "bsonType": "string"
+              },
+              "fileUrl": {
+                "bsonType": "string"
+              },
+              "mimeType": {
+                "bsonType": "string"
+              },
+              "type": {
+                "bsonType": "string"
+              }
+            },
+            "required": [
+              "fileName",
+              "fileUrl",
+              "mimeType",
+              "type"
+            ]
+          },
+          "summary": {
+            "bsonType": "string"
+          },
+          "templateId": {
+            "bsonType": [
+              "objectId",
+              "null"
+            ]
+          },
+          "title": {
+            "bsonType": "string"
+          },
+          "updatedAt": {
+            "bsonType": "date"
+          }
+        }
+      }
+    },
+    "cv_screening.interviews": {
+      "ns": "cv_screening.interviews",
+      "jsonSchema": {
+        "bsonType": "object",
+        "required": [
+          "_id",
+          "applicationId",
+          "createdAt",
+          "durationMinutes",
+          "location",
+          "meetingLink",
+          "mode",
+          "notes",
+          "scheduledAt",
+          "scheduledBy",
+          "status"
+        ],
+        "properties": {
+          "_id": {
+            "bsonType": "objectId"
+          },
+          "applicationId": {
+            "bsonType": "objectId"
+          },
+          "createdAt": {
+            "bsonType": "date"
+          },
+          "durationMinutes": {
+            "bsonType": "int"
+          },
+          "location": {
+            "bsonType": "string"
+          },
+          "meetingLink": {
+            "bsonType": "string"
+          },
+          "mode": {
+            "bsonType": "string"
+          },
+          "notes": {
+            "bsonType": "string"
+          },
+          "scheduledAt": {
+            "bsonType": "date"
+          },
+          "scheduledBy": {
+            "bsonType": "objectId"
+          },
+          "status": {
+            "bsonType": "string"
+          }
+        }
+      }
+    },
+    "cv_screening.jobs": {
+      "ns": "cv_screening.jobs",
+      "jsonSchema": {
+        "bsonType": "object",
+        "required": [
+          "_id",
+          "benefits",
+          "category",
+          "companyId",
+          "createdAt",
+          "deadline",
+          "description",
+          "employmentType",
+          "experience",
+          "location",
+          "recruiterId",
+          "requirements",
+          "salary",
+          "status",
+          "title",
+          "updatedAt"
+        ],
+        "properties": {
+          "_id": {
+            "bsonType": "objectId"
+          },
+          "benefits": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "string"
+            }
+          },
+          "category": {
+            "bsonType": "string"
+          },
+          "companyId": {
+            "bsonType": "objectId"
+          },
+          "createdAt": {
+            "bsonType": "date"
+          },
+          "deadline": {
+            "bsonType": "date"
+          },
+          "description": {
+            "bsonType": "string"
+          },
+          "employmentType": {
+            "bsonType": "string"
+          },
+          "experience": {
+            "bsonType": "object",
+            "properties": {
+              "level": {
+                "bsonType": "string"
+              },
+              "maxYears": {
+                "bsonType": "int"
+              },
+              "minYears": {
+                "bsonType": "int"
+              }
+            },
+            "required": [
+              "level",
+              "maxYears",
+              "minYears"
+            ]
+          },
+          "location": {
+            "bsonType": "object",
+            "properties": {
+              "address": {
+                "bsonType": "string"
+              },
+              "city": {
+                "bsonType": "string"
+              },
+              "country": {
+                "bsonType": "string"
+              },
+              "remote": {
+                "bsonType": "bool"
+              }
+            },
+            "required": [
+              "address",
+              "city",
+              "country",
+              "remote"
+            ]
+          },
+          "recruiterId": {
+            "bsonType": "objectId"
+          },
+          "requirements": {
+            "bsonType": "object",
+            "properties": {
+              "education": {
+                "bsonType": "object",
+                "properties": {
+                  "minimumDegree": {
+                    "bsonType": "string"
+                  },
+                  "preferredMajors": {
+                    "bsonType": "array",
+                    "items": {
+                      "bsonType": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "minimumDegree",
+                  "preferredMajors"
+                ]
+              },
+              "languages": {
+                "bsonType": "array",
+                "items": {
+                  "bsonType": "object",
+                  "properties": {
+                    "minimumLevel": {
+                      "bsonType": "string"
+                    },
+                    "name": {
+                      "bsonType": "string"
+                    }
+                  },
+                  "required": [
+                    "minimumLevel",
+                    "name"
+                  ]
+                }
+              },
+              "minimumGpa": {
+                "bsonType": "object",
+                "properties": {
+                  "scale": {
+                    "bsonType": "int"
+                  },
+                  "value": {
+                    "bsonType": [
+                      "int",
+                      "double"
+                    ]
+                  }
+                },
+                "required": [
+                  "scale",
+                  "value"
+                ]
+              },
+              "preferredSkills": {
+                "bsonType": "array",
+                "items": {
+                  "bsonType": "string"
+                }
+              },
+              "requiredSkills": {
+                "bsonType": "array",
+                "items": {
+                  "bsonType": "string"
+                }
+              }
+            },
+            "required": [
+              "preferredSkills",
+              "requiredSkills"
+            ]
+          },
+          "salary": {
+            "bsonType": "object",
+            "properties": {
+              "currency": {
+                "bsonType": "string"
+              },
+              "max": {
+                "bsonType": "int"
+              },
+              "min": {
+                "bsonType": "int"
+              },
+              "negotiable": {
+                "bsonType": "bool"
+              }
+            },
+            "required": [
+              "currency",
+              "max",
+              "min",
+              "negotiable"
+            ]
+          },
+          "status": {
+            "bsonType": "string"
+          },
+          "title": {
+            "bsonType": "string"
+          },
+          "updatedAt": {
+            "bsonType": "date"
+          }
+        }
+      }
+    },
+    "cv_screening.recruiter_profiles": {
+      "ns": "cv_screening.recruiter_profiles",
+      "jsonSchema": {
+        "bsonType": "object",
+        "required": [
+          "_id",
+          "companyId",
+          "createdAt",
+          "fullName",
+          "phone",
+          "position",
+          "updatedAt",
+          "userId"
+        ],
+        "properties": {
+          "_id": {
+            "bsonType": "objectId"
+          },
+          "companyId": {
+            "bsonType": "objectId"
+          },
+          "createdAt": {
+            "bsonType": "date"
+          },
+          "fullName": {
+            "bsonType": "string"
+          },
+          "phone": {
+            "bsonType": "string"
+          },
+          "position": {
+            "bsonType": "string"
+          },
+          "updatedAt": {
+            "bsonType": "date"
+          },
+          "userId": {
+            "bsonType": "objectId"
+          }
+        }
+      }
+    },
+    "cv_screening.users": {
+      "ns": "cv_screening.users",
+      "jsonSchema": {
+        "bsonType": "object",
+        "required": [
+          "_id",
+          "createdAt",
+          "email",
+          "emailVerified",
+          "passwordHash",
+          "role",
+          "status",
+          "updatedAt"
+        ],
+        "properties": {
+          "_id": {
+            "bsonType": "objectId"
+          },
+          "createdAt": {
+            "bsonType": "date"
+          },
+          "email": {
+            "bsonType": "string"
+          },
+          "emailVerified": {
+            "bsonType": "bool"
+          },
+          "passwordHash": {
+            "bsonType": "string"
+          },
+          "role": {
+            "bsonType": "string"
+          },
+          "status": {
+            "bsonType": "string"
+          },
+          "updatedAt": {
+            "bsonType": "date"
+          }
+        }
+      }
+    }
+  },
+  "relationships": [
+    {
+      "id": "0af945d4-bc35-4e66-8a3b-b2609a9257d9",
+      "relationship": [
+        {
+          "ns": "cv_screening.cv_analyses",
+          "fields": [
+            "applicationId"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.applications",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "3771df34-7e84-4bdd-a9c3-a73877f61b2e",
+      "relationship": [
+        {
+          "ns": "cv_screening.interviews",
+          "fields": [
+            "applicationId"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.applications",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "80056efe-75dc-4fad-8a21-6bc433e2d057",
+      "relationship": [
+        {
+          "ns": "cv_screening.applications",
+          "fields": [
+            "candidateId"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.candidate_profiles",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "c86983cc-76ee-4286-ad57-a4501d642259",
+      "relationship": [
+        {
+          "ns": "cv_screening.cvs",
+          "fields": [
+            "candidateId"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.candidate_profiles",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "89257d33-0d74-489d-be72-f4f2950805cc",
+      "relationship": [
+        {
+          "ns": "cv_screening.jobs",
+          "fields": [
+            "companyId"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.companies",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "087161c8-da2c-465f-ba90-55972e1a62c6",
+      "relationship": [
+        {
+          "ns": "cv_screening.recruiter_profiles",
+          "fields": [
+            "companyId"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.companies",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "6d374874-692b-44cc-be1c-6d377452183b",
+      "relationship": [
+        {
+          "ns": "cv_screening.cvs",
+          "fields": [
+            "templateId"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.cv_templates",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "00b051c0-57d2-4495-bdbd-94bf8cd310b9",
+      "relationship": [
+        {
+          "ns": "cv_screening.applications",
+          "fields": [
+            "cvId"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.cvs",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "88c029a0-29e6-44a0-849e-83446648af4c",
+      "relationship": [
+        {
+          "ns": "cv_screening.cv_analyses",
+          "fields": [
+            "cvId"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.cvs",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "8e3ef1e9-2cd4-4432-b41f-8615da5cc755",
+      "relationship": [
+        {
+          "ns": "cv_screening.applications",
+          "fields": [
+            "jobId"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.jobs",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "c7353255-5baa-4273-a878-63b2a55ac751",
+      "relationship": [
+        {
+          "ns": "cv_screening.cv_analyses",
+          "fields": [
+            "jobId"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.jobs",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "f39fb749-5212-4142-ba5f-5ffd79e1489c",
+      "relationship": [
+        {
+          "ns": "cv_screening.interviews",
+          "fields": [
+            "scheduledBy"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.recruiter_profiles",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "9468812f-c934-44f3-8dc2-bf5938ff0f63",
+      "relationship": [
+        {
+          "ns": "cv_screening.jobs",
+          "fields": [
+            "recruiterId"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.recruiter_profiles",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "24541f53-070c-4623-b872-6b6f57140fec",
+      "relationship": [
+        {
+          "ns": "cv_screening.applications",
+          "fields": [
+            "statusHistory",
+            "changedBy"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.users",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "65409d2e-5edb-4eed-825f-fcb9a705d967",
+      "relationship": [
+        {
+          "ns": "cv_screening.candidate_profiles",
+          "fields": [
+            "userId"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.users",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "fb86e216-0177-4c00-a956-ca277f34c5aa",
+      "relationship": [
+        {
+          "ns": "cv_screening.cv_templates",
+          "fields": [
+            "createdBy"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.users",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    },
+    {
+      "id": "c1acbe24-a101-46f5-9a1d-bb0a753e3dea",
+      "relationship": [
+        {
+          "ns": "cv_screening.recruiter_profiles",
+          "fields": [
+            "userId"
+          ],
+          "cardinality": 1
+        },
+        {
+          "ns": "cv_screening.users",
+          "fields": [
+            "_id"
+          ],
+          "cardinality": 1
+        }
+      ],
+      "isInferred": true
+    }
+  ]
+}
