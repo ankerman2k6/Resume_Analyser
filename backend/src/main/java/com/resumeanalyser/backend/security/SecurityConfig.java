@@ -1,6 +1,7 @@
 package com.resumeanalyser.backend.security;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -9,6 +10,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import jakarta.servlet.DispatcherType;
 
 @Configuration
 public class SecurityConfig {
@@ -25,35 +27,48 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // JWT filter chỉ chạy trong Spring Security, không đăng ký thêm ở servlet container.
+    @Bean
+    public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration() {
+        FilterRegistrationBean<JwtAuthenticationFilter> registration =
+                new FilterRegistrationBean<>(jwtAuthenticationFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http)
             throws Exception {
 
         http
-            // REST API dùng JWT nên tắt CSRF
-            .csrf(csrf -> csrf.disable())
+                // REST API dùng JWT nên tắt CSRF
+                .csrf(csrf -> csrf.disable())
 
-            // Không dùng session để lưu đăng nhập
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(
-                    SessionCreationPolicy.STATELESS
-                )
-            )
+                // Không dùng session để lưu đăng nhập
+                .sessionManagement(session -> session.sessionCreationPolicy(
+                        SessionCreationPolicy.STATELESS))
 
-            .authorizeHttpRequests(auth -> auth
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, exception) -> {
+                            response.setStatus(401);
+                            response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
+                            response.getWriter().write("{\"status\":401,\"message\":\"Unauthorized\"}");
+                        }))
 
-                // Login không cần JWT
-                .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                .authorizeHttpRequests(auth -> auth
+                        // Không để security che lỗi gốc của controller thành 401/403.
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/auth/login",
+                                "/api/auth/register")
+                        .permitAll()
+                        .anyRequest().authenticated())
 
-                // Các API khác phải đăng nhập
-                .anyRequest().authenticated()
-            )
-
-            // Cho JWT filter chạy trước filter login mặc định
-            .addFilterBefore(
-                jwtAuthenticationFilter,
-                UsernamePasswordAuthenticationFilter.class
-            );
+                // Cho JWT filter chạy trước filter login mặc định
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

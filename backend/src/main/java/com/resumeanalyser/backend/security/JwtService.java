@@ -13,12 +13,15 @@ import com.resumeanalyser.backend.model.User;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.security.Keys;
 
 @Service 
 public class JwtService {
     
     private final SecretKey key;
+    private final JwtParser parser;
     private final long expiration;
     
     public JwtService(
@@ -30,6 +33,7 @@ public class JwtService {
         );
 
         this.expiration = expiration;
+        this.parser = Jwts.parser().verifyWith(key).build();
     }
 
     public String generateToken(User user) {
@@ -47,9 +51,7 @@ public class JwtService {
      // Đọc toàn bộ claims
     private Claims extractAllClaims(String token) {
 
-        return Jwts.parser()
-                .verifyWith(key)
-                .build()
+        return parser
                 .parseSignedClaims(token)
                 .getPayload();
     }
@@ -61,7 +63,12 @@ public class JwtService {
 
     // Lấy userId
     public String extractUserId(String token) {
-        return extractAllClaims(token).getSubject();
+        Claims claims = extractAllClaims(token);
+        if (claims.getExpiration() == null || !claims.getExpiration().after(new Date())
+                || claims.getSubject() == null || claims.getSubject().isBlank()) {
+            throw new JwtException("Token requires a valid subject and expiration");
+        }
+        return claims.getSubject();
     }
 
     // Lấy role
@@ -73,9 +80,9 @@ public class JwtService {
     // Kiểm tra JWT hợp lệ
     public boolean isTokenValid(String token) {
         try {
-            extractAllClaims(token);
+            extractUserId(token);
             return true;
-        } catch (Exception e) {
+        } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
     }
