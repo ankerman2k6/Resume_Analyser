@@ -4,8 +4,8 @@
   left: 0;
   right: 0;
   height: 64px;
-  background-color: var(--color-background);
-  border-bottom: 1px solid var(--color-outline-variant);
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
   z-index: 100;
   display: flex;
   align-items: center;
@@ -27,15 +27,15 @@
   align-items: center;
   gap: 12px;
   text-decoration: none;
-  color: var(--color-on-surface);
+  color: var(--text-primary);
 }
 
 .brand-logo-badge {
   width: 36px;
   height: 36px;
   border-radius: var(--radius-md);
-  background-color: var(--color-primary);
-  color: var(--color-on-primary);
+  background-color: var(--brand-primary);
+  color: var(--text-inverse);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -48,13 +48,13 @@
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.01em;
-  color: var(--color-on-surface);
+  color: var(--text-primary);
 }
 
 .brand-subtitle {
   font-size: 12px;
   font-weight: 500;
-  color: var(--color-on-surface-variant);
+  color: var(--text-secondary);
   margin-left: 4px;
   display: none;
 }
@@ -69,4 +69,23 @@
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.theme-toggle-btn {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+}
+
+.theme-toggle-btn:hover {
+  background-color: var(--bg-subtle);
 }

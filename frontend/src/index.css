@@ -1,82 +1,77 @@
 :root {
-  /* ===== LIGHT MODE (Be ấm) ===== */
-  --color-background: #FDFBF7;
-  --color-surface: #F5F0E8;
-  --color-surface-dim: #F5F0E8;
-  --color-surface-bright: #FFFFFF;
-  --color-surface-container-low: #FAF6EF;
-  --color-surface-container: #F5F0E8;
-  --color-surface-container-high: #EDE6DA;
-  --color-surface-container-highest: #E3D9C9;
+  /* ===== LIGHT MODE (Mặc định) ===== */
+  --bg-primary: #F4F7FB;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #EDF2F7;
+  --bg-input: #FFFFFF;
   
-  --color-on-surface: #2B2620;
-  --color-on-surface-variant: #6B5F4E;
-  --color-outline: #A89B85;
-  --color-outline-variant: #E3D9C9;
+  --brand-primary: #0F1E36;
+  --brand-secondary: #2563EB;
+  --brand-accent: #E0F2FE;
   
-  --color-primary: #8B6F47;
-  --color-primary-hover: #6F5838;
-  --color-on-primary: #FFFFFF;
-  --color-primary-container: #F0E6D6;
-  --color-on-primary-container: #3A2E1E;
+  --role-active-bg: var(--bg-subtle);
+  --role-active-border: var(--text-primary);
+  --role-active-text: var(--text-primary);
+  --tab-active-bg: var(--brand-primary);
   
-  --color-secondary: #A67B5B;
-  --color-on-secondary: #FFFFFF;
-  --color-secondary-container: #F5E6D3;
-  --color-on-secondary-container: #3D2A1A;
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --text-inverse: #FFFFFF;
   
-  --color-tertiary: #C9A961;
-  --color-error: #C0392B;
-  --color-success: #6B8E5A;
-  --color-warning: #D4933A;
-
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --border-subtle: #E2E8F0;
+  --border-focus: #3B82F6;
+  
+  --status-success: #10B981;
+  --status-warning: #F59E0B;
+  --status-danger: #EF4444;
+  --status-info: #0EA5E9;
+  
+  --font-family: 'SF Pro Display', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  
   --radius-sm: 4px;
   --radius-default: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
   --radius-full: 9999px;
   
-  --shadow-sm: 0 1px 3px rgba(43, 38, 32, 0.06);
-  --shadow-md: 0 4px 12px rgba(43, 38, 32, 0.08);
-  --shadow-lg: 0 10px 30px rgba(43, 38, 32, 0.15);
+  --shadow-sm: 0 1px 3px rgba(15, 30, 54, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 30, 54, 0.08);
+  --shadow-lg: 0 10px 30px rgba(15, 30, 54, 0.15);
 }
 
 [data-theme="dark"] {
-  /* ===== DARK MODE (Cà phê đêm) ===== */
-  --color-background: #1C1916;
-  --color-surface: #2A2722;
-  --color-surface-dim: #161311;
-  --color-surface-bright: #2E2A25;
-  --color-surface-container-low: #22201C;
-  --color-surface-container: #2A2722;
-  --color-surface-container-high: #332F29;
-  --color-surface-container-highest: #3D3831;
+  /* ===== DARK MODE ===== */
+  --bg-primary: #0B1019; /* Matching the deep dark blue-black */
+  --bg-surface: #121a28; /* In dark mode, card background blends */
+  --bg-subtle: #162032; /* Tab container */
+  --bg-input: #162032; /* Inputs and social buttons */
   
-  --color-on-surface: #EDE6DA;
-  --color-on-surface-variant: #B8AC98;
-  --color-outline: #8A7E6B;
-  --color-outline-variant: #4A4338;
+  --brand-primary: #3B82F6; /* Main actions are bright blue */
+  --brand-secondary: #60A5FA;
+  --brand-accent: rgba(56, 189, 248, 0.15);
   
-  --color-primary: #C4A67A;
-  --color-primary-hover: #D4B48C;
-  --color-on-primary: #3A2E1E;
-  --color-primary-container: #5A4A32;
-  --color-on-primary-container: #F0E6D6;
+  --role-active-bg: rgba(59, 130, 246, 0.15);
+  --role-active-border: #3B82F6;
+  --role-active-text: #3B82F6;
+  --tab-active-bg: #3B82F6;
   
-  --color-secondary: #D4B48C;
-  --color-on-secondary: #3D2A1A;
-  --color-secondary-container: #6B5238;
-  --color-on-secondary-container: #F5E6D3;
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-inverse: #FFFFFF;
   
-  --color-tertiary: #E0C68A;
-  --color-error: #E88B7E;
-  --color-success: #9BB88A;
-  --color-warning: #E8B36A;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-focus: #60A5FA;
   
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
+  --status-success: #34D399;
+  --status-warning: #FBBF24;
+  --status-danger: #F87171;
+  --status-info: #38BDF8;
+  
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
 }
 
 * {
@@ -87,8 +82,8 @@
 
 body {
   font-family: var(--font-family);
-  background-color: var(--color-background);
-  color: var(--color-on-surface);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -100,7 +95,7 @@ a {
   text-decoration: none;
 }
 
-/* Button styles following design.md specs */
+/* Button styles */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -119,35 +114,35 @@ a {
 
 .btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(139, 111, 71, 0.25);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25); /* Focus color */
 }
 
 .btn-primary {
-  background-color: var(--color-primary);
-  color: var(--color-on-primary);
-  border-color: var(--color-primary);
+  background-color: var(--brand-primary);
+  color: var(--text-inverse);
+  border-color: var(--brand-primary);
 }
 
 .btn-primary:hover {
-  background-color: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
+  background-color: var(--brand-secondary);
+  border-color: var(--brand-secondary);
 }
 
 .btn-secondary {
   background-color: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
+  color: var(--brand-secondary);
+  border: 1px solid var(--brand-secondary);
 }
 
 .btn-secondary:hover {
-  background-color: var(--color-primary-container);
+  background-color: var(--brand-accent);
 }
 
 .btn-ghost {
   background-color: transparent;
-  color: var(--color-primary);
+  color: var(--text-primary);
 }
 
 .btn-ghost:hover {
-  background-color: var(--color-surface);
+  background-color: var(--bg-subtle);
 }
