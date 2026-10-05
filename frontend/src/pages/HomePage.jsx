@@ -22,8 +22,8 @@ const HomePage = () => {
       <div
         style={{
           display: 'inline-block',
-          backgroundColor: 'var(--color-primary-container)',
-          color: 'var(--color-on-primary-container)',
+          backgroundColor: 'var(--brand-accent)',
+          color: 'var(--brand-secondary)',
           fontSize: '13px',
           fontWeight: 600,
           padding: '6px 16px',
@@ -39,7 +39,7 @@ const HomePage = () => {
           fontSize: '40px',
           fontWeight: 700,
           letterSpacing: '-0.02em',
-          color: 'var(--color-on-surface)',
+          color: 'var(--text-primary)',
           maxWidth: '680px',
           marginBottom: '16px',
           lineHeight: 1.2
@@ -51,7 +51,7 @@ const HomePage = () => {
       <p
         style={{
           fontSize: '18px',
-          color: 'var(--color-on-surface-variant)',
+          color: 'var(--text-secondary)',
           maxWidth: '560px',
           marginBottom: '36px',
           lineHeight: 1.6
