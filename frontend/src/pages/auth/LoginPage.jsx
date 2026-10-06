@@ -20,7 +20,7 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      const data = await loginApi(email, password);
+      const data = await loginApi(email, password, role);
 
       // Lưu Token và thông tin User vào localStorage
       localStorage.setItem('token', data.token);
@@ -31,7 +31,13 @@ const LoginPage = () => {
       }));
 
       // Chuyển hướng về trang chủ
-      navigate('/');
+      if(data.role === 'candidate'){
+        navigate('/candidate');
+      } else if(data.role === 'recruiter'){
+        navigate('/hr');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       setErrorMessage(err.message);
     } finally {

@@ -9,9 +9,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidJson(HttpMessageNotReadableException ex) {
+        return ResponseEntity.badRequest().body(Map.of(
+                "status", 400,
+                "message", "Dữ liệu JSON không hợp lệ"));
+    }
 
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<Map<String, Object>> handleUnauthorized(
@@ -38,7 +46,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-public ResponseEntity<Map<String, Object>> handleValidation(
+    public ResponseEntity<Map<String, Object>> handleValidation(
         MethodArgumentNotValidException ex) {
 
     Map<String, String> errors = new HashMap<>();
@@ -52,12 +60,24 @@ public ResponseEntity<Map<String, Object>> handleValidation(
                     )
             );
 
-    return ResponseEntity
+        return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
             .body(Map.of(
                     "status", 400,
                     "message", "Dữ liệu không hợp lệ",
                     "errors", errors
+            ));
+        }
+
+        @ExceptionHandler(ConflictException.class)
+        public ResponseEntity<Map<String, Object>> handleConflict(
+        ConflictException ex) {
+
+        return ResponseEntity
+            .status(HttpStatus.CONFLICT)
+            .body(Map.of(
+                    "status", 409,
+                    "message", ex.getMessage()
             ));
 }
 }

@@ -1,11 +1,46 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Register.css';
+import { registerApi } from '../../services/authService';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
   const [role, setRole] = useState('candidate');
   const [showPassword, setShowPassword] = useState(false);
+
+  // State quản lý form
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    if(password.length < 6){
+      setErrorMessage("Mật khẩu phải chứa nhiều hơn 6 ký tự");
+      return;
+    } 
+    setLoading(true);
+
+    try{
+      //Gửi json sang be
+      await registerApi(email, password, role);
+      setSuccessMessage('Đăng ký tài khoản thành công! Đang chuyển đến trang đăng nhập...');
+
+      setTimeout(() => {
+        navigate('/login')
+      }, 1500);
+    } catch(err){
+      setErrorMessage(err.messange)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="register-page">
@@ -39,16 +74,48 @@ const RegisterPage = () => {
           <button type="button" className="auth-tab" onClick={() => navigate('/login')}>Đăng nhập</button>
           <button type="button" className="auth-tab active">Đăng ký</button>
         </div>
+        {/* Thông báo lỗi nếu có */}
+        {errorMessage && (
+          <div style={{
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            color: 'var(--status-danger)',
+            padding: '10px 14px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '14px',
+            marginBottom: '16px'
+          }}>
+            {errorMessage}
+          </div>
+        )}
+        {/* Thông báo thành công */}
+        {successMessage && (
+          <div style={{
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            color: 'var(--status-success)',
+            padding: '10px 14px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '14px',
+            marginBottom: '16px'
+          }}>
+            {successMessage}
+          </div>
+        )}
 
-        <form className="register-form">
+        <form className="register-form" onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Họ và tên</label>
-            <input type="text" placeholder="Nguyễn Văn A" required />
+            <input 
+              type="text" 
+              placeholder="Nguyễn Văn A" 
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required 
+            />
           </div>
 
           <div className="form-group">
             <label>Địa chỉ Email</label>
-            <input type="email" placeholder="name@example.com" required />
+            <input type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required/>
           </div>
 
           <div className="form-group">
@@ -57,6 +124,8 @@ const RegisterPage = () => {
               <input 
                 type={showPassword ? "text" : "password"} 
                 placeholder="••••••••••••" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
               />
               <button 

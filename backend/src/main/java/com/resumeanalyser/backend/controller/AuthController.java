@@ -1,5 +1,6 @@
 package com.resumeanalyser.backend.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -8,6 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.resumeanalyser.backend.dto.LoginRequest;
 import com.resumeanalyser.backend.dto.LoginResponse;
+import com.resumeanalyser.backend.dto.RegisterRequest;
+import com.resumeanalyser.backend.dto.RegisterResponse;
 import com.resumeanalyser.backend.dto.UserResponse;
 import com.resumeanalyser.backend.service.AuthService;
 
@@ -55,6 +58,15 @@ public class AuthController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<RegisterResponse> register(
+        @Valid @RequestBody RegisterRequest request) {
+
+    RegisterResponse response = authService.register(request);
+
+    return ResponseEntity.status(HttpStatus.CREATED).body(response);
 }
     
 }

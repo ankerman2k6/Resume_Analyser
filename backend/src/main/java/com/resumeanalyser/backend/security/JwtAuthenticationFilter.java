@@ -48,15 +48,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        String token = authHeader.substring(7);
-
-        // Token không hợp lệ
-        if (!jwtService.isTokenValid(token)) {
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // Lấy userId từ JWT
+        String token = authHeader.substring(7);
+
+        // Verify chữ ký, expiration và lấy userId trong một lần parse JWT.
         String userId;
         try {
             userId = jwtService.extractUserId(token);

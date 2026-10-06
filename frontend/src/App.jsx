@@ -4,29 +4,28 @@ import MainLayout from './layouts/MainLayout';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
+import HRPage from './pages/hr/index';
+import CandidatePage from './pages/candiate/index';
 
-/**
- * Cấu hình luồng chuyển trang của ứng dụng
- */
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* layout chung */}
+        {/* Layout chung có Navbar */}
         <Route path="/" element={<MainLayout />}>
-        {/* các trang con được lắp vào */}
           <Route index element={<HomePage />} />
-          {/* Nếu URL là đường dẫn này */}
-          <Route path="login" element={<LoginPage />} />
-          <Route path="register" element={<RegisterPage />} />
-          
-          
-          <Route path="auth/login" element={<Navigate to="/login" replace />} />
-          <Route path="auth/register" element={<Navigate to="/register" replace />} />
-          
-          {/* Catch-all redirect về trang chủ */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* 2 trang theo role */}
+          <Route path="hr" element={<HRPage />} />
+          <Route path="candidate" element={<CandidatePage />} />
         </Route>
+
+        {/* Các trang xác thực độc lập */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+
+        <Route path="/auth/login" element={<Navigate to="/login" replace />} />
+        <Route path="/auth/register" element={<Navigate to="/register" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
