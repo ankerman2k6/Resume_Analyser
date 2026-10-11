@@ -87,8 +87,7 @@ public class AuthService {
     user.setStatus("active");
 
     user.setCreatedAt(LocalDateTime.now());
-    user.setUpdatedAt(LocalDateTime.now());
-
+    user.setUpdatedAt(LocalDateTime.now()); 
     User savedUser;
     try {
         savedUser = userRepository.save(user);

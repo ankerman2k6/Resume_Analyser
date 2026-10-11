@@ -55,14 +55,23 @@ public class SecurityConfig {
                             response.setCharacterEncoding("UTF-8");
                             response.getWriter().write("{\"status\":401,\"message\":\"Unauthorized\"}");
                         }))
+                        
 
+                        // THẰNG NÀO ĐỘNG VÀO ĐÂY LÀM CHÓ
                 .authorizeHttpRequests(auth -> auth
                         // Không để security che lỗi gốc của controller thành 401/403.
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+
+                        //API đăng nhập đăng ký
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/login",
                                 "/api/auth/register")
                         .permitAll()
+
+                        // API chỉ dành cho HR
+                        .requestMatchers("/api/hr/**")
+                        .hasRole("RECRUITER")
+
                         .anyRequest().authenticated())
 
                 // Cho JWT filter chạy trước filter login mặc định
