@@ -2,6 +2,8 @@ package com.resumeanalyser.backend.service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.bson.types.ObjectId;
 import org.springframework.http.HttpStatus;
@@ -15,6 +17,11 @@ import com.resumeanalyser.backend.repository.JobRepository;
 
 @Service
 public class JobService {
+
+    private static final List<String> EMPLOYMENT_TYPES = List.of(
+            "full_time", "part_time", "internship", "contract", "freelance");
+    private static final Set<String> REQUIREMENT_FIELDS = Set.of(
+            "requiredSkills", "preferredSkills", "education", "minimumGpa", "languages");
 
     private final JobRepository jobRepository;
 
@@ -60,6 +67,8 @@ public class JobService {
         throw new IllegalArgumentException("Deadline phải ở tương lai");
     }
 
+    validateCreateJobSchema(request);
+
     //Tạo đối tượng job
     Job job = new Job();
 
@@ -90,6 +99,98 @@ public class JobService {
     job.setUpdatedAt(now);
 
     return jobRepository.save(job);
+    }
+
+    private static void validateCreateJobSchema(CreateJobRequest request) {
+        if (request.description() == null) {
+            throw new IllegalArgumentException("description là trường bắt buộc");
+        }
+        if (request.employmentType() != null
+                && !EMPLOYMENT_TYPES.contains(request.employmentType())) {
+            throw new IllegalArgumentException("employmentType không hợp lệ; dùng "
+                    + String.join(", ", EMPLOYMENT_TYPES));
+        }
+
+        Map<String, Object> requirements = request.requirements();
+        if (requirements == null) {
+            return;
+        }
+        validateKeys(requirements, "requirements", REQUIREMENT_FIELDS);
+        for (Map.Entry<String, Object> field : requirements.entrySet()) {
+            String path = "requirements." + field.getKey();
+            switch (field.getKey()) {
+                case "requiredSkills", "preferredSkills" -> validateStringList(field.getValue(), path);
+                case "education" -> {
+                    Map<?, ?> education = requireObject(field.getValue(), path);
+                    validateKeys(education, path, Set.of("minimumDegree", "preferredMajors"));
+                    if (education.containsKey("minimumDegree")) {
+                        requireString(education.get("minimumDegree"), path + ".minimumDegree");
+                    }
+                    if (education.containsKey("preferredMajors")) {
+                        validateStringList(education.get("preferredMajors"), path + ".preferredMajors");
+                    }
+                }
+                case "minimumGpa" -> {
+                    Map<?, ?> gpa = requireObject(field.getValue(), path);
+                    validateKeys(gpa, path, Set.of("value", "scale"));
+                    requireNumber(gpa.get("value"), path + ".value");
+                    requireNumber(gpa.get("scale"), path + ".scale");
+                }
+                case "languages" -> {
+                    if (!(field.getValue() instanceof List<?> languages)) {
+                        throw new IllegalArgumentException(path + " phải là mảng");
+                    }
+                    for (int i = 0; i < languages.size(); i++) {
+                        String itemPath = path + "[" + i + "]";
+                        Map<?, ?> language = requireObject(languages.get(i), itemPath);
+                        validateKeys(language, itemPath, Set.of("name", "minimumLevel"));
+                        requireString(language.get("name"), itemPath + ".name");
+                        if (language.containsKey("minimumLevel")) {
+                            requireString(language.get("minimumLevel"), itemPath + ".minimumLevel");
+                        }
+                    }
+                }
+                default -> throw new IllegalArgumentException(path + " không được hỗ trợ");
+            }
+        }
+    }
+
+    private static void validateKeys(Map<?, ?> object, String path, Set<String> allowed) {
+        for (Object key : object.keySet()) {
+            if (!allowed.contains(key)) {
+                throw new IllegalArgumentException(path + "." + key + " không được hỗ trợ");
+            }
+        }
+    }
+
+    private static Map<?, ?> requireObject(Object value, String path) {
+        if (!(value instanceof Map<?, ?> object)) {
+            throw new IllegalArgumentException(path + " phải là JSON object");
+        }
+        return object;
+    }
+
+    private static void requireString(Object value, String path) {
+        if (!(value instanceof String)) {
+            throw new IllegalArgumentException(path + " phải là chuỗi");
+        }
+    }
+
+    private static void requireNumber(Object value, String path) {
+        if (!(value instanceof Number)
+                || (value instanceof Double number && !Double.isFinite(number))
+                || (value instanceof Float number && !Float.isFinite(number))) {
+            throw new IllegalArgumentException(path + " phải là số hữu hạn");
+        }
+    }
+
+    private static void validateStringList(Object value, String path) {
+        if (!(value instanceof List<?> values)) {
+            throw new IllegalArgumentException(path + " phải là mảng chuỗi");
+        }
+        for (int i = 0; i < values.size(); i++) {
+            requireString(values.get(i), path + "[" + i + "]");
+        }
     }
 
     // Tìm job theo ID
