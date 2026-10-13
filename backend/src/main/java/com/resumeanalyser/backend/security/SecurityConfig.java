@@ -62,6 +62,8 @@ public class SecurityConfig {
                         // Không để security che lỗi gốc của controller thành 401/403.
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
 
+                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+
                         //API đăng nhập đăng ký
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/login",

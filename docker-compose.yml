@@ -1,29 +1,67 @@
-# =============================================
-# Docker Compose - Resume Analyser
-# Kết nối Backend + Frontend
-# (MongoDB dùng container "local-mongo" đã có sẵn)
-# =============================================
-
 services:
+  mongodb:
+    image: ${MONGO_IMAGE:-bacdepzaiz7/resume-mongodb}:${VERSION:-latest}
+    container_name: resume-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: cv_screening
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - resume-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "if (db.adminCommand({ping: 1}).ok !== 1) quit(1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
-  # --- Backend (Spring Boot) ---
   backend:
-    build:
-      context: ./backend
+    image: ${BACKEND_IMAGE:-bacdepzaiz7/resume-backend}:${VERSION:-latest}
     container_name: resume-backend
     ports:
-      - "8080:8080"
+      - "8081:8080"
     environment:
-      # Dùng host.docker.internal để truy cập container local-mongo
-      # đang chạy trên máy host (port 27017)
-      - SPRING_MONGODB_URI=mongodb://host.docker.internal:27017/cv_screening
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/cv_screening
+      SERVER_PORT: "8080"
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the environment or .env}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - resume-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
 
-  # --- Frontend (React + Nginx) ---
   frontend:
-    build:
-      context: ./frontend
+    image: ${FRONTEND_IMAGE:-bacdepzaiz7/resume-frontend}:${VERSION:-latest}
     container_name: resume-frontend
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    networks:
+      - resume-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+volumes:
+  mongo-data:
+
+networks:
+  resume-network:
+    name: resume-network
+    external: true

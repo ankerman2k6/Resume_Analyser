@@ -25,6 +25,9 @@ RUN mvn package -DskipTests -B
 # Dùng JRE 21 nhẹ hơn (không cần compiler nữa)
 FROM eclipse-temurin:21-jre
 
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy file .jar từ stage build sang stage run
