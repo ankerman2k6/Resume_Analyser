@@ -4,3 +4,8 @@ dist-ssr
 *.local
 .DS_Store
 *.log
+.git
+.env
+.env.*
+coverage
+*.xml

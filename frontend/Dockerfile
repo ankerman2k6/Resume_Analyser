@@ -5,10 +5,12 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
+ENV CI=true
+
 # Copy file package.json và package-lock.json trước
 # để Docker cache lại node_modules (tương tự pom.xml ở backend)
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 
 # Copy toàn bộ mã nguồn frontend
 COPY . .
