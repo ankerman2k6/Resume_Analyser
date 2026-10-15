@@ -28,7 +28,7 @@ pipeline {
                     // Lấy mã hash commit rút gọn (vd: a1b2c3d)
                     env.GIT_COMMIT_SHORT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     env.VERSION_COMMIT = "${env.VERSION}-${env.GIT_COMMIT_SHORT}"
-                    echo "📦 Phiên bản build: ${env.VERSION_COMMIT}"
+                    echo "Phiên bản build: ${env.VERSION_COMMIT}"
                 }
             }
         }

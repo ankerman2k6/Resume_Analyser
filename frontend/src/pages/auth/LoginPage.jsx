@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { loginApi } from '../../services/authService';
+import { useAuth } from '../../context/AuthContext';
 import './Login.css';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [role, setRole] = useState('candidate');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -22,18 +24,13 @@ const LoginPage = () => {
     try {
       const data = await loginApi(email, password, role);
 
-      // Lưu Token và thông tin User vào localStorage
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify({
-        id: data.userId,
-        email: data.email,
-        role: data.role,
-      }));
+      // Cập nhật thông qua AuthContext
+      login(data);
 
-      // Chuyển hướng về trang chủ
-      if(data.role === 'candidate'){
-        navigate('/candidate');
-      } else if(data.role === 'recruiter'){
+      // Chuyển hướng về trang chủ hoặc trang ứng viên
+      if (data.role === 'candidate') {
+        navigate('/candidate/profile');
+      } else if (data.role === 'recruiter') {
         navigate('/hr');
       } else {
         navigate('/');
