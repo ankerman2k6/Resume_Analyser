@@ -150,8 +150,12 @@ const CandidateProfile = () => {
   // Xử lý rút hồ sơ ứng tuyển
   const handleWithdrawApplication = async (applicationId) => {
     if (window.confirm('Bạn có chắc chắn muốn rút đơn ứng tuyển cho vị trí này?')) {
-      await withdrawApplicationApi(applicationId);
-      setApplications((prev) => prev.filter((app) => app._id !== applicationId));
+      const success = await withdrawApplicationApi(applicationId);
+      if (success) {
+        setApplications((prev) => prev.filter((app) => app._id !== applicationId));
+      } else {
+        alert('Không thể rút đơn ứng tuyển hoặc đơn ứng tuyển không tồn tại.');
+      }
     }
   };
 

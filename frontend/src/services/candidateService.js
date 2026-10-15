@@ -161,8 +161,14 @@ export const getCandidateCvsApi = async () => {
 
 /**
  * Rút đơn ứng tuyển
+ * @param {string} applicationId - ID của đơn ứng tuyển cần rút
+ * @returns {Promise<boolean>} true nếu rút thành công, false nếu không tìm thấy hoặc thất bại
  */
 export const withdrawApplicationApi = async (applicationId) => {
+  if (!applicationId) {
+    return false;
+  }
+
   const token = localStorage.getItem('token');
 
   if (token) {
@@ -173,13 +179,28 @@ export const withdrawApplicationApi = async (applicationId) => {
           Authorization: `Bearer ${token}`
         }
       });
-      if (response.ok) return true;
+
+      if (response.ok) {
+        return true;
+      }
+
+      // Nếu backend từ chối yêu cầu (ví dụ: 400, 403 không cho rút đơn)
+      if (response.status >= 400 && response.status !== 404) {
+        return false;
+      }
     } catch {
-      // Fallback
+      // Khi backend chưa có endpoint hoặc offline, fallback xử lý trên mock data
     }
   }
 
+  // Fallback xử lý trên mock data: kiểm tra đơn ứng tuyển có tồn tại hay không
   const list = getLocalData(STORAGE_KEYS.APPLICATIONS, MOCK_CANDIDATE_APPLICATIONS);
+  const applicationIndex = list.findIndex((app) => app._id === applicationId);
+
+  if (applicationIndex === -1) {
+    return false;
+  }
+
   const updatedList = list.filter((app) => app._id !== applicationId);
   setLocalData(STORAGE_KEYS.APPLICATIONS, updatedList);
   return true;
