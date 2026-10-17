@@ -30,4 +30,5 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Mở port 80
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+#Lệnh để start
+CMD ["nginx", "-g", "daemon off;"]  

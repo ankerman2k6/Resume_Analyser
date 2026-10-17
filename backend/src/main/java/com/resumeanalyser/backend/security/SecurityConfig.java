@@ -63,6 +63,9 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/register")
                         .permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/jobs/**")
+                        .permitAll()
                         .anyRequest().authenticated())
 
                 // Cho JWT filter chạy trước filter login mặc định

@@ -1,0 +1,66 @@
+/* ==========================================================================
+   Trang giới thiệu Nhà tuyển dụng (HR Portal) - Không có Navbar ở trên
+   ========================================================================== */
+
+.hr-intro-page {
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+}
+
+.hr-intro-container {
+  max-width: 560px;
+  width: 100%;
+  background-color: var(--bg-surface);
+  border-radius: 16px;
+  padding: 40px 32px;
+  text-align: center;
+}
+
+.hr-intro-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background-color: var(--brand-accent);
+  color: var(--brand-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.hr-intro-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  margin-bottom: 12px;
+}
+
+.hr-intro-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.hr-intro-desc strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .hr-intro-page {
+    padding: 24px 16px;
+  }
+
+  .hr-intro-container {
+    padding: 28px 20px;
+  }
+
+  .hr-intro-title {
+    font-size: 20px;
+  }
+}

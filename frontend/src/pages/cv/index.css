@@ -1,0 +1,363 @@
+/* ==========================================================================
+   Trang Tải lên & Quản lý CV (CV Upload Page)
+   Tuân thủ chuẩn UI/UX: components/file-upload.md, M29, T14, N1, I13, I31
+   ========================================================================== */
+
+.cv-upload-page {
+  min-height: calc(100vh - 64px);
+  background-color: var(--bg-primary);
+  padding: 40px 24px 80px 24px;
+}
+
+.cv-upload-container {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.cv-page-header {
+  margin-bottom: 24px;
+}
+
+.cv-page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  margin-bottom: 6px;
+}
+
+.cv-page-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* M29: Màn chỉ có đúng một card giữa trang nên không viền, không bóng */
+.cv-upload-card {
+  background-color: var(--bg-surface);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+/* Ẩn input file gốc nhưng vẫn giữ khả năng đọc màn hình */
+.cv-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Khung kéo thả (Dropzone) - F21 cho phép border-dashed tại vùng thả tệp */
+.cv-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border-subtle);
+  border-radius: 12px;
+  background-color: color-mix(in srgb, var(--bg-primary) 60%, var(--bg-surface));
+  padding: 32px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  outline: none;
+}
+
+.cv-dropzone:hover {
+  background-color: var(--bg-primary);
+}
+
+.cv-dropzone:focus-visible {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px var(--ring-focus);
+}
+
+.cv-dropzone.is-dragging {
+  border-color: color-mix(in srgb, var(--text-primary) 40%, transparent);
+  background-color: var(--bg-primary);
+}
+
+.cv-dropzone-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+/* Máy cảm ứng không kéo thả được: ẩn câu "Kéo thả tài liệu CV vào đây" */
+@media (hover: none) {
+  .cv-dropzone-title {
+    display: none;
+  }
+}
+
+.cv-dropzone-hint {
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+/* Nút giả <span> mang dáng nút viền h-9 (36px) */
+.cv-dropzone-btn {
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  transition: background-color 0.15s ease;
+}
+
+.cv-dropzone:hover .cv-dropzone-btn {
+  background-color: var(--bg-subtle);
+}
+
+.cv-dropzone-btn-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+/* Trạng thái rỗng: đúng một dòng chữ mờ (components/empty-state.md) */
+.cv-empty-text {
+  padding: 24px 0 8px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* Danh sách dòng tệp chia bằng đường kẻ mảnh (F3) */
+.cv-file-list {
+  list-style: none;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.cv-file-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.cv-file-row + .cv-file-row {
+  border-top: 1px solid var(--border-hairline);
+}
+
+.cv-file-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.cv-file-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.cv-file-top {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Tên tệp cắt giữa, giữ đuôi (T14) */
+.cv-file-name {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.cv-file-name-head {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cv-file-name-tail {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.cv-file-percent {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+/* Tầng dưới cao cố định min-h-5 (20px) để đổi trạng thái không nhảy bố cục (N1) */
+.cv-file-bottom {
+  margin-top: 4px;
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.cv-progress-track {
+  height: 4px;
+  width: 100%;
+  border-radius: 9999px;
+  background-color: color-mix(in srgb, var(--text-primary) 7%, transparent);
+  overflow: hidden;
+}
+
+.cv-progress-fill {
+  height: 4px;
+  border-radius: 9999px;
+  background-color: var(--brand-primary);
+  transition: width 0.2s ease;
+}
+
+.cv-file-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.cv-status-check {
+  width: 14px;
+  height: 14px;
+  color: var(--status-success);
+  flex-shrink: 0;
+}
+
+.cv-file-error-row {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.cv-file-error {
+  font-size: 12px;
+  color: var(--status-danger);
+  line-height: 1.4;
+}
+
+.cv-file-dot {
+  color: var(--text-secondary);
+}
+
+/* Nút chữ Thử lại có vùng bấm nới rộng >= 32px bằng ::before (components/file-upload.md) */
+.cv-retry-link {
+  position: relative;
+  display: inline;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: var(--font-family);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  text-underline-offset: 2px;
+}
+
+.cv-retry-link:hover {
+  text-decoration: underline;
+}
+
+/* Nới vùng chạm cảm ứng trên điện thoại lên tối thiểu 32px (luật N11, file-upload.md) */
+.cv-retry-link::before {
+  content: '';
+  position: absolute;
+  inset: -8px -6px;
+}
+
+/* Cột ✕ rộng cố định 32px (w-8) ở mọi dòng */
+.cv-file-action {
+  width: 32px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cv-remove-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background-color: transparent;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  outline: none;
+}
+
+.cv-remove-btn:hover {
+  background-color: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+/* Toast nổi ở góc dưới phải khi hoàn tất tải */
+.cv-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.cv-toast-icon {
+  color: var(--status-success);
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .cv-upload-page {
+    padding: 24px 16px 60px 16px;
+  }
+
+  .cv-upload-card {
+    padding: 16px;
+  }
+
+  .cv-dropzone {
+    padding: 24px 16px;
+  }
+
+  .cv-page-title {
+    font-size: 20px;
+  }
+}
