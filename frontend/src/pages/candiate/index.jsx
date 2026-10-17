@@ -1,6 +1,63 @@
 import React, { useState, useMemo } from 'react';
 import CandidateSearch from './CandidateSearch';
 import './index.css';
+import { searchJobsApi } from '../../services/jobsService';
+
+//CAC HAM HELPER
+const formatSalary = (salary) => {
+  if (!salary) return 'Thoả thuận'
+  if(salary.negotiable && (!salary.min || !salary.max)) return 'Thoả thuận'
+
+  const minM = salary.min ? `${Math.round(salary.min / 1000000)}` : '';
+  const maxM = salary.max ? `${Math.round(salary.max / 1000000)} triệu` : 'triệu';
+  return minM ? `${minM} - ${maxM} VND` : `${maxM} VND`;
+};
+
+const formatLocation = (location) => {
+  if(!location) return 'Toàn quốc'; 
+  const parts = [];
+  if (location.city) parts.push(location.city);
+  if (location.remote) parts.push('Từ xa (Remote)');
+  return parts.length > 0 ? parts.join(' • ') : 'Toàn quốc';
+};
+
+const formatEmploymentType = (type) => {
+  const map = {
+    full_time: 'Toàn thời gian',
+    part_time: 'Bán thời gian',
+    internship: 'Thực tập',
+    contract: 'Hợp đồng dự án'
+  };
+
+  return map[type] || 'Toàn thời gian';
+};
+
+const formatTimeAgo = (dateString) =>{
+  if (!dateString) return 'Gần đây';
+  const date = new Date(dateString);
+
+  if (Number.isNaN(date.getTime())) return 'Gần đây';
+
+  const diffMs = Date.now() - date.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+
+  if (diffHours < 1) return 'Vừa đăng';
+  if (diffHours < 24) return `${diffHours} giờ trước`;
+
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffDays <= 30) return `${diffDays} ngày trước`;
+  return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+};
+
+const getCompanyLogoText = (title = '', companyId = ''){
+  const words = title.trim().split(/\s+/);
+  if(words.length >= 2){
+    return (words[0][0] + word[0][0]).toUpperCase();
+  }
+  return title.slice(0,2).toUpperCase() || 'JB'
+};
+
 
 // Dữ liệu mẫu danh sách công việc cho ứng viên
 const INITIAL_JOBS = [
@@ -104,6 +161,16 @@ const INITIAL_JOBS = [
 
 const CandidatePage = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  // 1. Quản lý danh sách việc làm và trạng thái từ BE
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  //2. Quản lý phân trang theo DTO
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPage, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+   
   const [filterCriteria, setFilterCriteria] = useState({
     keyword: '',
     industry: '',
