@@ -1,3 +1,14 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --color-brand-primary: #051A24;
+  --color-brand-dark: #0D212C;
+  --color-brand-blue: #2563EB;
+  --color-brand-border: #E2E8F0;
+}
+
 :root {
   /* ===== LIGHT MODE (Mặc định) ===== */
   --bg-primary: #F4F7FB;
@@ -26,7 +37,7 @@
   --status-danger: #EF4444;
   --status-info: #0EA5E9;
   
-  --font-family: 'SF Pro Display', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   
   --radius-sm: 4px;
   --radius-default: 6px;
@@ -43,12 +54,12 @@
 
 [data-theme="dark"] {
   /* ===== DARK MODE ===== */
-  --bg-primary: #0B1019; /* Matching the deep dark blue-black */
-  --bg-surface: #121a28; /* In dark mode, card background blends */
-  --bg-subtle: #162032; /* Tab container */
-  --bg-input: #162032; /* Inputs and social buttons */
+  --bg-primary: #0B1019;
+  --bg-surface: #121a28;
+  --bg-subtle: #162032;
+  --bg-input: #162032;
   
-  --brand-primary: #3B82F6; /* Main actions are bright blue */
+  --brand-primary: #3B82F6;
   --brand-secondary: #60A5FA;
   --brand-accent: rgba(56, 189, 248, 0.15);
   
@@ -76,8 +87,6 @@
 
 * {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 body {
@@ -93,6 +102,54 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* Animations & Effects for KONEK Landing */
+.font-serif-instrument {
+  font-family: 'Instrument Serif', 'Playfair Display', Georgia, serif;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes marquee-reverse {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+.animate-marquee-reverse {
+  display: flex;
+  width: max-content;
+  animation: marquee-reverse 32s linear infinite;
+}
+
+.animate-marquee-reverse:hover {
+  animation-play-state: paused;
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.glass-dark {
+  background: rgba(13, 33, 44, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Button styles */
@@ -114,7 +171,7 @@ a {
 
 .btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25); /* Focus color */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
 .btn-primary {

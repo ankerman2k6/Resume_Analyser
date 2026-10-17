@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Register.css';
 import { registerApi } from '../../services/authService';
+import Logo from '../../components/common/Logo';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -48,6 +49,11 @@ const RegisterPage = () => {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
       </Link>
       <div className="register-container">
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+          <Link to="/" title="Về trang chủ KONEK">
+            <Logo size="lg" />
+          </Link>
+        </div>
         <h1 className="register-title">Tạo tài khoản</h1>
         <p className="register-subtitle">Đăng ký để khám phá công việc và tối ưu hóa sơ yếu lý lịch của bạn.</p>
         

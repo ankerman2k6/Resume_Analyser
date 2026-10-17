@@ -1,83 +1,275 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import Logo from './common/Logo';
+import { Sparkles, Sun, Moon, Menu, X, ArrowRight, ShieldCheck, Calendar } from 'lucide-react';
 import './Navbar.css';
 
 /**
- * Top Navbar component
+ * Top Navbar component for KONEK Platform
  * Features:
- * - Clean layout with CMCV logo on the left
- * - 2 action buttons on the right: Đăng nhập (Login) and Đăng ký (Register)
- * - Dark mode toggle switch
- * - Sticky at top, 64px height, warm minimal style
+ * - Official KONEK SVG Logo with responsive sizing and dark/light mode support
+ * - Landing section anchor links with smooth scroll (#features, #case-studies, #pricing)
+ * - Navigation links to HR and Candidate portals (/hr, /candidate)
+ * - "Yêu cầu Demo" CTA button that triggers the Calibration Booking Modal
+ * - Authentication action buttons (Đăng nhập & Đăng ký)
+ * - Dark / Light theme toggle switch with persistent storage
+ * - Frosted glass backdrop blur on scroll
+ * - Mobile responsive drawer menu
  */
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isDark, setIsDark] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Initialize theme from localStorage or system preference
   useEffect(() => {
-    // Check local storage or system preference on mount
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setIsDark(true);
+    const shouldBeDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+
+    setIsDark(shouldBeDark);
+    if (shouldBeDark) {
       document.documentElement.setAttribute('data-theme', 'dark');
+      document.documentElement.classList.add('dark');
     } else {
-      setIsDark(false);
       document.documentElement.setAttribute('data-theme', 'light');
+      document.documentElement.classList.remove('dark');
     }
   }, []);
 
+  // Listen to scroll to apply frosted glass navbar effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 15);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Close mobile menu on route changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
   const toggleTheme = () => {
-    const newTheme = isDark ? 'light' : 'dark';
-    setIsDark(!isDark);
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
+    const nextDark = !isDark;
+    setIsDark(nextDark);
+    const themeStr = nextDark ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', themeStr);
+    if (nextDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', themeStr);
+  };
+
+  const handleNavClick = (sectionId) => {
+    setIsMobileMenuOpen(false);
+    if (location.pathname !== '/') {
+      navigate(`/#${sectionId}`);
+      setTimeout(() => {
+        const el = document.getElementById(sectionId);
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      return;
+    }
+
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleOpenDemoModal = () => {
+    setIsMobileMenuOpen(false);
+    if (location.pathname !== '/') {
+      navigate('/?demo=true');
+      return;
+    }
+    window.dispatchEvent(
+      new CustomEvent('konek:open-demo', {
+        detail: { plan: 'Phiên Trao đổi Hiệu chỉnh Tổng quan' },
+      })
+    );
   };
 
   return (
-    <header className="navbar">
+    <header className={`navbar ${isScrolled ? 'navbar-scrolled' : ''}`}>
       <div className="navbar-container">
-        {/* Brand / Logo */}
-        <Link to="/" className="navbar-brand">
-          <div className="brand-logo-badge">CV</div>
-          <div>
-            <span className="brand-text">CMCV</span>
-            <span className="brand-subtitle">— Smart Recruitment</span>
-          </div>
+        {/* Brand / Official KONEK Logo */}
+        <Link to="/" className="navbar-brand" aria-label="KONEK Home">
+          <Logo size="md" className="navbar-logo" />
         </Link>
+
+        {/* Center Navigation Links (Desktop) */}
+        <nav className="navbar-links" aria-label="Main navigation">
+          <button
+            type="button"
+            className="navbar-link"
+            onClick={() => handleNavClick('features')}
+          >
+            Trụ cột Chính
+          </button>
+          <button
+            type="button"
+            className="navbar-link"
+            onClick={() => handleNavClick('case-studies')}
+          >
+            Chứng thực
+          </button>
+          <button
+            type="button"
+            className="navbar-link"
+            onClick={() => handleNavClick('pricing')}
+          >
+            Bảng giá
+          </button>
+
+          <span className="navbar-divider" aria-hidden="true" />
+
+          {/* Quick links to role spaces */}
+          <Link to="/hr" className="navbar-link navbar-link-portal">
+            Nhà tuyển dụng
+          </Link>
+          <Link to="/candidate" className="navbar-link navbar-link-portal">
+            Ứng viên
+          </Link>
+        </nav>
 
         {/* Action Buttons on the Right */}
         <div className="navbar-actions">
+
+
           <button
             type="button"
-            className="btn btn-secondary"
+            className="navbar-btn-auth navbar-btn-login"
             onClick={() => navigate('/login')}
           >
             Đăng nhập
           </button>
+
           <button
             type="button"
-            className="btn btn-primary"
+            className="navbar-btn-auth navbar-btn-register"
             onClick={() => navigate('/register')}
           >
             Đăng ký
           </button>
-          
-          <button 
-            type="button" 
+
+          {/* Dark Mode Switcher */}
+          <button
+            type="button"
             className="theme-toggle-btn"
             onClick={toggleTheme}
-            aria-label="Toggle dark mode"
+            aria-label={isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}
+            title={isDark ? 'Chế độ Sáng' : 'Chế độ Tối'}
           >
             {isDark ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+              <Sun className="w-4.5 h-4.5 text-amber-400 rotate-0 transition-transform" />
             ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+              <Moon className="w-4.5 h-4.5 text-slate-700 transition-transform" />
+            )}
+          </button>
+
+          {/* Mobile Menu Toggle Button */}
+          <button
+            type="button"
+            className="navbar-mobile-toggle"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label={isMobileMenuOpen ? 'Đóng menu' : 'Mở menu'}
+            aria-expanded={isMobileMenuOpen}
+          >
+            {isMobileMenuOpen ? (
+              <X className="w-6 h-6 text-slate-800 dark:000000" />
+            ) : (
+              <Menu className="w-6 h-6 text-slate-800 dark:000000" />
             )}
           </button>
         </div>
       </div>
+
+      {/* Mobile Drawer Navigation */}
+      {isMobileMenuOpen && (
+        <div className="navbar-mobile-menu animate-slide-down">
+          <div className="navbar-mobile-links">
+            <button
+              type="button"
+              className="navbar-mobile-link"
+              onClick={() => handleNavClick('features')}
+            >
+              Trụ cột Chính
+            </button>
+            <button
+              type="button"
+              className="navbar-mobile-link"
+              onClick={() => handleNavClick('case-studies')}
+            >
+              Chứng thực Thực tế
+            </button>
+            <button
+              type="button"
+              className="navbar-mobile-link"
+              onClick={() => handleNavClick('pricing')}
+            >
+              Bảng giá & Gói dịch vụ
+            </button>
+
+            <div className="navbar-mobile-divider" />
+
+            <Link
+              to="/hr"
+              className="navbar-mobile-link text-[#2563EB] font-medium"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Cổng Nhà tuyển dụng (HR)
+            </Link>
+            <Link
+              to="/candidate"
+              className="navbar-mobile-link text-[#2563EB] font-medium"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Cổng Ứng viên (Candidate)
+            </Link>
+          </div>
+
+          <div className="navbar-mobile-actions">
+            <button
+              type="button"
+              className="navbar-mobile-demo-btn"
+              onClick={handleOpenDemoModal}
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Yêu cầu Demo KONEK
+            </button>
+
+            <div className="navbar-mobile-auth-grid">
+              <button
+                type="button"
+                className="btn btn-secondary w-full"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  navigate('/login');
+                }}
+              >
+                Đăng nhập
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary w-full"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  navigate('/register');
+                }}
+              >
+                Đăng ký
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { loginApi } from '../../services/authService';
+import Logo from '../../components/common/Logo';
 import './Login.css';
 
 const LoginPage = () => {
@@ -54,6 +55,11 @@ const LoginPage = () => {
         </svg>
       </Link>
       <div className="login-container">
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+          <Link to="/" title="Về trang chủ KONEK">
+            <Logo size="lg" />
+          </Link>
+        </div>
         <h1 className="login-title">Chào mừng trở lại</h1>
         <p className="login-subtitle">Đăng nhập để truy cập công việc và thông tin sơ yếu lý lịch của bạn.</p>
         
