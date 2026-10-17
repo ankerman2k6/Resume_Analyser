@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import HRPage from './pages/hr/index';
+import DashboardPage from './pages/hr/DashboardPage';
 import CandidatePage from './pages/candiate/index';
 import CandidateProfile from './pages/candiate/CandidateProfile';
 import CVUploadPage from './pages/cv/index';
@@ -27,6 +28,7 @@ function App() {
 
           {/* Phân hệ Nhà tuyển dụng: không có Navbar ở trên */}
           <Route path="/hr" element={<HRPage />} />
+          <Route path="/hr/dashboard" element={<DashboardPage />} />
 
           {/* Các trang xác thực độc lập */}
           <Route path="/login" element={<LoginPage />} />
