@@ -9,6 +9,7 @@ import HRPage from './pages/hr/index';
 import CandidatePage from './pages/candiate/index';
 import CandidateProfile from './pages/candiate/CandidateProfile';
 import CVUploadPage from './pages/cv/index';
+import RecruiterSettings from './pages/hr/RecruiterSettings';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
 
           {/* Phân hệ Nhà tuyển dụng: không có Navbar ở trên */}
           <Route path="/hr" element={<HRPage />} />
+          <Route path="/hr/settings" element={<RecruiterSettings />} />
 
           {/* Các trang xác thực độc lập */}
           <Route path="/login" element={<LoginPage />} />
