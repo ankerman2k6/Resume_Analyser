@@ -24,4 +24,6 @@ public interface JobRepository extends MongoRepository<Job, ObjectId> {
             ObjectId recruiterId,
             String status
     );
+
+    List<Job> findByStatus(String status);
 }

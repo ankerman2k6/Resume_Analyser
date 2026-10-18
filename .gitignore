@@ -2,3 +2,5 @@
 .env.*
 !.env.example
 ci-artifacts/
+uploads/
+.idea/discord.xml

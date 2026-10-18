@@ -90,5 +90,48 @@ public class GlobalExceptionHandler {
                     "status", 409,
                     "message", ex.getMessage()
             ));
-}
+        }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<Map<String, Object>> handleBadRequest(BadRequestException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                        "status", 400,
+                        "message", ex.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleMaxSizeException(
+            org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                        "status", 400,
+                        "message", "Kích thước file vượt quá giới hạn cho phép (tối đa 5MB)"
+                ));
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MultipartException.class)
+    public ResponseEntity<Map<String, Object>> handleMultipartException(
+            org.springframework.web.multipart.MultipartException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                        "status", 400,
+                        "message", "Yêu cầu tải file không hợp lệ hoặc thiếu file đính kèm"
+                ));
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.support.MissingServletRequestPartException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingPart(
+            org.springframework.web.multipart.support.MissingServletRequestPartException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                        "status", 400,
+                        "message", "Thiếu tham số '" + ex.getRequestPartName() + "'. Vui lòng đặt Key chính xác là 'file' (chữ thường)"
+                ));
+    }
 }

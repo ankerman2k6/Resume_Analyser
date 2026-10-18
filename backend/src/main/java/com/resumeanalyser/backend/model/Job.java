@@ -6,6 +6,7 @@ import org.springframework.data.annotation.Id;
 import com.resumeanalyser.backend.config.ObjectIdStringSerializer;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -33,10 +34,10 @@ public class Job {
     private Salary salary;
     private Experience experience;
 
-    // Chưa biết cấu trúc chi tiết của requirements
+    // Keep all requirement fields, including education, GPA and languages.
     private Map<String, Object> requirements;
 
-    private List<String> benefits;
+    private List<String> benefits = new ArrayList<>();
 
     private Instant deadline;
     private String status;
@@ -176,7 +177,16 @@ public class Job {
         private String address;
         private String city;
         private String country;
-        private boolean remote;
+        private Boolean remote;
+
+        public Location() {}
+
+        public Location(String address, String city, String country, Boolean remote) {
+            this.address = address;
+            this.city = city;
+            this.country = country;
+            this.remote = remote;
+        }
 
         public String getAddress() { return address; }
         public void setAddress(String address) { this.address = address; }
@@ -187,15 +197,25 @@ public class Job {
         public String getCountry() { return country; }
         public void setCountry(String country) { this.country = country; }
 
-        public boolean isRemote() { return remote; }
-        public void setRemote(boolean remote) { this.remote = remote; }
+        public Boolean getRemote() { return remote; }
+        public boolean isRemote() { return Boolean.TRUE.equals(remote); }
+        public void setRemote(Boolean remote) { this.remote = remote; }
     }
 
     public static class Salary {
         private Long min;
         private Long max;
         private String currency;
-        private boolean negotiable;
+        private Boolean negotiable;
+
+        public Salary() {}
+
+        public Salary(Long min, Long max, String currency, Boolean negotiable) {
+            this.min = min;
+            this.max = max;
+            this.currency = currency;
+            this.negotiable = negotiable;
+        }
 
         public Long getMin() { return min; }
         public void setMin(Long min) { this.min = min; }
@@ -206,14 +226,23 @@ public class Job {
         public String getCurrency() { return currency; }
         public void setCurrency(String currency) { this.currency = currency; }
 
-        public boolean isNegotiable() { return negotiable; }
-        public void setNegotiable(boolean negotiable) { this.negotiable = negotiable; }
+        public Boolean getNegotiable() { return negotiable; }
+        public boolean isNegotiable() { return Boolean.TRUE.equals(negotiable); }
+        public void setNegotiable(Boolean negotiable) { this.negotiable = negotiable; }
     }
 
     public static class Experience {
         private Integer minYears;
         private Integer maxYears;
         private String level;
+
+        public Experience() {}
+
+        public Experience(Integer minYears, Integer maxYears, String level) {
+            this.minYears = minYears;
+            this.maxYears = maxYears;
+            this.level = level;
+        }
 
         public Integer getMinYears() { return minYears; }
         public void setMinYears(Integer minYears) { this.minYears = minYears; }
@@ -223,5 +252,23 @@ public class Job {
 
         public String getLevel() { return level; }
         public void setLevel(String level) { this.level = level; }
+    }
+
+    public static class Requirements {
+        private List<String> requiredSkills = new ArrayList<>();
+        private List<String> preferredSkills = new ArrayList<>();
+
+        public Requirements() {}
+
+        public Requirements(List<String> requiredSkills, List<String> preferredSkills) {
+            this.requiredSkills = requiredSkills != null ? requiredSkills : new ArrayList<>();
+            this.preferredSkills = preferredSkills != null ? preferredSkills : new ArrayList<>();
+        }
+
+        public List<String> getRequiredSkills() { return requiredSkills; }
+        public void setRequiredSkills(List<String> requiredSkills) { this.requiredSkills = requiredSkills; }
+
+        public List<String> getPreferredSkills() { return preferredSkills; }
+        public void setPreferredSkills(List<String> preferredSkills) { this.preferredSkills = preferredSkills; }
     }
 }
