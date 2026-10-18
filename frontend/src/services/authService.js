@@ -18,7 +18,7 @@ export const loginApi = async (email, password, role) => {
 
 // Api đăng ký người dùng
 export const registerApi = async (email, password, role) => {
-  const respone = await fetch('api/auth/register', {
+  const respone = await fetch('/api/auth/register', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

@@ -1,0 +1,12 @@
+package com.resumeanalyser.backend.dto;
+
+import java.time.Instant;
+
+public record UpdateInterviewRequest(
+        Instant scheduledAt,
+        Integer durationMinutes,
+        String mode,
+        String meetingLink,
+        String location,
+        String notes
+) {}

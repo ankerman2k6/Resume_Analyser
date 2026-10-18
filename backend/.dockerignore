@@ -5,3 +5,7 @@ target
 *.iml
 *.ipr
 .vscode
+.git
+.env
+.env.*
+*.log
