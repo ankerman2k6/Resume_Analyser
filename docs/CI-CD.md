@@ -15,7 +15,7 @@ The pipeline deploys to the Docker daemon configured **on the selected Jenkins a
 ## Pipeline stages
 
 1. **Checkout Source**: disables implicit SCM checkout, checks out exactly `backend/hr-dashboard`, and generates `v0.BUILD_NUMBER` and `v0.BUILD_NUMBER-<12-character-commit>`. Verifies Node 20, Java 21, Docker daemon access, and Compose `--wait-timeout` support.
-2. **Test Code**: runs frontend `npm ci` / `npm test` and backend `chmod +x ./mvnw` followed by `./mvnw -B test` in parallel. Test failures stop the pipeline. JUnit reports are archived. Existing Mongo integration tests are opt-in via `RESUME_TEST_MONGO_URI`; without it six integration tests are skipped by their existing annotation. Unit tests still run. Frontend uses `--passWithNoTests` to permit an empty test suite; actual failing tests still fail the stage. For integration tests use a dedicated disposable Mongo instance and the required URI `mongodb://127.0.0.1:<port>/resume_analyser_test`, never an application database.
+2. **Test Code**: runs frontend `npm ci` / `npm test` and backend `chmod +x ./mvnw` followed by `./mvnw -B test` in parallel. Test failures stop the pipeline. JUnit reports are archived. Mongo integration suites are opt-in via `RESUME_TEST_MONGO_URI`; without it those suites are skipped by their existing annotation. Unit tests still run. Frontend uses `--passWithNoTests` to permit an empty test suite; actual failing tests still fail the stage. For integration tests use a dedicated disposable Mongo instance and the required URI `mongodb://127.0.0.1:<port>/resume_analyser_test`, never an application database.
 3. **Build & Push Docker Images**: builds contexts `./frontend`, `./backend`, `./mongo-init` before pushing any image. Publishes both tags for all three images. Uses credential `dockerhub-credentials` and `--password-stdin`; temporary Docker login files are deleted after use. Registry pushes are not atomic; a push failure can leave a subset of tags, but deployment does not proceed.
 4. **Deploy Docker Compose**: writes image names and commit version to `.env`, injects the runtime JWT secret, validates Compose without printing secrets, creates `resume-network` only if absent, pulls the exact version, and runs `up -d --no-build --force-recreate --wait --wait-timeout 180`. Mongo ping, backend `/actuator/health` (including Mongo connectivity), and Nginx `/healthz` must pass. Failure marks the pipeline FAILED and archives status/logs. No automatic rollback is implemented; partial deployments require operator inspection.
 
@@ -34,7 +34,7 @@ In **Manage Jenkins → Tools**:
 Create credentials in the job's scope:
 
 - **Username with password**, ID `dockerhub-credentials`, username `bacdepzaiz7`, password a Docker Hub access token with push/pull rights to all three repositories.
-- **Secret text**, ID `resume-jwt-secret`, a stable random JWT signing secret of at least 32 bytes. Keep it stable between deployments to preserve token validity. It overrides the application's existing development value via `JWT_SECRET`; it is not written into `.env` or baked into images.
+- **Secret text**, ID `resume-jwt-secret`, a stable random JWT signing secret of at least 32 bytes. The backend requires `JWT_SECRET`; there is no built-in signing secret. Keep it stable between deployments to preserve token validity. Jenkins injects it at runtime without writing it into `.env` or baking it into images. Rotate any previously hardcoded signing secret when deploying this change; existing tokens signed with that value will become invalid.
 - For a private GitHub repository, add a Git credential and its `credentialsId` to the explicit `git` step as well as the job SCM settings. No Git credentials are needed for public read access.
 
 The local controller's global credentials file contains IDs `dockerhub-credentials` and `resume-jwt-secret`; their types, job scope and values have not been validated, and their secret values were not printed. Configure a Linux agent with Git, JDK 21, Node tool support, Docker CLI, Compose supporting `up --wait --wait-timeout`, and authorized access to the intended deployment daemon. An agent on the deployment host or a preconfigured remote Docker connection can be used. If Jenkins runs in Docker, an administrator must explicitly decide how to grant daemon access; this change does not mount the Docker socket or enable privileged mode. Ensure paths/network/daemon permissions belong to the intended deployment environment.
@@ -117,3 +117,22 @@ References: [Compose health/wait behavior](https://docs.docker.com/reference/cli
 - No GitHub push, Docker Hub push, application deployment, database migration, volume deletion or Jenkins permission change was performed.
 
 Changed/added files: `Jenkinsfile`, `docker-compose.yml`, `.env.example`, `.gitignore`, `.gitattributes`, `README.md`, `docs/CI-CD.md`; `frontend/Dockerfile`, `frontend/.dockerignore`, `frontend/nginx.conf`, `frontend/src/services/authService.js`, `frontend/src/services/authService.test.js`; `backend/Dockerfile`, `backend/.dockerignore`, `backend/pom.xml`, `backend/src/main/resources/application.properties`, `backend/src/main/java/com/resumeanalyser/backend/security/SecurityConfig.java`, `backend/src/test/java/com/resumeanalyser/backend/HealthEndpointTests.java`; `mongo-init/Dockerfile`, `mongo-init/.dockerignore`, `mongo-init/01-init.js`.
+
+## Backend verification after the HR/search/CV merge (2026-10-18)
+
+On Windows with Java 21.0.10, Maven Wrapper 3.9.16 and a dedicated MongoDB 8.2 instance bound to localhost, run from the repository root:
+
+```powershell
+$env:RESUME_TEST_MONGO_URI = 'mongodb://127.0.0.1:<dedicated-test-port>/resume_analyser_test'
+.\backend\mvnw.cmd -f backend/pom.xml clean verify
+```
+
+The integration suites reject non-local/non-test URIs, generate separate UUID database names, and drop only their own databases. Tests supply signing secrets independently of deployment secrets. The verified result was **85 tests passed, 0 failures, 0 errors, 0 skipped**, and the executable backend JAR was packaged successfully.
+
+Coverage includes public published-job search and details, literal keyword matching, filters, pagination, HR CRUD and ownership, rich requirements, dashboard aggregations, real login/JWT authorization, interviews, per-user CV access, PDF validation and the exact 5MB upload boundary. Upload failure tests verify that interrupted writes and failed metadata saves leave no orphaned file.
+
+Each file remains limited to 5MB. The backend permits a 6MB multipart request to accommodate headers, and the frontend Nginx `/api/` location uses the matching `client_max_body_size 6m`. Frontend Vite and Nginx forward same-origin `/api/` requests; the backend does not add permissive cross-origin access.
+
+`docker compose --env-file .env.example config --quiet` passed with a test-only environment secret. The Docker daemon was unavailable, so Docker image builds, Nginx runtime validation and end-to-end Compose deployment were not run.
+
+**Accepted deployment limitation:** Compose still has no persistent volume for `/app/uploads`, as explicitly requested during this review. Recreating the backend container can lose CV files while MongoDB metadata remains. Preserve or back up these files before recreating a deployed container; durable upload storage remains follow-up work.

@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "spring.mongodb.uri=mongodb://127.0.0.1:1/resume_analyser_test_health?serverSelectionTimeoutMS=100",
+        "jwt.secret=health-test-only-secret-at-least-32-bytes",
         "logging.level.root=ERROR" })
 class HealthEndpointTests {
     @Value("${local.server.port}")

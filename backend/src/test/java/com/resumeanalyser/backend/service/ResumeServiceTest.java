@@ -8,6 +8,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -18,6 +20,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.dao.DataAccessResourceFailureException;
 
 import com.resumeanalyser.backend.dto.ResumeResponse;
 import com.resumeanalyser.backend.exception.BadRequestException;
@@ -155,5 +158,62 @@ class ResumeServiceTest {
         );
 
         assertEquals("Tệp tin tải lên không phải là định dạng PDF hợp lệ", ex.getMessage());
+    }
+
+    @Test
+    void uploadResume_removesFileWhenMetadataCannotBeSaved() throws IOException {
+        MockMultipartFile file = new MockMultipartFile("file", "cv.pdf", "application/pdf",
+                "%PDF-1.4 valid header".getBytes());
+        var databaseFailure = new DataAccessResourceFailureException("Test database unavailable");
+        when(resumeRepository.save(any(Resume.class))).thenThrow(databaseFailure);
+
+        assertEquals(databaseFailure, assertThrows(DataAccessResourceFailureException.class,
+                () -> resumeService.uploadResume(file, testUser)));
+        try (var files = Files.list(tempUploadDir)) {
+            assertEquals(0, files.count());
+        }
+    }
+
+    @Test
+    void uploadResume_acceptsPdfWhoseHeaderArrivesInShortReads() {
+        byte[] content = "%PDF-1.4 valid header".getBytes();
+        MockMultipartFile file = new MockMultipartFile("file", "cv.pdf", "application/pdf", content) {
+            @Override
+            public InputStream getInputStream() {
+                return new ByteArrayInputStream(content) {
+                    @Override
+                    public synchronized int read(byte[] bytes, int offset, int length) {
+                        return super.read(bytes, offset, Math.min(length, 1));
+                    }
+                };
+            }
+        };
+        when(resumeRepository.save(any(Resume.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        assertEquals("UPLOADED", resumeService.uploadResume(file, testUser).getStatus());
+    }
+
+    @Test
+    void uploadResume_removesPartialFileWhenStreamFailsDuringCopy() throws IOException {
+        MockMultipartFile file = new MockMultipartFile("file", "cv.pdf", "application/pdf", "%PDF-".getBytes()) {
+            private int opened;
+            @Override
+            public InputStream getInputStream() {
+                if (opened++ == 0) {
+                    return new ByteArrayInputStream("%PDF-".getBytes());
+                }
+                return new InputStream() {
+                    private int reads;
+                    @Override
+                    public int read() throws IOException {
+                        if (reads++ < 5) return '%';
+                        throw new IOException("Test stream interrupted");
+                    }
+                };
+            }
+        };
+        assertThrows(RuntimeException.class, () -> resumeService.uploadResume(file, testUser));
+        try (var files = Files.list(tempUploadDir)) {
+            assertEquals(0, files.count());
+        }
     }
 }

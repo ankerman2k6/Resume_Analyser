@@ -81,7 +81,7 @@ public class JobService {
         throw new IllegalArgumentException("Deadline phải ở tương lai");
     }
 
-    validateCreateJobSchema(request);
+    validateJobSchema(request);
 
     //Tạo đối tượng job
     Job job = new Job();
@@ -115,7 +115,7 @@ public class JobService {
     return jobRepository.save(job);
     }
 
-    private static void validateCreateJobSchema(CreateJobRequest request) {
+    private static void validateJobSchema(CreateJobRequest request) {
         if (request.description() == null) {
             throw new IllegalArgumentException("description là trường bắt buộc");
         }
@@ -257,6 +257,8 @@ public class JobService {
                     HttpStatus.NOT_FOUND,
                     "Job not found"
             ));
+
+    validateJobSchema(request);
 
     // Cập nhật thông tin
     job.setTitle(request.title());

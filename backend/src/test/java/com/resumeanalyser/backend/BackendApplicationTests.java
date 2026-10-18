@@ -15,7 +15,9 @@ import com.resumeanalyser.backend.model.Job;
 import com.resumeanalyser.backend.model.User;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(properties = "spring.mongodb.uri=mongodb://127.0.0.1:1/resume_analyser_test_mapping?serverSelectionTimeoutMS=100")
+@SpringBootTest(properties = {
+        "spring.mongodb.uri=mongodb://127.0.0.1:1/resume_analyser_test_mapping?serverSelectionTimeoutMS=100",
+        "jwt.secret=mapping-test-only-secret-at-least-32-bytes" })
 class BackendApplicationTests {
 
     @Autowired

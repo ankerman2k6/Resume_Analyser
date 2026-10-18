@@ -58,6 +58,7 @@ public class ResumeService {
                 Files.copy(inputStream, targetLocation, StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (IOException ex) {
+            deleteFailedUpload(targetLocation, ex);
             throw new RuntimeException("Không thể lưu trữ file CV: " + ex.getMessage(), ex);
         }
 
@@ -74,9 +75,21 @@ public class ResumeService {
         resume.setUploadedAt(LocalDateTime.now());
         resume.setUpdatedAt(LocalDateTime.now());
 
-        Resume savedResume = resumeRepository.save(resume);
+        try {
+            Resume savedResume = resumeRepository.save(resume);
+            return mapToResponse(savedResume);
+        } catch (RuntimeException ex) {
+            deleteFailedUpload(targetLocation, ex);
+            throw ex;
+        }
+    }
 
-        return mapToResponse(savedResume);
+    private void deleteFailedUpload(Path targetLocation, Exception failure) {
+        try {
+            Files.deleteIfExists(targetLocation);
+        } catch (IOException cleanupFailure) {
+            failure.addSuppressed(cleanupFailure);
+        }
     }
 
     public List<ResumeResponse> getUserResumes(User user) {
@@ -117,9 +130,8 @@ public class ResumeService {
 
         // 4. Kiểm tra Magic Bytes (Header thực tế của file PDF: %PDF-) // 25 50 44 46
         try (InputStream is = file.getInputStream()) {
-            byte[] header = new byte[5];
-            int read = is.read(header);
-            if (read < 5 || header[0] != 0x25 || header[1] != 0x50 || header[2] != 0x44 || header[3] != 0x46 || header[4] != 0x2D) {
+            byte[] header = is.readNBytes(5);
+            if (header.length < 5 || header[0] != 0x25 || header[1] != 0x50 || header[2] != 0x44 || header[3] != 0x46 || header[4] != 0x2D) {
                 throw new BadRequestException("Tệp tin tải lên không phải là định dạng PDF hợp lệ");
             }
         } catch (IOException e) {
