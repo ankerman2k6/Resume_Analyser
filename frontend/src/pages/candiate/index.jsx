@@ -50,10 +50,10 @@ const formatTimeAgo = (dateString) =>{
   return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
 };
 
-const getCompanyLogoText = (title = '', companyId = ''){
+const getCompanyLogoText = (title = '', companyId = '') => {
   const words = title.trim().split(/\s+/);
   if(words.length >= 2){
-    return (words[0][0] + word[0][0]).toUpperCase();
+    return (words[0][0] + words[1][0]).toUpperCase();
   }
   return title.slice(0,2).toUpperCase() || 'JB'
 };

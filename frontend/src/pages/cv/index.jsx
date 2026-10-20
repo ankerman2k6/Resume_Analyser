@@ -172,12 +172,12 @@ const CVUploadPage = () => {
           it.id === itemId
             ? {
               ...it,
-              id: created.id || itemId,
-              originalFileName: created.originalFileName || file.name,
+              id: created.id || created._id || itemId,
+              originalFileName: created.originalFileName || created.source?.fileName || file.name,
               fileSize: created.fileSize || file.size,
               status: 'uploaded',
               progress: 100,
-              uploadedAtLabel: formatUploadedDate(created.uploadedAt),
+              uploadedAtLabel: formatUploadedDate(created.uploadedAt || created.createdAt),
               errorMessage: null
             }
             : it
