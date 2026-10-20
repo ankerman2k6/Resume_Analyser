@@ -1,6 +1,6 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import MainLayout from './layouts/MainLayout';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/auth/LoginPage';
@@ -9,6 +9,17 @@ import HRPage from './pages/hr/index';
 import CandidatePage from './pages/candiate/index';
 import CandidateProfile from './pages/candiate/CandidateProfile';
 import CVUploadPage from './pages/cv/index';
+
+const RequireAuth = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  return children;
+};
 
 function App() {
   return (
@@ -21,8 +32,22 @@ function App() {
             <Route path="candidate" element={<CandidatePage />} />
             <Route path="candidate/profile" element={<CandidateProfile />} />
             <Route path="profile" element={<Navigate to="/candidate/profile" replace />} />
-            <Route path="cv" element={<CVUploadPage />} />
-            <Route path="candidate/cv" element={<CVUploadPage />} />
+            <Route
+              path="cv"
+              element={(
+                <RequireAuth>
+                  <CVUploadPage />
+                </RequireAuth>
+              )}
+            />
+            <Route
+              path="candidate/cv"
+              element={(
+                <RequireAuth>
+                  <CVUploadPage />
+                </RequireAuth>
+              )}
+            />
           </Route>
 
           {/* Phân hệ Nhà tuyển dụng: không có Navbar ở trên */}

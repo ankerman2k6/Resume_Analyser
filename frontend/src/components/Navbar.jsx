@@ -49,6 +49,15 @@ const Navbar = () => {
   const isCvActive = location.pathname.startsWith('/cv');
   const isHrRoute = location.pathname.startsWith('/hr');
 
+  const handleCreateCvClick = () => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: { pathname: '/cv' } } });
+      return;
+    }
+
+    navigate('/cv');
+  };
+
   // Chỉ hiển thị Navbar ở phân hệ ứng viên hoặc khi chưa đăng nhập; ẩn ở phân hệ nhà tuyển dụng
   if (isHrRoute) {
     return null;
@@ -98,7 +107,7 @@ const Navbar = () => {
             <button
               type="button"
               className={`btn-nav btn-nav--primary ${isCvActive ? 'is-active' : ''}`}
-              onClick={() => navigate('/cv')}
+              onClick={handleCreateCvClick}
               aria-current={isCvActive ? 'page' : undefined}
             >
               <svg

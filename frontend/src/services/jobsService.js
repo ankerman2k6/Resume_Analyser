@@ -3,7 +3,7 @@
 export const searchJobsApi = async ({
     keyword = '',
     profession = '',
-    location = 0,
+    location = '',
     page = 0,
     size = 10
 } = {}) => {
@@ -24,7 +24,10 @@ export const searchJobsApi = async ({
     queryParam.append('page', page)
     queryParam.append('size', size)
 
-    const respone = await fetch(`/api/jobs/search${queryParam.toString()}`, {
+    const queryString = queryParam.toString();
+    const url = queryString ? `/api/jobs/search?${queryString}` : '/api/jobs/search';
+
+    const respone = await fetch(url, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'

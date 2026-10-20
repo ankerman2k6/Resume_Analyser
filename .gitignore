@@ -14,3 +14,5 @@
 ci-artifacts/
 uploads/
 .idea/discord.xml
+.codex/*
+graphify-out/*

@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import CandidateSearch from './CandidateSearch';
 import './index.css';
 import { searchJobsApi } from '../../services/jobsService';
@@ -60,104 +61,7 @@ const getCompanyLogoText = (title = '', companyId = '') => {
 
 
 // Dữ liệu mẫu danh sách công việc cho ứng viên
-const INITIAL_JOBS = [
-  {
-    id: 1,
-    title: 'Senior Frontend Developer (ReactJS / TypeScript)',
-    company: 'FPT Software & Solutions',
-    logo: 'FP',
-    salary: '25 - 40 triệu',
-    location: 'TP. Hồ Chí Minh',
-    industryId: 'it',
-    industryName: 'Công nghệ thông tin',
-    type: 'Toàn thời gian',
-    posted: '2 giờ trước'
-  },
-  {
-    id: 2,
-    title: 'UI/UX Designer (Figma, Design System)',
-    company: 'VNG Corporation',
-    logo: 'VN',
-    salary: '18 - 28 triệu',
-    location: 'Hà Nội',
-    industryId: 'design',
-    industryName: 'Thiết kế / Sáng tạo',
-    type: 'Toàn thời gian',
-    posted: '5 giờ trước'
-  },
-  {
-    id: 3,
-    title: 'Fullstack NodeJS & React Engineer',
-    company: 'Techcombank Digital Lab',
-    logo: 'TC',
-    salary: '30 - 50 triệu',
-    location: 'Đà Nẵng',
-    industryId: 'it',
-    industryName: 'Công nghệ thông tin',
-    type: 'Toàn thời gian',
-    posted: '1 ngày trước'
-  },
-  {
-    id: 4,
-    title: 'Digital Marketing Lead (SEO, Performance)',
-    company: 'Shopee Vietnam',
-    logo: 'SP',
-    salary: '20 - 35 triệu',
-    location: 'TP. Hồ Chí Minh',
-    industryId: 'marketing',
-    industryName: 'Marketing / Truyền thông',
-    type: 'Toàn thời gian',
-    posted: '1 ngày trước'
-  },
-  {
-    id: 5,
-    title: 'Chuyên viên Kế toán Tổng hợp & Thuế',
-    company: 'Vinamilk Group',
-    logo: 'VM',
-    salary: '15 - 22 triệu',
-    location: 'Bình Dương',
-    industryId: 'accounting',
-    industryName: 'Kế toán / Kiểm toán',
-    type: 'Toàn thời gian',
-    posted: '2 ngày trước'
-  },
-  {
-    id: 6,
-    title: 'Backend Developer (Java, Spring Boot, Microservices)',
-    company: 'Viettel Telecom',
-    logo: 'VT',
-    salary: '22 - 38 triệu',
-    location: 'Hà Nội',
-    industryId: 'it',
-    industryName: 'Công nghệ thông tin',
-    type: 'Toàn thời gian',
-    posted: '3 ngày trước'
-  },
-  {
-    id: 7,
-    title: 'Chuyên viên Quản trị Nhân sự & Tuyển dụng',
-    company: 'Masan Consumer',
-    logo: 'MS',
-    salary: '16 - 25 triệu',
-    location: 'Cần Thơ',
-    industryId: 'hr',
-    industryName: 'Nhân sự / Tuyển dụng',
-    type: 'Toàn thời gian',
-    posted: '3 ngày trước'
-  },
-  {
-    id: 8,
-    title: 'Chuyên viên Phân tích Tài chính Doanh nghiệp',
-    company: 'VPBank Securities',
-    logo: 'VP',
-    salary: '20 - 32 triệu',
-    location: 'Hải Phòng',
-    industryId: 'finance',
-    industryName: 'Tài chính / Ngân hàng',
-    type: 'Toàn thời gian',
-    posted: '4 ngày trước'
-  }
-];
+
 
 const CandidatePage = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -168,7 +72,7 @@ const CandidatePage = () => {
 
   //2. Quản lý phân trang theo DTO
   const [currentPage, setCurrentPage] = useState(0);
-  const [totalPage, setTotalPages] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
    
   const [filterCriteria, setFilterCriteria] = useState({
@@ -178,41 +82,59 @@ const CandidatePage = () => {
     isAllProvinces: false
   });
 
+  //4 hàm thực hiện gọi API tìm kiếm việc làm từ backend
+  const fetchJobs = useCallback(async(criteria, page) => {
+    setLoading(true);
+    setError(null);
+
+    try{
+      // Chuẩn bị tham số theo đúng backend API quy định:
+      // - keyword: từ khoá
+      // - profession: nếu chọn ngành nghề
+      // - location: nếu chọn tỉnh thành (lấy tỉnh đầu tiên hoặc nối chuỗi)
+      const locationParam = criteria.provinces && criteria.provinces.length > 0  && !criteria.isAllProvinces
+      ? criteria.provinces[0] 
+      : '';
+
+      const data = await searchJobsApi({
+        keyword: criteria.keyword,
+        profession: criteria.industry,
+        location: locationParam,
+        page: page,
+        size: 10
+      });
+
+      setJobs(data.content || []);
+      setTotalPages(data.totalPages || 0);
+      setTotalElements(data.totalElements || 0);
+      setCurrentPage(data.page ?? 0);
+    } catch (error) {
+      console.error('Lỗi khi tìm kiếm việc làm:', error);
+      setError(error.message || 'Đã xảy ra lỗi khi tìm kiếm việc làm.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // 5. Tự động fetch dữ liệu khi filterCriteria hoặc currentPage thay đổi
+  useEffect(() => {
+    fetchJobs(filterCriteria, currentPage);
+  }, [filterCriteria, currentPage]);
+
   // Xử lý callback khi người dùng tìm kiếm từ CandidateSearch
   const handleSearch = (criteria) => {
     setFilterCriteria(criteria);
+    setCurrentPage(0); // Reset về trang đầu tiên khi tìm kiếm mới
   };
+  // 7. Chuyển trang
+  const handlePageChange = (newPage) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
+      window.scrollTo({ top: 400, behavior: 'smooth' });
+    }
+  }
 
-  // Lọc danh sách công việc dựa theo tiêu chí
-  const filteredJobs = useMemo(() => {
-    return INITIAL_JOBS.filter((job) => {
-      // 1. Lọc theo từ khoá
-      if (filterCriteria.keyword.trim()) {
-        const query = filterCriteria.keyword.toLowerCase().trim();
-        const matchTitle = job.title.toLowerCase().includes(query);
-        const matchCompany = job.company.toLowerCase().includes(query);
-        if (!matchTitle && !matchCompany) return false;
-      }
-
-      // 2. Lọc theo ngành nghề
-      if (filterCriteria.industry) {
-        if (job.industryId !== filterCriteria.industry) return false;
-      }
-
-      // 3. Lọc theo vị trí thành phố (tỉnh thành)
-      if (
-        filterCriteria.provinces.length > 0 &&
-        !filterCriteria.isAllProvinces
-      ) {
-        const matchProvince = filterCriteria.provinces.some((p) =>
-          job.location.toLowerCase().includes(p.toLowerCase())
-        );
-        if (!matchProvince) return false;
-      }
-
-      return true;
-    });
-  }, [filterCriteria]);
+  
 
   return (
     <div className="candidate-page-container">
@@ -247,62 +169,123 @@ const CandidatePage = () => {
           <div className="results-header">
             <h2 className="results-title">Cơ hội việc làm gợi ý</h2>
             <span className="results-count">
-              Tìm thấy <strong>{filteredJobs.length}</strong> việc làm phù hợp
+              Tìm thấy <strong>{totalElements}</strong> việc làm phù hợp
             </span>
           </div>
 
-          {filteredJobs.length > 0 ? (
-            <div className="jobs-list-grid">
-              {filteredJobs.map((job) => (
-                <article key={job.id} className="job-card">
-                  <div className="job-card-main">
-                    <div className="job-company-logo" aria-hidden="true">
-                      {job.logo}
-                    </div>
-                    <div className="job-details">
-                      <div className="job-title-row">
-                        <h3 className="job-title">{job.title}</h3>
-                        <span className="job-salary-badge">{job.salary}</span>
-                      </div>
-                      <span className="job-company-name">{job.company}</span>
-
-                      <div className="job-meta-row">
-                        <span className="job-meta-item">
-                          <svg className="job-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                            <circle cx="12" cy="10" r="3" />
-                          </svg>
-                          {job.location}
-                        </span>
-
-                        <span className="job-meta-item">
-                          <svg className="job-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-                          </svg>
-                          {job.industryName}
-                        </span>
-
-                        <span className="job-meta-item">
-                          <svg className="job-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10" />
-                            <polyline points="12 6 12 12 16 14" />
-                          </svg>
-                          {job.posted}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="job-card-action">
-                    <button type="button" className="btn-apply-job">
-                      Ứng tuyển ngay
-                    </button>
-                  </div>
-                </article>
-              ))}
+          {/* Trạng thái 1: Đang tải dữ liệu (Loading) */}
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-secondary)' }}>
+              <div className="empty-icon-wrap" style={{ margin: '0 auto 16px', animation: 'spin 1s linear infinite' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+              </div>
+              <p>Đang tìm kiếm việc làm phù hợp từ hệ thống...</p>
             </div>
+          ) : error ? (
+            /* Trạng thái 2: Lỗi kết nối */
+            <div className="jobs-empty-state">
+              <h3 className="empty-state-title" style={{ color: 'var(--status-danger)' }}>
+                Không thể tải dữ liệu
+              </h3>
+              <p className="empty-state-desc">{error}</p>
+              <button
+                type="button"
+                className="btn-apply-job"
+                style={{ marginTop: '16px' }}
+                onClick={() => fetchJobs(filterCriteria, currentPage)}
+              >
+                Thử lại
+              </button>
+            </div>
+          ) : jobs.length > 0 ? (
+            /* Trạng thái 3: Hiển thị danh sách việc làm từ Backend */
+            <>
+              <div className="jobs-list-grid">
+                {jobs.map((job) => (
+                  <article key={job.id} className="job-card">
+                    <div className="job-card-main">
+                      <div className="job-company-logo" aria-hidden="true">
+                        {getCompanyLogoText(job.title, job.companyId)}
+                      </div>
+                      <div className="job-details">
+                        <div className="job-title-row">
+                          <h3 className="job-title">{job.title}</h3>
+                          <span className="job-salary-badge">{formatSalary(job.salary)}</span>
+                        </div>
+                        <span className="job-company-name">
+                          {job.category || 'Công nghệ thông tin'}
+                        </span>
+
+                        <div className="job-meta-row">
+                          <span className="job-meta-item">
+                            <svg className="job-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                              <circle cx="12" cy="10" r="3" />
+                            </svg>
+                            {formatLocation(job.location)}
+                          </span>
+
+                          <span className="job-meta-item">
+                            <svg className="job-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                            </svg>
+                            {formatEmploymentType(job.employmentType)}
+                          </span>
+
+                          <span className="job-meta-item">
+                            <svg className="job-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <circle cx="12" cy="12" r="10" />
+                              <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                            {formatTimeAgo(job.createdAt)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="job-card-action">
+                      <button type="button" className="btn-apply-job">
+                        Ứng tuyển ngay
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              {/* Thanh phân trang Pagination */}
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '32px' }}>
+                  <button
+                    type="button"
+                    className="filter-pill"
+                    disabled={currentPage === 0}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    style={{ opacity: currentPage === 0 ? 0.5 : 1, cursor: currentPage === 0 ? 'not-allowed' : 'pointer' }}
+                  >
+                    ← Trang trước
+                  </button>
+
+                  <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                    Trang <strong>{currentPage + 1}</strong> / {totalPages}
+                  </span>
+
+                  <button
+                    type="button"
+                    className="filter-pill"
+                    disabled={currentPage >= totalPages - 1}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    style={{ opacity: currentPage >= totalPages - 1 ? 0.5 : 1, cursor: currentPage >= totalPages - 1 ? 'not-allowed' : 'pointer' }}
+                  >
+                    Trang sau →
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
+            /* Trạng thái 4: Không có việc làm nào phù hợp (Empty State) */
             <div className="jobs-empty-state">
               <div className="empty-icon-wrap" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -312,10 +295,83 @@ const CandidatePage = () => {
               </div>
               <h3 className="empty-state-title">Không tìm thấy việc làm phù hợp</h3>
               <p className="empty-state-desc">
-                Không có việc làm nào khớp với tiêu chí tìm kiếm hiện tại. Hãy thử chọn thêm tỉnh thành, đổi ngành nghề hoặc tìm với từ khoá ngắn hơn.
+                Không có việc làm nào khớp với tiêu chí tìm kiếm hiện tại. Hãy thử tìm với từ khoá ngắn hơn hoặc thay đổi địa điểm.
               </p>
             </div>
           )}
+        </section>
+
+        <section className="application-ready-section" aria-labelledby="application-ready-title">
+          <div className="application-ready-header">
+            <div>
+              <span className="application-ready-eyebrow">Chuẩn bị hồ sơ</span>
+              <h2 id="application-ready-title" className="application-ready-title">
+                Sẵn sàng ứng tuyển?
+              </h2>
+              <p className="application-ready-description">
+                Hoàn thiện các bước quan trọng để ứng tuyển nhanh hơn khi gặp công việc phù hợp.
+              </p>
+            </div>
+
+            <Link className="application-ready-primary" to="/cv">
+              Quản lý CV
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M5 12h14" />
+                <path d="m13 6 6 6-6 6" />
+              </svg>
+            </Link>
+          </div>
+
+          <nav className="application-ready-actions" aria-label="Các bước chuẩn bị ứng tuyển">
+            <Link className="application-ready-item" to="/cv">
+              <span className="application-ready-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <path d="M14 2v6h6" />
+                  <path d="M8 13h8M8 17h6" />
+                </svg>
+              </span>
+              <span className="application-ready-copy">
+                <strong>CV của bạn</strong>
+                <span>Tạo mới hoặc cập nhật CV trước khi gửi đến nhà tuyển dụng.</span>
+              </span>
+              <svg className="application-ready-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </Link>
+
+            <Link className="application-ready-item" to="/candidate/profile?tab=settings">
+              <span className="application-ready-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21a8 8 0 0 0-16 0" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </span>
+              <span className="application-ready-copy">
+                <strong>Hồ sơ cá nhân</strong>
+                <span>Bổ sung thông tin để nhà tuyển dụng hiểu rõ hơn về bạn.</span>
+              </span>
+              <svg className="application-ready-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </Link>
+
+            <Link className="application-ready-item" to="/candidate/profile?tab=applications">
+              <span className="application-ready-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="5" width="18" height="15" rx="2" />
+                  <path d="M8 5V3h8v2M8 11h8M8 15h5" />
+                </svg>
+              </span>
+              <span className="application-ready-copy">
+                <strong>Đơn ứng tuyển</strong>
+                <span>Theo dõi các vị trí đã nộp và trạng thái xử lý hồ sơ.</span>
+              </span>
+              <svg className="application-ready-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </Link>
+          </nav>
         </section>
       </div>
     </div>
