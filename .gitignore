@@ -10,4 +10,4 @@
 *.sw?
 uploads/
 .idea/discord.xml
-
+.codex/
