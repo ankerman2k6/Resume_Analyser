@@ -22,4 +22,6 @@ public interface ApplicationRepository
             ObjectId jobId,
             ObjectId candidateId
     );
+
+    boolean existsByCvId(ObjectId cvId);
 }

@@ -1,0 +1,270 @@
+{
+  "info": {
+    "_postman_id": "c1f7a40b-789a-4e58-9b8e-candidate-profile-v1",
+    "name": "Candidate Profile API",
+    "description": "API contract for Candidate Profile (Trang cá nhân ứng viên) v1.1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "YOUR_JWT_CANDIDATE_TOKEN",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Profile - GET",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/candidates/me/profile",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "candidates", "me", "profile"]
+        },
+        "description": "Lấy thông tin hồ sơ ứng viên cá nhân."
+      }
+    },
+    {
+      "name": "2. Profile - PUT (Create or Update)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Nguyễn Minh An\",\n  \"phone\": \"0901234567\",\n  \"location\": {\n    \"city\": \"Hà Nội\",\n    \"country\": \"Việt Nam\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/candidates/me/profile",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "candidates", "me", "profile"]
+        },
+        "description": "Tạo hoặc cập nhật thông tin hồ sơ ứng viên."
+      }
+    },
+    {
+      "name": "3. Stats - GET",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/candidates/me/stats",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "candidates", "me", "stats"]
+        },
+        "description": "Lấy số liệu thống kê đơn ứng tuyển, CV và lịch phỏng vấn."
+      }
+    },
+    {
+      "name": "4. Applications - GET List",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/candidates/me/applications?filter=all&page=0&size=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "candidates", "me", "applications"],
+          "query": [
+            {
+              "key": "filter",
+              "value": "all",
+              "description": "all, applied, reviewing, interview, accepted, rejected, withdrawn"
+            },
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "10"
+            }
+          ]
+        },
+        "description": "Lấy danh sách các đơn đã ứng tuyển của ứng viên."
+      }
+    },
+    {
+      "name": "5. Applications - Withdraw",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/candidates/me/applications/:applicationId/withdraw",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "candidates", "me", "applications", ":applicationId", "withdraw"],
+          "variable": [
+            {
+              "key": "applicationId",
+              "value": "670000000000000000000005"
+            }
+          ]
+        },
+        "description": "Rút đơn ứng tuyển (chỉ khả dụng khi status = applied)."
+      }
+    },
+    {
+      "name": "6. Resumes - GET List",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/candidates/me/cvs?page=0&size=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "candidates", "me", "cvs"],
+          "query": [
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "10"
+            }
+          ]
+        },
+        "description": "Lấy danh sách CV của ứng viên."
+      }
+    },
+    {
+      "name": "7. Resumes - GET File",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/candidates/me/cvs/:cvId/file",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "candidates", "me", "cvs", ":cvId", "file"],
+          "variable": [
+            {
+              "key": "cvId",
+              "value": "670000000000000000000003"
+            }
+          ]
+        },
+        "description": "Xem trực tuyến luồng nhị phân file PDF CV."
+      }
+    },
+    {
+      "name": "8. Resumes - DELETE",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/candidates/me/cvs/:cvId",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "candidates", "me", "cvs", ":cvId"],
+          "variable": [
+            {
+              "key": "cvId",
+              "value": "670000000000000000000003"
+            }
+          ]
+        },
+        "description": "Xóa CV chưa từng được sử dụng trong đơn ứng tuyển hoặc báo cáo AI."
+      }
+    },
+    {
+      "name": "9. Resumes - POST Upload",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": []
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/resumes/upload",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "resumes", "upload"]
+        },
+        "description": "Tải lên file PDF CV vào collection cvs."
+      }
+    },
+    {
+      "name": "10. Career - GET",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/candidates/me/career",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "candidates", "me", "career"],
+          "query": [
+            {
+              "key": "cvId",
+              "value": "670000000000000000000003",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "Lấy thông tin kinh nghiệm, học vấn, kỹ năng từ CV."
+      }
+    }
+  ]
+}
