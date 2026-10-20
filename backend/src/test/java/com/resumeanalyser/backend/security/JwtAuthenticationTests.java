@@ -185,6 +185,28 @@ class JwtAuthenticationTests {
     }
 
     @Test
+    void publicJobReadsPassSecurityButWritesAndResumeUploadsRequireAuthentication() throws Exception {
+        // These controllers are absent from this focused context: 404 means security allowed dispatch.
+        mvc.perform(get("/api/jobs/search")).andExpect(status().isNotFound());
+        mvc.perform(get("/api/jobs/507f1f77bcf86cd799439011")).andExpect(status().isNotFound());
+        mvc.perform(post("/api/jobs/search")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/resumes/upload")).andExpect(status().isUnauthorized());
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void hrEndpointsRequireRecruiterRole() throws Exception {
+        mvc.perform(get("/api/hr/jobs")).andExpect(status().isUnauthorized());
+        when(repository.findById(user.getId())).thenReturn(Optional.of(user));
+        user.setRole("candidate");
+        mvc.perform(get("/api/hr/jobs").header("Authorization", "Bearer " + jwtService.generateToken(user)))
+                .andExpect(status().isForbidden());
+        user.setRole("recruiter");
+        mvc.perform(get("/api/hr/jobs").header("Authorization", "Bearer " + jwtService.generateToken(user)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void registerWithoutTokenHashesPasswordAndReturnsCreated() throws Exception {
         when(repository.save(org.mockito.ArgumentMatchers.any(User.class))).thenAnswer(invocation -> {
             User saved = invocation.getArgument(0);

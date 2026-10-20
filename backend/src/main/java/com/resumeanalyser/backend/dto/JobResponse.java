@@ -2,6 +2,7 @@ package com.resumeanalyser.backend.dto;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import com.resumeanalyser.backend.model.Job;
 
@@ -18,7 +19,7 @@ public class JobResponse {
     private Job.Location location;
     private Job.Salary salary;
     private Job.Experience experience;
-    private Job.Requirements requirements;
+    private Map<String, Object> requirements;
     private List<String> benefits;
 
     private LocalDateTime deadline;
@@ -30,7 +31,7 @@ public class JobResponse {
 
     public JobResponse(String id, String companyId, String recruiterId, String title, String description,
                        String category, String employmentType, Job.Location location, Job.Salary salary,
-                       Job.Experience experience, Job.Requirements requirements, List<String> benefits,
+                       Job.Experience experience, Map<String, Object> requirements, List<String> benefits,
                        LocalDateTime deadline, String status, LocalDateTime createdAt) {
         this.id = id;
         this.companyId = companyId;
@@ -79,8 +80,8 @@ public class JobResponse {
     public Job.Experience getExperience() { return experience; }
     public void setExperience(Job.Experience experience) { this.experience = experience; }
 
-    public Job.Requirements getRequirements() { return requirements; }
-    public void setRequirements(Job.Requirements requirements) { this.requirements = requirements; }
+    public Map<String, Object> getRequirements() { return requirements; }
+    public void setRequirements(Map<String, Object> requirements) { this.requirements = requirements; }
 
     public List<String> getBenefits() { return benefits; }
     public void setBenefits(List<String> benefits) { this.benefits = benefits; }

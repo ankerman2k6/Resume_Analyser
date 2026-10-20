@@ -1,8 +1,8 @@
 package com.resumeanalyser.backend.controller;
 
+import java.net.URI;
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -15,29 +15,34 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.resumeanalyser.backend.dto.ResumeResponse;
+import com.resumeanalyser.backend.dto.candidate.CvSummaryDto;
 import com.resumeanalyser.backend.model.User;
+import com.resumeanalyser.backend.service.CandidateService;
 import com.resumeanalyser.backend.service.ResumeService;
 
-// Hứng rq, chuyển sang cho services
 @RestController
 @RequestMapping("/api/resumes")
 public class ResumeController {
 
     private final ResumeService resumeService;
+    private final CandidateService candidateService;
 
-    public ResumeController(ResumeService resumeService) {
+    public ResumeController(ResumeService resumeService, CandidateService candidateService) {
         this.resumeService = resumeService;
+        this.candidateService = candidateService;
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ResumeResponse> uploadResume(
+    public ResponseEntity<CvSummaryDto> uploadResume(
             @RequestParam("file") MultipartFile file,
             Authentication authentication) {
 
         User user = (User) authentication.getPrincipal();
-        ResumeResponse response = resumeService.uploadResume(file, user);
+        CvSummaryDto response = candidateService.uploadCv(file, user);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity
+                .created(URI.create("/api/candidates/me/cvs/" + response._id() + "/file"))
+                .body(response);
     }
 
     @GetMapping

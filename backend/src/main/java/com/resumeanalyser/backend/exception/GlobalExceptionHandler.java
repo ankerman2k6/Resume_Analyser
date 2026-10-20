@@ -1,126 +1,108 @@
 package com.resumeanalyser.backend.exception;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
-import java.util.HashMap;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.http.converter.HttpMessageNotReadableException;
+import com.resumeanalyser.backend.dto.ApiErrorResponse;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiErrorResponse("VALIDATION_ERROR", ex.getMessage(), 400));
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ApiErrorResponse> handleBadRequest(BadRequestException ex) {
+        String code = ex.getCode() != null ? ex.getCode() : "VALIDATION_ERROR";
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiErrorResponse(code, ex.getMessage(), 400));
+    }
+
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNotFound(NotFoundException ex) {
+        String code = ex.getCode() != null ? ex.getCode() : "RESOURCE_NOT_FOUND";
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiErrorResponse(code, ex.getMessage(), 404));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<Map<String, Object>> handleInvalidJson(HttpMessageNotReadableException ex) {
-        return ResponseEntity.badRequest().body(Map.of(
-                "status", 400,
-                "message", "Dữ liệu JSON không hợp lệ"));
+    public ResponseEntity<ApiErrorResponse> handleInvalidJson(HttpMessageNotReadableException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiErrorResponse("VALIDATION_ERROR", "Dữ liệu JSON không hợp lệ.", 400));
     }
 
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<Map<String, Object>> handleUnauthorized(
-            UnauthorizedException ex) {
-
-        return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of(
-                        "status", 401,
-                        "message", ex.getMessage()
-                ));
+    public ResponseEntity<ApiErrorResponse> handleUnauthorized(UnauthorizedException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiErrorResponse("UNAUTHENTICATED", ex.getMessage(), 401));
     }
 
     @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<Map<String, Object>> handleForbidden(
-            ForbiddenException ex) {
+    public ResponseEntity<ApiErrorResponse> handleForbidden(ForbiddenException ex) {
+        String code = ex.getCode() != null ? ex.getCode() : "FORBIDDEN";
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ApiErrorResponse(code, ex.getMessage(), 403));
+    }
 
-        return ResponseEntity
-                .status(HttpStatus.FORBIDDEN)
-                .body(Map.of(
-                        "status", 403,
-                        "message", ex.getMessage()
-                ));
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleConflict(ConflictException ex) {
+        String code = ex.getCode() != null ? ex.getCode() : "CONFLICT";
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ApiErrorResponse(code, ex.getMessage(), 409));
+    }
+
+    @ExceptionHandler(UnsupportedFileTypeException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnsupportedFileType(UnsupportedFileTypeException ex) {
+        String code = ex.getCode() != null ? ex.getCode() : "UNSUPPORTED_FILE_TYPE";
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(new ApiErrorResponse(code, ex.getMessage(), 415));
+    }
+
+    @ExceptionHandler(FileStorageException.class)
+    public ResponseEntity<ApiErrorResponse> handleFileStorage(FileStorageException ex) {
+        String code = ex.getCode() != null ? ex.getCode() : "FILE_STORAGE_UNAVAILABLE";
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ApiErrorResponse(code, ex.getMessage(), 502));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidation(
-        MethodArgumentNotValidException ex) {
-
-    Map<String, String> errors = new HashMap<>();
-
-    ex.getBindingResult()
-            .getFieldErrors()
-            .forEach(error ->
-                    errors.put(
-                            error.getField(),
-                            error.getDefaultMessage()
-                    )
-            );
-
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .body(Map.of(
-                    "status", 400,
-                    "message", "Dữ liệu không hợp lệ",
-                    "errors", errors
-            ));
-        }
-
-        @ExceptionHandler(ConflictException.class)
-        public ResponseEntity<Map<String, Object>> handleConflict(
-        ConflictException ex) {
-
-        return ResponseEntity
-            .status(HttpStatus.CONFLICT)
-            .body(Map.of(
-                    "status", 409,
-                    "message", ex.getMessage()
-            ));
-        }
-
-    @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<Map<String, Object>> handleBadRequest(BadRequestException ex) {
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(
-                        "status", 400,
-                        "message", ex.getMessage()
-                ));
+    public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(error ->
+                errors.put(error.getField(), error.getDefaultMessage())
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiErrorResponse("VALIDATION_ERROR", "Thông tin hồ sơ chưa hợp lệ.", errors, 400));
     }
 
-    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
-    public ResponseEntity<Map<String, Object>> handleMaxSizeException(
-            org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(
-                        "status", 400,
-                        "message", "Kích thước file vượt quá giới hạn cho phép (tối đa 5MB)"
-                ));
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleMaxSizeException(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(new ApiErrorResponse("FILE_TOO_LARGE", "Kích thước file vượt quá giới hạn cho phép (tối đa 5MB)", 413));
     }
 
-    @ExceptionHandler(org.springframework.web.multipart.MultipartException.class)
-    public ResponseEntity<Map<String, Object>> handleMultipartException(
-            org.springframework.web.multipart.MultipartException ex) {
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(
-                        "status", 400,
-                        "message", "Yêu cầu tải file không hợp lệ hoặc thiếu file đính kèm"
-                ));
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ApiErrorResponse> handleMultipartException(MultipartException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiErrorResponse("VALIDATION_ERROR", "Yêu cầu tải file không hợp lệ hoặc thiếu file đính kèm", 400));
     }
 
-    @ExceptionHandler(org.springframework.web.multipart.support.MissingServletRequestPartException.class)
-    public ResponseEntity<Map<String, Object>> handleMissingPart(
-            org.springframework.web.multipart.support.MissingServletRequestPartException ex) {
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(
-                        "status", 400,
-                        "message", "Thiếu tham số '" + ex.getRequestPartName() + "'. Vui lòng đặt Key chính xác là 'file' (chữ thường)"
-                ));
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ApiErrorResponse> handleMissingPart(MissingServletRequestPartException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiErrorResponse("VALIDATION_ERROR", "Thiếu tham số '" + ex.getRequestPartName() + "'. Vui lòng đặt Key chính xác là 'file' (chữ thường)", 400));
     }
 }
