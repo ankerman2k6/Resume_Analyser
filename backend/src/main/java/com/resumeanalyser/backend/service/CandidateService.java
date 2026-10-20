@@ -701,7 +701,7 @@ public class CandidateService {
         cv.setId(new ObjectId());
         cv.setCandidateId(profile.getId());
         cv.setTitle(title);
-        cv.setSource(new Cv.Source("upload", originalFilename, targetLocation.toString(), "application/pdf"));
+        cv.setSource(new Cv.Source("uploaded", originalFilename, targetLocation.toString(), "application/pdf"));
         cv.setParseInfo(new Cv.ParseInfo("pending", null, null));
         cv.setCreatedAt(now);
         cv.setUpdatedAt(now);

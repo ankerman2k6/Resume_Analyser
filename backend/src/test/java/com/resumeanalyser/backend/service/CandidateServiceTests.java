@@ -359,7 +359,7 @@ class CandidateServiceTests {
 
         assertNotNull(summary);
         assertTrue(summary.title().contains("my_frontend_cv"));
-        assertEquals("upload", summary.source().type());
+        assertEquals("uploaded", summary.source().type());
         assertEquals("pending", summary.parseInfo().status());
         assertTrue(summary.canViewFile());
         assertTrue(summary.canDelete());

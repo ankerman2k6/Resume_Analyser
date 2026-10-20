@@ -19,6 +19,43 @@
   ],
   "item": [
     {
+      "name": "0. Auth - Login (Tự động lưu Token)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData.token) {",
+              "    pm.collectionVariables.set('token', jsonData.token);",
+              "    console.log('Token đã được tự động lưu vào biến {{token}}:', jsonData.token);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"testcandidate123@example.com\",\n  \"password\": \"Password123@\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Đăng nhập tài khoản ứng viên để lấy JWT token và tự động lưu vào biến collection {{token}}."
+      }
+    },
+    {
       "name": "1. Profile - GET",
       "request": {
         "method": "GET",
