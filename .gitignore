@@ -10,4 +10,7 @@
 *.sw?
 uploads/
 .idea/discord.xml
+.codex/*
+graphify-out/*
+
 

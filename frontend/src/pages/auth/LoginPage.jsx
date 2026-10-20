@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { loginApi } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
 import './Login.css';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const [role, setRole] = useState('candidate');
   const [showPassword, setShowPassword] = useState(false);
@@ -27,8 +28,12 @@ const LoginPage = () => {
       // Cập nhật thông qua AuthContext
       login(data);
 
-      // Chuyển hướng về trang chủ hoặc trang ứng viên
-      if (data.role === 'candidate') {
+      const redirectPath = location.state?.from?.pathname;
+
+      // Quay lại trang người dùng định mở trước khi được yêu cầu đăng nhập
+      if (redirectPath) {
+        navigate(redirectPath, { replace: true });
+      } else if (data.role === 'candidate') {
         navigate('/candidate/profile');
       } else if (data.role === 'recruiter') {
         navigate('/hr');
