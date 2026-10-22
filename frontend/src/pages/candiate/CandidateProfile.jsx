@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Avatar from '../../components/Avatar';
 import {
@@ -8,17 +8,22 @@ import {
   getCandidateApplicationsApi,
   getCandidateCvsApi,
   withdrawApplicationApi,
-  setDefaultCvApi,
+  getCandidateStatsApi,
+  getCandidateCareerApi,
+  getCandidateCvFileApi,
   deleteCandidateCvApi
 } from '../../services/candidateService';
 import './CandidateProfile.css';
 
 const formatSalary = (salary) => {
-  if (!salary) return 'Thỏa thuận';
-  if (salary.negotiable && (!salary.min || !salary.max)) return 'Thỏa thuận';
-  const minM = salary.min ? `${Math.round(salary.min / 1000000)}` : '';
-  const maxM = salary.max ? `${Math.round(salary.max / 1000000)} triệu` : 'triệu';
-  return minM ? `${minM} - ${maxM} VND` : `${maxM} VND`;
+  if (!salary) return 'Chưa cập nhật mức lương';
+  if (salary.negotiable) return 'Thỏa thuận';
+  const currency = salary.currency || 'VND';
+  const format = (value) => `${Number(value).toLocaleString('vi-VN')} ${currency}`;
+  if (salary.min != null && salary.max != null) return `${format(salary.min)} - ${format(salary.max)}`;
+  if (salary.min != null) return `Từ ${format(salary.min)}`;
+  if (salary.max != null) return `Đến ${format(salary.max)}`;
+  return 'Chưa cập nhật mức lương';
 };
 
 const formatDate = (dateString) => {
@@ -43,15 +48,19 @@ const formatDateTime = (dateString) => {
   return `${hours}:${minutes} ngày ${d}/${m}/${y}`;
 };
 
-const formatFileSize = (bytes) => {
-  if (!bytes || bytes <= 0) return '0 KB';
-  const mb = bytes / (1024 * 1024);
-  if (mb >= 0.1) {
-    return `${mb.toFixed(1).replace('.', ',')} MB`;
-  }
-  const kb = Math.max(1, Math.round(bytes / 1024));
-  return `${kb} KB`;
-};
+const FILTERS = { all: 'Tất cả', interview: 'Phỏng vấn', reviewing: 'Đang duyệt',
+  applied: 'Đã nộp', accepted: 'Trúng tuyển', rejected: 'Chưa phù hợp', withdrawn: 'Đã rút' };
+const toForm = (profile) => ({
+  fullName: profile?.fullName || '', phone: profile?.phone || '',
+  city: profile?.location?.city || '', country: profile?.location?.country || ''
+});
+const Pagination = ({ data, page, onChange }) => data?.totalPages > 1 && (
+  <div className="profile-pagination">
+    <button className="btn-action btn-action--secondary" disabled={page === 0} onClick={() => onChange(page - 1)}>Trang trước</button>
+    <span>Trang {page + 1}/{data.totalPages} · {data.totalElements} kết quả</span>
+    <button className="btn-action btn-action--secondary" disabled={data.last} onClick={() => onChange(page + 1)}>Trang sau</button>
+  </div>
+);
 
 const STATUS_LABELS = {
   applied: { label: 'Đã nộp đơn', className: 'app-status-badge--applied' },
@@ -60,20 +69,35 @@ const STATUS_LABELS = {
   interview_scheduled: { label: 'Lịch phỏng vấn', className: 'app-status-badge--interview_scheduled' },
   accepted: { label: 'Trúng tuyển', className: 'app-status-badge--accepted' },
   rejected: { label: 'Chưa phù hợp', className: 'app-status-badge--rejected' },
+  withdrawn: { label: 'Đã rút', className: 'app-status-badge--rejected' },
 };
 
 const CandidateProfile = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, logout, updateUser } = useAuth();
+  const { user, token, logout, updateUser } = useAuth();
 
-  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'applications');
+  const [activeTab, setActiveTab] = useState(() =>
+    ['applications', 'resumes', 'career', 'settings'].includes(searchParams.get('tab'))
+      ? searchParams.get('tab') : 'applications');
   const [appFilter, setAppFilter] = useState('all');
 
   const [profile, setProfile] = useState(null);
   const [applications, setApplications] = useState([]);
   const [cvs, setCvs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(null);
+  const [career, setCareer] = useState(null);
+  const [appPage, setAppPage] = useState(0);
+  const [cvPage, setCvPage] = useState(0);
+  const [appsPagination, setAppsPagination] = useState(null);
+  const [cvsPagination, setCvsPagination] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [listLoading, setListLoading] = useState({});
+  const [revision, setRevision] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [pdfUrl, setPdfUrl] = useState(null);
 
   // Modals
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -92,98 +116,162 @@ const CandidateProfile = () => {
     setSearchParams({ tab });
   };
 
-  // Tải dữ liệu ban đầu
+  // Các đường dẫn /profile, /stats, /applications, /cvs, /career bên dưới
+  // có tiền tố /api/candidates/me; candidateService gửi JWT và đọc response JSON.
+  // GET /profile -> profile hiển thị Hero và toForm() điền settings/modal.
+  // PROFILE_NOT_FOUND là tài khoản chưa tạo hồ sơ; PUT sẽ tạo mới.
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const [profileData, appsData, cvsData] = await Promise.all([
-          getCandidateProfileApi(),
-          getCandidateApplicationsApi(),
-          getCandidateCvsApi()
-        ]);
-        setProfile(profileData);
-        setApplications(appsData);
-        setCvs(cvsData);
-        setEditFormData({
-          fullName: profileData.fullName || '',
-          phone: profileData.phone || '',
-          title: profileData.title || '',
-          bio: profileData.bio || '',
-          city: profileData.location?.city || '',
-          country: profileData.location?.country || 'Việt Nam',
-          searchStatus: profileData.searchStatus || 'actively_looking'
-        });
-      } catch (err) {
-        console.error('Lỗi khi tải dữ liệu trang cá nhân:', err);
-      } finally {
-        setLoading(false);
+    const controller = new AbortController();
+    setLoading(true);
+    setProfile(null);
+    setEditFormData({});
+    setErrors((prev) => ({ ...prev, profile: null }));
+    getCandidateProfileApi(controller.signal).then((data) => {
+      if (!controller.signal.aborted) {
+        setProfile(data);
+        setEditFormData(toForm(data));
       }
-    };
+    }).catch((err) => {
+      if (!controller.signal.aborted) {
+        if (err.code === 'PROFILE_NOT_FOUND') {
+          setEditFormData(toForm(user));
+          setNotice('Bạn chưa có hồ sơ. Hãy cập nhật thông tin cá nhân để tạo hồ sơ.');
+        } else setErrors((prev) => ({ ...prev, profile: err.message }));
+      }
+    }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [token, revision]);
 
-    loadData();
-  }, []);
+  // GET /stats và /career độc lập: một API lỗi không làm mất dữ liệu phần khác.
+  // career lấy CV mới nhất do backend chọn; không suy ra từ trang danh sách CV.
+  useEffect(() => {
+    const controller = new AbortController();
+    for (const [key, fetchData, setData] of [
+      ['stats', () => getCandidateStatsApi(controller.signal), setStats],
+      ['career', () => getCandidateCareerApi({ signal: controller.signal }), setCareer]
+    ]) {
+      setData(null);
+      setListLoading((prev) => ({ ...prev, [key]: true }));
+      setErrors((prev) => ({ ...prev, [key]: null }));
+      fetchData().then((data) => { if (!controller.signal.aborted) setData(data); })
+        .catch((err) => { if (!controller.signal.aborted) setErrors((prev) => ({ ...prev, [key]: err.message })); })
+        .finally(() => { if (!controller.signal.aborted) setListLoading((prev) => ({ ...prev, [key]: false })); });
+    }
+    return () => controller.abort();
+  }, [token, revision]);
+
+  // GET /applications?filter&page&size -> content render cards; metadata render phân trang.
+  // Đổi filter/page hủy request cũ để response cũ không ghi đè lựa chọn mới.
+  useEffect(() => {
+    const controller = new AbortController();
+    setListLoading((prev) => ({ ...prev, applications: true }));
+    setErrors((prev) => ({ ...prev, applications: null }));
+    setApplications([]);
+    setAppsPagination(null);
+    getCandidateApplicationsApi({ filter: appFilter, page: appPage, signal: controller.signal })
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        if (appPage > 0 && data.content.length === 0) { setAppPage(appPage - 1); return; }
+        setApplications(data.content);
+        setAppsPagination(data);
+      }).catch((err) => { if (!controller.signal.aborted) setErrors((prev) => ({ ...prev, applications: err.message })); })
+      .finally(() => { if (!controller.signal.aborted) setListLoading((prev) => ({ ...prev, applications: false })); });
+    return () => controller.abort();
+  }, [token, appFilter, appPage, revision]);
+
+  // GET /cvs?page&size -> content render thẻ CV, canViewFile/canDelete điều khiển nút.
+  useEffect(() => {
+    const controller = new AbortController();
+    setListLoading((prev) => ({ ...prev, resumes: true }));
+    setErrors((prev) => ({ ...prev, resumes: null }));
+    setCvs([]);
+    setCvsPagination(null);
+    getCandidateCvsApi({ page: cvPage, signal: controller.signal }).then((data) => {
+      if (controller.signal.aborted) return;
+      if (cvPage > 0 && data.content.length === 0) { setCvPage(cvPage - 1); return; }
+      setCvs(data.content);
+      setCvsPagination(data);
+    }).catch((err) => { if (!controller.signal.aborted) setErrors((prev) => ({ ...prev, resumes: err.message })); })
+      .finally(() => { if (!controller.signal.aborted) setListLoading((prev) => ({ ...prev, resumes: false })); });
+    return () => controller.abort();
+  }, [token, cvPage, revision]);
+
+  // Blob PDF từ GET /cvs/{id}/file; thu hồi object URL khi đóng hoặc rời trang.
+  useEffect(() => () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl); }, [pdfUrl]);
+
+  const openEditModal = () => {
+    setEditFormData(toForm(profile || user));
+    setIsEditModalOpen(true);
+  };
 
   // Xử lý cập nhật thông tin cá nhân
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    setBusy(true);
+    setNotice('');
     try {
+      // PUT /profile chỉ nhận các field được phép sửa; response là ProfileDto mới.
       const updated = await updateCandidateProfileApi({
         fullName: editFormData.fullName,
         phone: editFormData.phone,
-        title: editFormData.title,
-        bio: editFormData.bio,
         location: {
           city: editFormData.city,
           country: editFormData.country
-        },
-        searchStatus: editFormData.searchStatus
+        }
       });
       setProfile(updated);
+      setEditFormData(toForm(updated));
       updateUser({ fullName: updated.fullName });
       setIsEditModalOpen(false);
+      setNotice('Đã lưu thông tin hồ sơ.');
+      setRevision((prev) => prev + 1);
     } catch (err) {
-      alert('Không cập nhật được hồ sơ: ' + err.message);
-    }
+      setNotice('Không cập nhật được hồ sơ: ' + err.message);
+    } finally { setBusy(false); }
   };
 
   // Xử lý rút hồ sơ ứng tuyển
   const handleWithdrawApplication = async (applicationId) => {
     if (window.confirm('Bạn có chắc chắn muốn rút đơn ứng tuyển cho vị trí này?')) {
-      const success = await withdrawApplicationApi(applicationId);
-      if (success) {
-        setApplications((prev) => prev.filter((app) => app._id !== applicationId));
-      } else {
-        alert('Không thể rút đơn ứng tuyển hoặc đơn ứng tuyển không tồn tại.');
-      }
+      setBusy(true);
+      try {
+        // POST /applications/{id}/withdraw trả đơn status=withdrawn, không xóa lịch sử.
+        const updated = await withdrawApplicationApi(applicationId);
+        setApplications((prev) => prev.map((app) => app._id === applicationId ? updated : app));
+        setNotice('Đã rút đơn ứng tuyển.');
+        setRevision((prev) => prev + 1);
+      } catch (err) { setNotice(err.message); }
+      finally { setBusy(false); }
     }
   };
 
-  // Xử lý đặt CV mặc định
-  const handleSetDefaultCv = async (cvId) => {
-    const updated = await setDefaultCvApi(cvId);
-    setCvs(updated);
+  const handleViewCv = async (cvId) => {
+    setBusy(true);
+    try {
+      const blob = await getCandidateCvFileApi(cvId);
+      setPdfUrl(URL.createObjectURL(blob));
+    } catch (err) { setNotice(err.message); }
+    finally { setBusy(false); }
   };
 
   // Xử lý xóa CV
   const handleDeleteCv = async (cvId) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa tệp CV này khỏi danh sách?')) {
-      const updated = await deleteCandidateCvApi(cvId);
-      setCvs(updated);
+      setBusy(true);
+      try {
+        // DELETE trả 204 không body; tải lại CV, stats và career sau khi xóa thành công.
+        await deleteCandidateCvApi(cvId);
+        setNotice('Đã xóa CV.');
+        setRevision((prev) => prev + 1);
+      } catch (err) { setNotice(err.message); }
+      finally { setBusy(false); }
     }
   };
 
-  // Lọc danh sách ứng tuyển
-  const filteredApplications = applications.filter((app) => {
-    if (appFilter === 'all') return true;
-    if (appFilter === 'interview') return app.status === 'interview_scheduled';
-    if (appFilter === 'reviewing') return app.status === 'reviewing' || app.status === 'shortlisted';
-    if (appFilter === 'applied') return app.status === 'applied';
-    if (appFilter === 'rejected') return app.status === 'rejected';
-    return true;
-  });
+  // Danh sách đã được server lọc; tổng theo trạng thái lấy từ stats.applicationCounts.
+  const filteredApplications = applications;
 
-  const primaryCv = cvs.find((c) => c.isDefault) || cvs[0] || null;
+  if (!token) return <Navigate to="/login" replace />;
 
   if (loading && !profile) {
     return (
@@ -207,7 +295,14 @@ const CandidateProfile = () => {
           <span>Trang cá nhân</span>
         </div>
 
-        {/* Hero Card */}
+        {notice && <p role="status">{notice}</p>}
+        {Object.entries(errors).filter(([, message]) => message).map(([key, message]) => (
+          <div key={key} role="alert">
+            {message}{' '}
+            <button type="button" className="btn-action btn-action--secondary" onClick={() => setRevision((value) => value + 1)}>Thử lại</button>
+          </div>
+        ))}
+        {/* GET /profile: avatarUrl/fullName/email/phone/location/accountStatus -> Hero. */}
         <div className="profile-hero-card">
           <div className="profile-hero-main">
             <div className="profile-hero-left">
@@ -220,31 +315,15 @@ const CandidateProfile = () => {
                 />
                 <span
                   className="profile-status-indicator"
-                  title="Tài khoản đang hoạt động"
+                  title={profile?.accountStatus === 'active' ? 'Tài khoản đang hoạt động' : 'Chưa xác định trạng thái'}
+                  hidden={profile?.accountStatus !== 'active'}
                 />
               </div>
 
               <div className="profile-hero-info">
                 <div className="profile-name-row">
                   <h1 className="profile-name">{profile?.fullName || 'Ứng viên CMCV'}</h1>
-                  <span className="profile-badge-status">
-                    <span className="profile-status-dot" />
-                    {profile?.searchStatus === 'actively_looking'
-                      ? 'Đang tìm việc'
-                      : profile?.searchStatus === 'open'
-                      ? 'Mở cơ hội mới'
-                      : 'Không tìm việc'}
-                  </span>
                 </div>
-
-                <div className="profile-title">
-                  {profile?.title || 'Lập trình viên / Kỹ sư phần mềm'}
-                </div>
-
-                <p className="profile-bio">
-                  {profile?.bio ||
-                    'Chưa có phần giới thiệu bản thân. Bấm Chỉnh sửa hồ sơ để thêm mô tả kinh nghiệm và thế mạnh của bạn.'}
-                </p>
 
                 <div className="profile-contact-chips">
                   <span className="contact-chip">
@@ -252,7 +331,7 @@ const CandidateProfile = () => {
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                       <polyline points="22,6 12,13 2,6" />
                     </svg>
-                    {profile?.email || user?.email || 'chua_cap_nhat@gmail.com'}
+                    {profile?.email || user?.email || 'Chưa cập nhật email'}
                   </span>
 
                   {profile?.phone && (
@@ -269,7 +348,7 @@ const CandidateProfile = () => {
                       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                       <circle cx="12" cy="10" r="3" />
                     </svg>
-                    {profile?.location?.city || 'Hồ Chí Minh'}, {profile?.location?.country || 'Việt Nam'}
+                    {[profile?.location?.city, profile?.location?.country].filter(Boolean).join(', ') || 'Chưa cập nhật địa điểm'}
                   </span>
                 </div>
               </div>
@@ -279,7 +358,7 @@ const CandidateProfile = () => {
               <button
                 type="button"
                 className="btn-action btn-action--secondary"
-                onClick={() => setIsEditModalOpen(true)}
+                onClick={openEditModal}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -303,7 +382,7 @@ const CandidateProfile = () => {
             </div>
           </div>
 
-          {/* Quick Metrics Bar */}
+          {/* GET /stats -> 4 số tổng toàn bộ DB, không dùng length của trang hiện tại. Null score hiển thị —. */}
           <div className="profile-metrics-grid">
             <div className="metric-card">
               <div className="metric-icon-box metric-icon-box--blue">
@@ -315,7 +394,7 @@ const CandidateProfile = () => {
                 </svg>
               </div>
               <div className="metric-content">
-                <span className="metric-value">{cvs.length}</span>
+                <span className="metric-value">{stats?.cvCount ?? '—'}</span>
                 <span className="metric-label">CV đã tải lên</span>
               </div>
             </div>
@@ -328,7 +407,7 @@ const CandidateProfile = () => {
                 </svg>
               </div>
               <div className="metric-content">
-                <span className="metric-value">{applications.length}</span>
+                <span className="metric-value">{stats?.applicationCount ?? '—'}</span>
                 <span className="metric-label">Việc làm đã ứng tuyển</span>
               </div>
             </div>
@@ -344,7 +423,7 @@ const CandidateProfile = () => {
               </div>
               <div className="metric-content">
                 <span className="metric-value">
-                  {applications.filter((a) => a.status === 'interview_scheduled').length}
+                  {stats?.upcomingInterviewCount ?? '—'}
                 </span>
                 <span className="metric-label">Lịch hẹn phỏng vấn</span>
               </div>
@@ -358,7 +437,7 @@ const CandidateProfile = () => {
               </div>
               <div className="metric-content">
                 <span className="metric-value">
-                  {profile?.stats?.avgMatchScore ? `${profile.stats.avgMatchScore}%` : '86%'}
+                  {stats?.avgMatchScore != null ? `${stats.avgMatchScore}%` : '—'}
                 </span>
                 <span className="metric-label">Điểm AI Match trung bình</span>
               </div>
@@ -377,7 +456,7 @@ const CandidateProfile = () => {
               onClick={() => handleTabChange('applications')}
             >
               <span>Việc làm đã ứng tuyển</span>
-              <span className="profile-tab-count">{applications.length}</span>
+              <span className="profile-tab-count">{stats?.applicationCount ?? '—'}</span>
             </button>
 
             <button
@@ -388,7 +467,7 @@ const CandidateProfile = () => {
               onClick={() => handleTabChange('resumes')}
             >
               <span>CV đã tải lên</span>
-              <span className="profile-tab-count">{cvs.length}</span>
+              <span className="profile-tab-count">{stats?.cvCount ?? '—'}</span>
             </button>
 
             <button
@@ -426,46 +505,19 @@ const CandidateProfile = () => {
                 </p>
               </div>
 
+              {/* GET /stats.applicationCounts -> số trên từng bộ lọc; click gọi GET /applications?filter=... */}
               <div className="filter-pills-group">
-                <button
-                  type="button"
-                  className={`filter-pill ${appFilter === 'all' ? 'is-active' : ''}`}
-                  onClick={() => setAppFilter('all')}
-                >
-                  Tất cả ({applications.length})
-                </button>
-                <button
-                  type="button"
-                  className={`filter-pill ${appFilter === 'interview' ? 'is-active' : ''}`}
-                  onClick={() => setAppFilter('interview')}
-                >
-                  Phỏng vấn ({applications.filter((a) => a.status === 'interview_scheduled').length})
-                </button>
-                <button
-                  type="button"
-                  className={`filter-pill ${appFilter === 'reviewing' ? 'is-active' : ''}`}
-                  onClick={() => setAppFilter('reviewing')}
-                >
-                  Đang duyệt ({applications.filter((a) => a.status === 'reviewing' || a.status === 'shortlisted').length})
-                </button>
-                <button
-                  type="button"
-                  className={`filter-pill ${appFilter === 'applied' ? 'is-active' : ''}`}
-                  onClick={() => setAppFilter('applied')}
-                >
-                  Đã nộp ({applications.filter((a) => a.status === 'applied').length})
-                </button>
-                <button
-                  type="button"
-                  className={`filter-pill ${appFilter === 'rejected' ? 'is-active' : ''}`}
-                  onClick={() => setAppFilter('rejected')}
-                >
-                  Chưa phù hợp ({applications.filter((a) => a.status === 'rejected').length})
-                </button>
+                {Object.entries(FILTERS).map(([key, label]) => (
+                  <button key={key} type="button" className={`filter-pill ${appFilter === key ? 'is-active' : ''}`}
+                    onClick={() => { setAppFilter(key); setAppPage(0); }}>
+                    {label} ({stats?.applicationCounts?.[key] ?? '—'})
+                  </button>
+                ))}
               </div>
             </div>
 
-            {filteredApplications.length === 0 ? (
+            {listLoading.applications ? <p role="status">Đang tải đơn ứng tuyển...</p> : errors.applications ? null :
+            filteredApplications.length === 0 ? (
               <div
                 style={{
                   padding: '48px 24px',
@@ -499,7 +551,9 @@ const CandidateProfile = () => {
                       <div className="application-card-header">
                         <div className="app-company-info">
                           <div className="app-company-logo">
-                            {app.company?.logoCode || app.company?.name?.slice(0, 2).toUpperCase() || 'CP'}
+                            {app.company?.logoUrl
+                              ? <img src={app.company.logoUrl} alt={app.company.name || 'Logo công ty'} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                              : app.company?.name?.slice(0, 2).toUpperCase() || 'CP'}
                           </div>
                           <div className="app-title-group">
                             <h3 className="app-job-title">{app.job?.title || 'Vị trí ứng tuyển'}</h3>
@@ -508,7 +562,7 @@ const CandidateProfile = () => {
                                 {app.company?.name || 'Tên công ty'}
                               </span>
                               <span>•</span>
-                              <span>{app.company?.industry || 'Công nghệ thông tin'}</span>
+                              <span>{app.company?.industry || 'Chưa cập nhật lĩnh vực'}</span>
                             </div>
                           </div>
                         </div>
@@ -532,7 +586,7 @@ const CandidateProfile = () => {
                             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                             <circle cx="12" cy="10" r="3" />
                           </svg>
-                          {app.job?.location?.city || 'Toàn quốc'}{' '}
+                          {app.job?.location?.city || 'Chưa cập nhật địa điểm'}{' '}
                           {app.job?.location?.remote ? '(Cho phép làm từ xa / Remote)' : ''}
                         </span>
 
@@ -541,11 +595,11 @@ const CandidateProfile = () => {
                             <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
                             <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
                           </svg>
-                          {app.job?.employmentType === 'full_time' ? 'Toàn thời gian' : 'Bán thời gian / Dự án'}
+                          {({ full_time: 'Toàn thời gian', part_time: 'Bán thời gian', contract: 'Hợp đồng', internship: 'Thực tập', freelance: 'Tự do' })[app.job?.employmentType] || app.job?.employmentType || 'Chưa cập nhật'}
                         </span>
                       </div>
 
-                      {/* AI Screening Insights */}
+                      {/* GET /applications.content[].aiAnalysis -> điểm và modal chi tiết; null thì ẩn. */}
                       {app.aiAnalysis && (
                         <div className="app-ai-screening-box">
                           <div className="ai-screening-info">
@@ -558,7 +612,7 @@ const CandidateProfile = () => {
                                   : 'ai-score-pill--low'
                               }`}
                             >
-                              AI Match: {app.aiAnalysis.overallScore}%
+                              AI Match: {app.aiAnalysis.overallScore != null ? `${app.aiAnalysis.overallScore}%` : 'Chưa có điểm'}
                             </span>
                             <span className="ai-recommendation-text">
                               {app.aiAnalysis.recommendation}
@@ -575,7 +629,7 @@ const CandidateProfile = () => {
                         </div>
                       )}
 
-                      {/* Lịch phỏng vấn (nếu có) */}
+                      {/* GET /applications.content[].interview -> lịch, hình thức và meetingLink. */}
                       {app.interview && app.status === 'interview_scheduled' && (
                         <div className="app-interview-banner">
                           <div className="interview-banner-content">
@@ -590,7 +644,7 @@ const CandidateProfile = () => {
                                 Lịch phỏng vấn: {formatDateTime(app.interview.scheduledAt)} ({app.interview.durationMinutes} phút)
                               </span>
                               <span className="interview-mode">
-                                Hình thức: {app.interview.mode === 'online' ? 'Trực tuyến qua Google Meet' : app.interview.location}
+                                Hình thức: {app.interview.mode === 'online' ? 'Trực tuyến' : app.interview.location}
                               </span>
                             </div>
                           </div>
@@ -615,10 +669,11 @@ const CandidateProfile = () => {
                         </span>
 
                         <div className="app-actions">
-                          {app.status === 'applied' && (
+                          {app.canWithdraw && (
                             <button
                               type="button"
                               className="btn-action btn-action--danger btn-action--sm"
+                              disabled={busy}
                               onClick={() => handleWithdrawApplication(app._id)}
                             >
                               Rút hồ sơ
@@ -629,7 +684,7 @@ const CandidateProfile = () => {
                             className="btn-action btn-action--secondary btn-action--sm"
                             onClick={() => navigate(`/candidate`)}
                           >
-                            Xem tin tuyển dụng
+                            Khám phá việc làm
                           </button>
                         </div>
                       </div>
@@ -638,6 +693,7 @@ const CandidateProfile = () => {
                 })}
               </div>
             )}
+            {!listLoading.applications && !errors.applications && <Pagination data={appsPagination} page={appPage} onChange={setAppPage} />}
           </div>
         )}
 
@@ -668,11 +724,14 @@ const CandidateProfile = () => {
               </button>
             </div>
 
+            {/* GET /cvs.content -> tên file, createdAt, skills, parseInfo; quyền xem/xóa từ backend. */}
+            {listLoading.resumes && <p role="status">Đang tải danh sách CV...</p>}
+            {!listLoading.resumes && !errors.resumes && cvs.length === 0 && <p>Bạn chưa tải CV nào.</p>}
             <div className="resumes-grid">
               {cvs.map((cv) => (
                 <div
                   key={cv._id}
-                  className={`resume-card ${cv.isDefault ? 'is-default' : ''}`}
+                  className="resume-card"
                 >
                   <div className="resume-card-header">
                     <div className="resume-pdf-icon">
@@ -689,11 +748,11 @@ const CandidateProfile = () => {
                         <span className="resume-filename" title={cv.source?.fileName || cv.title}>
                           {cv.source?.fileName || cv.title}
                         </span>
-                        {cv.isDefault && <span className="badge-default-cv">Mặc định</span>}
+
                       </div>
 
                       <span className="resume-meta">
-                        {formatFileSize(cv.source?.fileSize || 1542031)} • Tải lên ngày {formatDate(cv.createdAt)}
+                        Tải lên ngày {formatDate(cv.createdAt)}{cv.parseInfo?.status && ` • Trích xuất: ${cv.parseInfo.status}`}
                       </span>
                     </div>
                   </div>
@@ -714,35 +773,25 @@ const CandidateProfile = () => {
                   )}
 
                   <div className="resume-card-actions">
-                    {!cv.isDefault ? (
-                      <button
-                        type="button"
-                        className="btn-action btn-action--secondary btn-action--sm"
-                        onClick={() => handleSetDefaultCv(cv._id)}
-                      >
-                        Đặt làm CV chính
-                      </button>
-                    ) : (
-                      <span style={{ fontSize: '12px', color: 'var(--status-success)', fontWeight: 500 }}>
-                        ✓ Sử dụng khi nộp nhanh
-                      </span>
-                    )}
-
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <button
                         type="button"
                         className="btn-action btn-action--secondary btn-action--sm"
-                        onClick={() => alert(`Xem file: ${cv.source?.fileName || cv.title}`)}
+                        disabled={busy || !cv.canViewFile}
+                        onClick={() => handleViewCv(cv._id)}
                       >
                         Xem
                       </button>
                       <button
                         type="button"
                         className="btn-action btn-action--danger btn-action--sm"
+                        disabled={busy || !cv.canDelete}
+                        title={cv.deleteBlockedReason || undefined}
                         onClick={() => handleDeleteCv(cv._id)}
                       >
                         Xóa
                       </button>
+                      {!cv.canDelete && cv.deleteBlockedReason && <small>{cv.deleteBlockedReason}</small>}
                     </div>
                   </div>
                 </div>
@@ -753,6 +802,7 @@ const CandidateProfile = () => {
                 onClick={() => navigate('/cv')}
                 role="button"
                 tabIndex={0}
+                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate('/cv'); } }}
               >
                 <div className="upload-icon-circle">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -770,6 +820,7 @@ const CandidateProfile = () => {
                 </div>
               </div>
             </div>
+            {!listLoading.resumes && !errors.resumes && <Pagination data={cvsPagination} page={cvPage} onChange={setCvPage} />}
           </div>
         )}
 
@@ -782,26 +833,31 @@ const CandidateProfile = () => {
               <div className="section-title-group">
                 <h2 className="section-title">Hồ sơ năng lực & Trích xuất AI</h2>
                 <p className="section-description">
-                  Dữ liệu được trích xuất tự động từ CV chính của bạn: {primaryCv?.source?.fileName || 'Chưa chọn'}
+                  Dữ liệu từ CV mới nhất: {career?.cv?.fileName || career?.cv?.title || 'Chưa có CV'}
                 </p>
               </div>
 
               <button
                 type="button"
                 className="btn-action btn-action--secondary"
-                onClick={() => setIsEditModalOpen(true)}
+                onClick={() => navigate('/cv')}
               >
-                Cập nhật thông tin
+                Tải CV mới
               </button>
             </div>
 
+            {/* GET /career -> skills/experience/education/certificates từ CV mới nhất; chỉ đọc. */}
+            {listLoading.career && <p role="status">Đang tải hồ sơ năng lực...</p>}
+            {career?.cv?.parseInfo?.status && <p>Trạng thái trích xuất: {career.cv.parseInfo.status}</p>}
+            {!listLoading.career && !errors.career && !career?.cv && <p>Chưa có CV để trích xuất thông tin.</p>}
+            {career && <>
             {/* Kỹ năng trích xuất */}
             <div className="career-section-card">
               <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
                 Kỹ năng chuyên môn
               </h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {primaryCv?.skills?.map((skill, idx) => (
+                {career?.skills?.length > 0 ? career.skills.map((skill, idx) => (
                   <span
                     key={idx}
                     style={{
@@ -813,9 +869,9 @@ const CandidateProfile = () => {
                       color: 'var(--text-primary)'
                     }}
                   >
-                    <strong>{skill.name}</strong> • {skill.yearsOfExperience || 1} năm ({skill.level})
+                    <strong>{skill.name}</strong> • {skill.yearsOfExperience != null ? `${skill.yearsOfExperience} năm` : 'Chưa cập nhật số năm'} {skill.level && `(${skill.level})`}
                   </span>
-                )) || <p style={{ color: 'var(--text-secondary)' }}>Chưa có thông tin kỹ năng.</p>}
+                )) : <p style={{ color: 'var(--text-secondary)' }}>Chưa có thông tin kỹ năng.</p>}
               </div>
             </div>
 
@@ -825,13 +881,13 @@ const CandidateProfile = () => {
                 Kinh nghiệm làm việc
               </h3>
               <div className="timeline">
-                {primaryCv?.experience?.map((exp, idx) => (
+                {career?.experience?.length > 0 ? career.experience.map((exp, idx) => (
                   <div key={idx} className="timeline-item">
                     <span className="timeline-dot" />
                     <div className="timeline-role">{exp.position}</div>
                     <div className="timeline-company">{exp.company} • {exp.location}</div>
                     <div className="timeline-time">
-                      {exp.startDate} - {exp.endDate}
+                      {exp.startDate} - {exp.current ? 'Hiện tại' : exp.endDate}
                     </div>
                     <p className="timeline-description">{exp.description}</p>
                     {exp.achievements && exp.achievements.length > 0 && (
@@ -842,17 +898,18 @@ const CandidateProfile = () => {
                       </ul>
                     )}
                   </div>
-                )) || <p style={{ color: 'var(--text-secondary)' }}>Chưa có kinh nghiệm nào được trích xuất.</p>}
+                )) : <p style={{ color: 'var(--text-secondary)' }}>Chưa có kinh nghiệm nào được trích xuất.</p>}
               </div>
             </div>
 
-            {/* Học vấn & Chứng chỉ */}
+            {/* Học vấn */}
             <div className="career-section-card">
               <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                Học vấn & Chứng chỉ
+                Học vấn
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {primaryCv?.education?.map((edu, idx) => (
+                {career?.education?.length === 0 && <p>Chưa có thông tin học vấn.</p>}
+                {career?.education?.map((edu, idx) => (
                   <div key={idx} style={{ borderBottom: '1px solid var(--border-hairline)', paddingBottom: '12px' }}>
                     <div style={{ fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)' }}>
                       {edu.degree} - {edu.major}
@@ -869,6 +926,19 @@ const CandidateProfile = () => {
                 ))}
               </div>
             </div>
+            {/* GET /career.certificates[] -> chứng chỉ được trích xuất từ CV nguồn. */}
+            <div className="career-section-card">
+              <h3>Chứng chỉ</h3>
+              {career?.certificates?.length ? career.certificates.map((cert, index) => (
+                <div key={index}>
+                  <strong>{cert.name}</strong>
+                  <p>{cert.issuer}{cert.issueDate && ` • Cấp ngày ${cert.issueDate}`}</p>
+                  {cert.credentialId && <p>Mã chứng chỉ: {cert.credentialId}</p>}
+                  {cert.expirationDate && <p>Hết hạn: {cert.expirationDate}</p>}
+                </div>
+              )) : <p>Chưa có thông tin chứng chỉ.</p>}
+            </div>
+            </>}
           </div>
         )}
 
@@ -881,19 +951,20 @@ const CandidateProfile = () => {
               <div className="section-title-group">
                 <h2 className="section-title">Cài đặt tài khoản & Thông tin cá nhân</h2>
                 <p className="section-description">
-                  Cập nhật thông tin liên hệ và trạng thái nhận việc của bạn
+                  Cập nhật họ tên, số điện thoại và địa điểm của bạn
                 </p>
               </div>
             </div>
 
             <div className="career-section-card">
+              {/* GET /profile -> editFormData; PUT /profile -> lưu 4 trường bên dưới. */}
               <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div className="settings-grid">
                   <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
+                    <label htmlFor="profile-fullName-0" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
                       Họ và tên
                     </label>
-                    <input
+                    <input id="profile-fullName-0" maxLength={120}
                       type="text"
                       className="form-control-input"
                       value={editFormData.fullName || ''}
@@ -903,10 +974,10 @@ const CandidateProfile = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
+                    <label htmlFor="profile-phone-0" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
                       Số điện thoại
                     </label>
-                    <input
+                    <input id="profile-phone-0" maxLength={30}
                       type="tel"
                       className="form-control-input"
                       value={editFormData.phone || ''}
@@ -915,38 +986,10 @@ const CandidateProfile = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
-                      Chức danh chuyên môn
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control-input"
-                      value={editFormData.title || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
-                      placeholder="VD: Senior Frontend Developer"
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
-                      Trạng thái tìm việc
-                    </label>
-                    <select
-                      className="form-control-select"
-                      value={editFormData.searchStatus || 'actively_looking'}
-                      onChange={(e) => setEditFormData({ ...editFormData, searchStatus: e.target.value })}
-                    >
-                      <option value="actively_looking">Đang chủ động tìm việc (Hiện nổi bật cho HR)</option>
-                      <option value="open">Mở cơ hội mới (Không vội, chỉ xem đề nghị tốt)</option>
-                      <option value="not_looking">Tạm dừng tìm việc</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
+                    <label htmlFor="profile-city-0" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
                       Tỉnh / Thành phố
                     </label>
-                    <input
+                    <input id="profile-city-0" maxLength={120}
                       type="text"
                       className="form-control-input"
                       value={editFormData.city || ''}
@@ -956,33 +999,21 @@ const CandidateProfile = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
+                    <label htmlFor="profile-country-0" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
                       Quốc gia
                     </label>
-                    <input
+                    <input id="profile-country-0" maxLength={120}
                       type="text"
                       className="form-control-input"
-                      value={editFormData.country || 'Việt Nam'}
+                      value={editFormData.country || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, country: e.target.value })}
                     />
                   </div>
 
-                  <div className="form-group-full">
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
-                      Giới thiệu bản thân (Bio)
-                    </label>
-                    <textarea
-                      rows={4}
-                      className="form-control-textarea"
-                      value={editFormData.bio || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, bio: e.target.value })}
-                      placeholder="Tóm tắt ngắn về kinh nghiệm và mục tiêu sự nghiệp..."
-                    />
-                  </div>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
-                  <button type="submit" className="btn-action btn-action--primary">
+                  <button type="submit" disabled={busy || Boolean(errors.profile)} className="btn-action btn-action--primary">
                     Lưu thay đổi
                   </button>
                 </div>
@@ -1015,6 +1046,7 @@ const CandidateProfile = () => {
         {/* =========================================================================
             MODAL 1: CHỈNH SỬA THÔNG TIN CÁ NHÂN
            ========================================================================= */}
+        {/* Settings và modal dùng chung editFormData từ GET /profile; submit PUT chỉ fullName/phone/location. */}
         {isEditModalOpen && (
           <div className="modal-backdrop" onClick={() => setIsEditModalOpen(false)}>
             <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
@@ -1031,11 +1063,12 @@ const CandidateProfile = () => {
 
               <form onSubmit={handleSaveProfile}>
                 <div className="modal-body">
+                  {notice && <p role="status">{notice}</p>}
                   <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
+                    <label htmlFor="profile-fullName-1" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
                       Họ và tên
                     </label>
-                    <input
+                    <input id="profile-fullName-1" maxLength={120}
                       type="text"
                       className="form-control-input"
                       value={editFormData.fullName || ''}
@@ -1045,23 +1078,10 @@ const CandidateProfile = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
-                      Chức danh chuyên môn
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control-input"
-                      value={editFormData.title || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
-                      placeholder="VD: Senior React Developer"
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
+                    <label htmlFor="profile-phone-1" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
                       Số điện thoại
                     </label>
-                    <input
+                    <input id="profile-phone-1" maxLength={30}
                       type="tel"
                       className="form-control-input"
                       value={editFormData.phone || ''}
@@ -1070,10 +1090,10 @@ const CandidateProfile = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
+                    <label htmlFor="profile-city-1" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
                       Tỉnh / Thành phố
                     </label>
-                    <input
+                    <input id="profile-city-1" maxLength={120}
                       type="text"
                       className="form-control-input"
                       value={editFormData.city || ''}
@@ -1081,19 +1101,13 @@ const CandidateProfile = () => {
                     />
                   </div>
 
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
-                      Giới thiệu bản thân
-                    </label>
-                    <textarea
-                      rows={3}
-                      className="form-control-textarea"
-                      value={editFormData.bio || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, bio: e.target.value })}
-                    />
-                  </div>
+                <div>
+                  <label htmlFor="modal-country">Quốc gia</label>
+                  <input id="modal-country" className="form-control-input" maxLength={120}
+                    value={editFormData.country || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, country: e.target.value })} />
                 </div>
-
+                </div>
                 <div className="modal-footer">
                   <button
                     type="button"
@@ -1102,11 +1116,21 @@ const CandidateProfile = () => {
                   >
                     Hủy
                   </button>
-                  <button type="submit" className="btn-action btn-action--primary">
+                  <button type="submit" disabled={busy || Boolean(errors.profile)} className="btn-action btn-action--primary">
                     Lưu cập nhật
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {pdfUrl && (
+          <div className="modal-backdrop">
+            <div className="modal-dialog" role="dialog" aria-modal="true" aria-label="Xem CV">
+              <div className="modal-header"><h3>Xem CV</h3><button type="button" className="modal-close-btn" onClick={() => setPdfUrl(null)}>Đóng</button></div>
+              <iframe title="Nội dung CV" src={pdfUrl} style={{ width: '100%', height: '65vh', border: 0 }} />
+              <a href={pdfUrl} target="_blank" rel="noreferrer">Mở PDF trong tab mới</a>
             </div>
           </div>
         )}
@@ -1148,7 +1172,7 @@ const CandidateProfile = () => {
                   <div>
                     <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Điểm tương thích tổng quát</div>
                     <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--status-success)' }}>
-                      {selectedAnalysis.aiAnalysis?.overallScore || 0}%
+                      {selectedAnalysis.aiAnalysis?.overallScore != null ? `${selectedAnalysis.aiAnalysis.overallScore}%` : 'Chưa có điểm'}
                     </div>
                   </div>
                   <div style={{ maxWidth: '320px', fontSize: '13px', color: 'var(--text-primary)' }}>

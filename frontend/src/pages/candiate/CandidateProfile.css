@@ -2,6 +2,20 @@
    Candidate Profile (Trang cá nhân Ứng viên) - Chuẩn UI/UX
    ========================================================================== */
 
+.profile-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.candidate-profile-page button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .candidate-profile-page {
   min-height: calc(100vh - 64px);
   background-color: var(--bg-primary);

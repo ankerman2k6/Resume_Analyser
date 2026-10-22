@@ -1,230 +1,94 @@
-import {
-  MOCK_CANDIDATE_PROFILE,
-  MOCK_CANDIDATE_CVS,
-  MOCK_CANDIDATE_APPLICATIONS
-} from './mockCandidateData';
-
-const STORAGE_KEYS = {
-  PROFILE: 'cmcv_candidate_profile',
-  CVS: 'cmcv_candidate_cvs',
-  APPLICATIONS: 'cmcv_candidate_applications'
-};
-
-// Khởi tạo localStorage với mock data ban đầu nếu chưa có
-const getLocalData = (key, fallback) => {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) {
-      localStorage.setItem(key, JSON.stringify(fallback));
-      return fallback;
-    }
-    return JSON.parse(raw);
-  } catch {
-    return fallback;
-  }
-};
-
-const setLocalData = (key, data) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch (err) {
-    console.error('Lỗi lưu trữ dữ liệu local:', err);
-  }
-};
+const CANDIDATE_API = '/api/candidates/me';
 
 /**
- * Lấy thông tin hồ sơ cá nhân của ứng viên đang đăng nhập
- * Thử gọi GET /api/candidates/me/profile, nếu chưa có (404/500/offline) -> Dùng mock data
+ * JWT của phiên đăng nhập được gửi qua Authorization: Bearer <token>.
+ * /api được Vite proxy tới backend khi chạy dev. Không fallback mock/localStorage.
+ * Lỗi giữ status/code để UI phân biệt chưa có profile, hết phiên và lỗi nghiệp vụ.
  */
-export const getCandidateProfileApi = async () => {
+const request = async (url, { method = 'GET', body, signal, binary = false } = {}) => {
   const token = localStorage.getItem('token');
-
-  if (token) {
-    try {
-      const response = await fetch('/api/candidates/me/profile', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch {
-      // Backend chưa có endpoint, fallback về mock
-    }
+  if (!token) {
+    throw Object.assign(new Error('Vui lòng đăng nhập để xem hồ sơ.'), { status: 401 });
   }
-
-  // Fallback mock data
-  const profile = getLocalData(STORAGE_KEYS.PROFILE, MOCK_CANDIDATE_PROFILE);
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  if (user && user.email) {
-    return {
-      ...profile,
-      email: user.email,
-      fullName: user.fullName || profile.fullName
-    };
+  const response = await fetch(url, {
+    method, signal,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(body ? { 'Content-Type': 'application/json' } : {})
+    },
+    ...(body ? { body: JSON.stringify(body) } : {})
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw Object.assign(new Error(
+      response.status === 401
+        ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+        : [data.message, ...Object.values(data.errors || {})].filter(Boolean).join(' ')
+          || 'Không thể thực hiện yêu cầu. Vui lòng thử lại.'
+    ), { status: response.status, code: data.code });
   }
-  return profile;
+  if (response.status === 204) return null;
+  return binary ? response.blob() : response.json();
 };
 
-/**
- * Cập nhật thông tin hồ sơ cá nhân của ứng viên
- * Gọi PUT /api/candidates/me/profile, fallback cập nhật localStorage
+/** GET /api/candidates/me/profile → ProfileDto: fullName, email, avatarUrl,
+ * phone, location, accountStatus... 404 PROFILE_NOT_FOUND: UI cho tạo bằng PUT. */
+export const getCandidateProfileApi = (signal) =>
+  request(`${CANDIDATE_API}/profile`, { signal });
+
+/** PUT /api/candidates/me/profile; body: fullName, phone, location:{city,country}.
+ * Trả ProfileDto: 201 tạo mới, 200 cập nhật. Chuỗi rỗng xóa field tùy chọn.
  */
-export const updateCandidateProfileApi = async (updatedData) => {
-  const token = localStorage.getItem('token');
+export const updateCandidateProfileApi = ({ fullName, phone, location }) =>
+  request(`${CANDIDATE_API}/profile`, {
+    method: 'PUT',
+    body: { fullName, phone, location: { city: location.city, country: location.country } }
+  });
 
-  if (token) {
-    try {
-      const response = await fetch('/api/candidates/me/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(updatedData)
-      });
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch {
-      // Fallback
-    }
-  }
-
-  // Cập nhật local
-  const current = getLocalData(STORAGE_KEYS.PROFILE, MOCK_CANDIDATE_PROFILE);
-  const nextProfile = {
-    ...current,
-    ...updatedData,
-    updatedAt: new Date().toISOString()
-  };
-  setLocalData(STORAGE_KEYS.PROFILE, nextProfile);
-  return nextProfile;
-};
-
-/**
- * Lấy danh sách các đơn ứng tuyển của ứng viên
- * Gọi GET /api/candidates/me/applications, fallback mock data
+/** GET /api/candidates/me/stats → StatsDto, tổng toàn bộ dữ liệu:
+ * cvCount, applicationCount, upcomingInterviewCount, avgMatchScore (có thể null),
+ * applicationCounts theo filter. Không tính tổng từ danh sách đã phân trang.
  */
-export const getCandidateApplicationsApi = async () => {
-  const token = localStorage.getItem('token');
+export const getCandidateStatsApi = (signal) =>
+  request(`${CANDIDATE_API}/stats`, { signal });
 
-  if (token) {
-    try {
-      const response = await fetch('/api/candidates/me/applications', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return Array.isArray(data) ? data : data.content || [];
-      }
-    } catch {
-      // Fallback
-    }
-  }
-
-  return getLocalData(STORAGE_KEYS.APPLICATIONS, MOCK_CANDIDATE_APPLICATIONS);
-};
-
-/**
- * Lấy danh sách CV của ứng viên
- * Gọi GET /api/resumes (hoặc /api/candidates/me/cvs), fallback mock data
+/** GET /api/candidates/me/applications?filter=all&page=0&size=10
+ * filter: all/applied/reviewing/interview/accepted/rejected/withdrawn.
+ * Trả PageResponse: content[], page, size, totalElements, totalPages, last.
+ * Mỗi ApplicationDto có job, company, aiAnalysis, interview và canWithdraw.
  */
-export const getCandidateCvsApi = async () => {
-  const token = localStorage.getItem('token');
+export const getCandidateApplicationsApi = ({ filter = 'all', page = 0, size = 10, signal } = {}) =>
+  request(`${CANDIDATE_API}/applications?${new URLSearchParams({ filter, page, size })}`, { signal });
 
-  if (token) {
-    try {
-      const response = await fetch('/api/resumes', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const list = Array.isArray(data) ? data : data.content || [];
-        if (list.length > 0) return list;
-      }
-    } catch {
-      // Fallback
-    }
-  }
-
-  return getLocalData(STORAGE_KEYS.CVS, MOCK_CANDIDATE_CVS);
-};
-
-/**
- * Rút đơn ứng tuyển
- * @param {string} applicationId - ID của đơn ứng tuyển cần rút
- * @returns {Promise<boolean>} true nếu rút thành công, false nếu không tìm thấy hoặc thất bại
+/** POST /api/candidates/me/applications/{applicationId}/withdraw, không có body.
+ * Trả ApplicationDto status=withdrawn; giữ đơn trong lịch sử.
  */
-export const withdrawApplicationApi = async (applicationId) => {
-  if (!applicationId) {
-    return false;
-  }
+export const withdrawApplicationApi = (applicationId) =>
+  request(`${CANDIDATE_API}/applications/${encodeURIComponent(applicationId)}/withdraw`, { method: 'POST' });
 
-  const token = localStorage.getItem('token');
-
-  if (token) {
-    try {
-      const response = await fetch(`/api/candidates/me/applications/${applicationId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        return true;
-      }
-
-      // Nếu backend từ chối yêu cầu (ví dụ: 400, 403 không cho rút đơn)
-      if (response.status >= 400 && response.status !== 404) {
-        return false;
-      }
-    } catch {
-      // Khi backend chưa có endpoint hoặc offline, fallback xử lý trên mock data
-    }
-  }
-
-  // Fallback xử lý trên mock data: kiểm tra đơn ứng tuyển có tồn tại hay không
-  const list = getLocalData(STORAGE_KEYS.APPLICATIONS, MOCK_CANDIDATE_APPLICATIONS);
-  const applicationIndex = list.findIndex((app) => app._id === applicationId);
-
-  if (applicationIndex === -1) {
-    return false;
-  }
-
-  const updatedList = list.filter((app) => app._id !== applicationId);
-  setLocalData(STORAGE_KEYS.APPLICATIONS, updatedList);
-  return true;
-};
-
-/**
- * Đặt CV mặc định
+/** GET /api/candidates/me/cvs?page=0&size=10 → PageResponse<CvSummaryDto>.
+ * content chứa source.fileName, skills, parseInfo, canViewFile, canDelete,
+ * deleteBlockedReason; không có isDefault hoặc fileSize.
  */
-export const setDefaultCvApi = async (cvId) => {
-  const list = getLocalData(STORAGE_KEYS.CVS, MOCK_CANDIDATE_CVS);
-  const updated = list.map((cv) => ({
-    ...cv,
-    isDefault: cv._id === cvId
-  }));
-  setLocalData(STORAGE_KEYS.CVS, updated);
-  return updated;
-};
+export const getCandidateCvsApi = ({ page = 0, size = 10, signal } = {}) =>
+  request(`${CANDIDATE_API}/cvs?${new URLSearchParams({ page, size })}`, { signal });
 
-/**
- * Xóa CV
+/** GET /api/candidates/me/cvs/{cvId}/file → binary PDF có kiểm tra JWT/owner.
+ * Trả Blob để UI tạo object URL; không mở endpoint trực tiếp thiếu Bearer.
  */
-export const deleteCandidateCvApi = async (cvId) => {
-  const list = getLocalData(STORAGE_KEYS.CVS, MOCK_CANDIDATE_CVS);
-  const updated = list.filter((cv) => cv._id !== cvId);
-  setLocalData(STORAGE_KEYS.CVS, updated);
-  return updated;
-};
+export const getCandidateCvFileApi = (cvId) =>
+  request(`${CANDIDATE_API}/cvs/${encodeURIComponent(cvId)}/file`, { binary: true });
+
+/** DELETE /api/candidates/me/cvs/{cvId} → 204, không trả danh sách.
+ * UI tải lại CV/stats/career. CV đã sử dụng có thể bị backend từ chối xóa.
+ */
+export const deleteCandidateCvApi = (cvId) =>
+  request(`${CANDIDATE_API}/cvs/${encodeURIComponent(cvId)}`, { method: 'DELETE' });
+
+/** GET /api/candidates/me/career[?cvId=...] → CareerDto:
+ * cv (nguồn + parseInfo), skills[], experience[], education[], certificates[].
+ * Bỏ cvId: backend chọn CV mới nhất. Không có CV: cv=null, các mảng rỗng.
+ * Career chỉ đọc; tải mới qua POST /api/resumes/upload ở resumeService.js.
+ */
+export const getCandidateCareerApi = ({ cvId, signal } = {}) =>
+  request(`${CANDIDATE_API}/career${cvId ? `?${new URLSearchParams({ cvId })}` : ''}`, { signal });
