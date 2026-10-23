@@ -1,5 +1,4 @@
 import React from 'react';
-import { CareerSignalHero } from './components/CareerSignalHero';
 import { CareerSignalStory } from './components/CareerSignalStory';
 import { ProductProof } from './components/ProductProof';
 import { WorkspacePreview } from './components/WorkspacePreview';
@@ -10,7 +9,6 @@ import './landing.css';
 export const LandingPage = () => (
   <div className="landing-page">
     <main>
-      <CareerSignalHero />
       <CareerSignalStory />
       <ProductProof />
       <WorkspacePreview />

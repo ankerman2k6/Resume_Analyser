@@ -21,6 +21,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, cycleTheme } = useTheme();
+  const isLanding = location.pathname === '/';
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -74,10 +75,10 @@ const Navbar = () => {
   ];
 
   return (
-    <header className={`navbar${isScrolled ? ' navbar--scrolled' : ''}`}>
+    <header className={`navbar${isScrolled ? ' navbar--scrolled' : ''}${isLanding ? ' navbar--landing' : ''}`}>
       <div className="navbar__inner">
         <Link to="/" className="navbar__brand" aria-label="KONEK — về trang chủ">
-          <Logo size="md" />
+          <Logo size="md" variant={isLanding ? 'dark' : undefined} />
         </Link>
 
         <nav className="navbar__links" aria-label="Điều hướng trang chủ">
@@ -89,16 +90,18 @@ const Navbar = () => {
         </nav>
 
         <div className="navbar__actions">
-          <button
-            type="button"
-            className="navbar__theme"
-            onClick={cycleTheme}
-            aria-label={`Chế độ giao diện: ${THEME_LABELS[theme]}. Nhấn để đổi.`}
-            title={`Giao diện: ${THEME_LABELS[theme]}`}
-          >
-            <ThemeIcon theme={theme} />
-            <span>{THEME_LABELS[theme]}</span>
-          </button>
+          {!isLanding && (
+            <button
+              type="button"
+              className="navbar__theme"
+              onClick={cycleTheme}
+              aria-label={`Chế độ giao diện: ${THEME_LABELS[theme]}. Nhấn để đổi.`}
+              title={`Giao diện: ${THEME_LABELS[theme]}`}
+            >
+              <ThemeIcon theme={theme} />
+              <span>{THEME_LABELS[theme]}</span>
+            </button>
+          )}
           <Link to="/login" className="navbar__login">Đăng nhập</Link>
           <Link to="/register" className="navbar__cta">
             Bắt đầu
