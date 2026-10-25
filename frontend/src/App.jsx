@@ -7,6 +7,8 @@ import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import HRPage from './pages/hr/index';
 import CandidatePage from './pages/candiate/index';
+import JobDetail from './pages/candiate/JobDetail';
+import CompanyDetail from './pages/candiate/CompanyDetail';
 import CandidateProfile from './pages/candiate/CandidateProfile';
 import CVUploadPage from './pages/cv/index';
 
@@ -30,6 +32,8 @@ function App() {
           <Route path="/" element={<MainLayout />}>
             <Route index element={<HomePage />} />
             <Route path="candidate" element={<CandidatePage />} />
+            <Route path="candidate/jobs/:jobId" element={<JobDetail />} />
+            <Route path="candidate/companies/:companyId" element={<CompanyDetail />} />
             <Route path="candidate/profile" element={<CandidateProfile />} />
             <Route path="profile" element={<Navigate to="/candidate/profile" replace />} />
             <Route

@@ -16,3 +16,6 @@ uploads/
 .idea/discord.xml
 .codex/*
 graphify-out/*
+mongo-init/*
+skills-lock.json
+.agents/

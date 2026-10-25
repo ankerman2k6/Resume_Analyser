@@ -43,3 +43,39 @@ export const searchJobsApi = async ({
 
 
 }
+
+// API nhận dữ liệu chi tiết của một job từ backend: GET /api/jobs/{id}.
+// Hàm này chỉ gọi và trả JSON; việc hiển thị dữ liệu nằm ở JobDetail.jsx.
+export const getJobDetailApi = async (jobId) => {
+    const response = await fetch(`/api/jobs/${encodeURIComponent(jobId)}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Không thể tải chi tiết việc làm');
+    }
+
+    return await response.json();
+};
+
+// API nhận dữ liệu công ty theo companyId: GET /api/companies/{id}.
+// Hàm này phục vụ cả card công ty trong JobDetail và trang CompanyDetail.
+export const getCompanyDetailApi = async (companyId) => {
+    const response = await fetch(`/api/companies/${encodeURIComponent(companyId)}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Không thể tải thông tin công ty');
+    }
+
+    return await response.json();
+};

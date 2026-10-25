@@ -65,7 +65,8 @@ public class SecurityConfig {
                                 "/api/auth/register")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET,
-                                "/api/jobs/**")
+                                "/api/jobs/**",
+                                "/api/companies/**")
                         .permitAll()
                         .requestMatchers("/api/hr/**").hasRole("RECRUITER")
                         .anyRequest().authenticated())

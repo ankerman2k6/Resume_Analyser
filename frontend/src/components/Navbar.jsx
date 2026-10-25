@@ -254,6 +254,7 @@ const Navbar = () => {
                   type="button"
                   className="btn-nav btn-nav--ghost"
                   onClick={() => navigate('/login')}
+                  aria-label="Đăng nhập"
                 >
                   <span>Đăng nhập</span>
                 </button>
@@ -262,6 +263,7 @@ const Navbar = () => {
                   type="button"
                   className="btn-nav btn-nav--outline"
                   onClick={() => navigate('/register')}
+                  aria-label="Đăng ký"
                 >
                   <span>Đăng ký</span>
                 </button>

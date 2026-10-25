@@ -268,6 +268,21 @@
   }
 }
 
+@media (max-width: 390px) {
+  /* Giữ toàn bộ lối điều hướng trong một hàng ở màn 375px. */
+  .navbar-group--features .btn-nav--primary span,
+  .navbar-group--auth .btn-nav span {
+    display: none;
+  }
+
+  .navbar-group--features .btn-nav--primary,
+  .navbar-group--auth .btn-nav {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+  }
+}
+
 /* --------------------------------------------------------------------------
    User Profile Avatar & Dropdown Menu trên Navbar
    -------------------------------------------------------------------------- */

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import CandidateSearch from './CandidateSearch';
 import './index.css';
 import { searchJobsApi } from '../../services/jobsService';
@@ -64,6 +64,7 @@ const getCompanyLogoText = (title = '', companyId = '') => {
 
 
 const CandidatePage = () => {
+  const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   // 1. Quản lý danh sách việc làm và trạng thái từ BE
   const [jobs, setJobs] = useState([]);
@@ -204,7 +205,20 @@ const CandidatePage = () => {
             <>
               <div className="jobs-list-grid">
                 {jobs.map((job) => (
-                  <article key={job.id} className="job-card">
+                  <article
+                    key={job.id}
+                    className="job-card"
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => navigate(`/candidate/jobs/${job.id}`)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        navigate(`/candidate/jobs/${job.id}`);
+                      }
+                    }}
+                    aria-label={`Xem chi tiết ${job.title}`}
+                  >
                     <div className="job-card-main">
                       <div className="job-company-logo" aria-hidden="true">
                         {getCompanyLogoText(job.title, job.companyId)}
@@ -247,7 +261,14 @@ const CandidatePage = () => {
                     </div>
 
                     <div className="job-card-action">
-                      <button type="button" className="btn-apply-job">
+                      <button
+                        type="button"
+                        className="btn-apply-job"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(`/candidate/jobs/${job.id}`);
+                        }}
+                      >
                         Ứng tuyển ngay
                       </button>
                     </div>
