@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, Calendar, ShieldCheck, ArrowRight } from 'lucide-react';
+import { X, CheckCircle2, ShieldCheck, ArrowRight } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { createDemoBooking } from '../../../services/demoBookingService';
+
+const DEMO_SLOTS = [
+  'Ngày mai, 14:00 (GMT+7)',
+  'Thứ Năm, 10:00 (GMT+7)',
+  'Thứ Năm, 15:30 (GMT+7)',
+  'Thứ Sáu, 14:00 (GMT+7)',
+];
 
 interface DemoModalProps {
   isOpen: boolean;
@@ -22,14 +30,30 @@ export const DemoModal: React.FC<DemoModalProps> = ({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState('Tomorrow, 2:00 PM EST');
+  const [submitError, setSubmitError] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState(DEMO_SLOTS[0]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleClose = () => {
+    setIsSubmitting(false);
+    setIsSuccess(false);
+    setSubmitError('');
+    onClose();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setTimeout(() => {
+    setSubmitError('');
+
+    try {
+      await createDemoBooking({
+        ...formData,
+        plan: initialPlan,
+        requestedSlot: selectedSlot,
+      });
+
       setIsSubmitting(false);
       setIsSuccess(true);
       confetti({
@@ -38,7 +62,14 @@ export const DemoModal: React.FC<DemoModalProps> = ({
         origin: { y: 0.6 },
         colors: ['#2563EB', '#0D212C', '#38BDF8'],
       });
-    }, 600);
+    } catch (error) {
+      setIsSubmitting(false);
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : 'Không thể đặt lịch demo. Vui lòng thử lại sau.',
+      );
+    }
   };
 
   return (
@@ -57,7 +88,7 @@ export const DemoModal: React.FC<DemoModalProps> = ({
             </h3>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Đóng hộp thoại"
             className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors"
           >
@@ -124,7 +155,7 @@ export const DemoModal: React.FC<DemoModalProps> = ({
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700">Khung giờ còn trống</label>
               <div className="grid grid-cols-2 gap-2">
-                {['Ngày mai, 14:00 (GMT+7)', 'Thứ Năm, 10:00 (GMT+7)', 'Thứ Năm, 15:30 (GMT+7)', 'Thứ Sáu, 14:00 (GMT+7)'].map((slot) => (
+                {DEMO_SLOTS.map((slot) => (
                   <button
                     type="button"
                     key={slot}
@@ -141,11 +172,20 @@ export const DemoModal: React.FC<DemoModalProps> = ({
               </div>
             </div>
 
+            {submitError && (
+              <div
+                role="alert"
+                className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700"
+              >
+                {submitError}
+              </div>
+            )}
+
             <div className="pt-3">
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3 px-4 rounded-xl bg-[#051A24] hover:bg-[#0D212C] text-white font-semibold text-xs transition-colors shadow-md flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 rounded-xl bg-[#051A24] hover:bg-[#0D212C] disabled:cursor-not-allowed disabled:opacity-60 text-white font-semibold text-xs transition-colors shadow-md flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <span>Đang kết nối phòng họp...</span>
@@ -169,14 +209,14 @@ export const DemoModal: React.FC<DemoModalProps> = ({
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <h4 className="text-xl font-bold text-[#051A24]">
-              Lịch hẹn đã được Xác nhận
+              Yêu cầu đã được Ghi nhận
             </h4>
             <p className="text-xs sm:text-sm text-slate-600 max-w-sm mx-auto leading-relaxed">
-              Chúng tôi đã giữ chỗ khung giờ <strong className="text-[#051A24]">{selectedSlot}</strong> cho {formData.name || 'bạn'} tại {formData.company || 'doanh nghiệp'}. Thư mời Google Meet kèm thông tin tài khoản dùng thử sandbox đã được gửi tới email của bạn.
+              Yêu cầu giữ chỗ khung giờ <strong className="text-[#051A24]">{selectedSlot}</strong> cho {formData.name || 'bạn'} tại {formData.company || 'doanh nghiệp'} đã được ghi nhận. Chúng tôi sẽ liên hệ qua email để xác nhận lịch hẹn.
             </p>
             <div className="pt-2">
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="px-6 py-2.5 rounded-xl bg-[#051A24] text-white text-xs font-semibold hover:bg-[#0D212C] transition-colors"
               >
                 Quay lại Trang chủ
