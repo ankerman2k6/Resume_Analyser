@@ -33,6 +33,7 @@ import com.resumeanalyser.backend.dto.JobResponse;
 import com.resumeanalyser.backend.dto.PageResponse;
 import com.resumeanalyser.backend.exception.BadRequestException;
 import com.resumeanalyser.backend.model.Job;
+import com.resumeanalyser.backend.model.RecruiterProfile;
 import com.resumeanalyser.backend.model.User;
 import com.resumeanalyser.backend.repository.JobRepository;
 
@@ -45,11 +46,14 @@ class JobServiceTest {
     @Mock
     private MongoTemplate mongoTemplate;
 
+    @Mock
+    private RecruiterIdentityService recruiterIdentity;
+
     private JobService jobService;
 
     @BeforeEach
     void setUp() {
-        jobService = new JobService(jobRepository, mongoTemplate);
+        jobService = new JobService(jobRepository, mongoTemplate, recruiterIdentity);
     }
 
     @Test
@@ -157,22 +161,28 @@ class JobServiceTest {
     void hrCrudKeepsOwnershipAndRichRequirements() {
         User recruiter = new User();
         recruiter.setId(new ObjectId().toHexString());
-        String companyId = new ObjectId().toHexString();
+        ObjectId companyId = new ObjectId();
+        ObjectId owner = new ObjectId();
+        RecruiterProfile profile = new RecruiterProfile();
+        profile.setId(owner);
+        profile.setUserId(new ObjectId(recruiter.getId()));
+        profile.setCompanyId(companyId);
         Map<String, Object> requirements = Map.of("requiredSkills", List.of("Java"),
                 "education", Map.of("minimumDegree", "bachelor"));
-        CreateJobRequest request = new CreateJobRequest(companyId, "Backend", "Description", "IT",
+        CreateJobRequest request = new CreateJobRequest(companyId.toHexString(), "Backend", "Description", "IT",
                 "full_time", new Job.Location("Address", "City", "Country", false),
                 new Job.Salary(100L, 200L, "USD", true), new Job.Experience(1, 3, "junior"),
                 requirements, List.of("Training"), Instant.now().plusSeconds(86400));
+        when(recruiterIdentity.requireProfile(recruiter)).thenReturn(profile);
+        when(recruiterIdentity.requireProfileId(recruiter)).thenReturn(owner);
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Job created = jobService.createJob(request, recruiter);
         created.setId(new ObjectId());
-        ObjectId owner = new ObjectId(recruiter.getId());
         when(jobRepository.findByIdAndRecruiterId(created.getId(), owner)).thenReturn(Optional.of(created));
         when(jobRepository.findByRecruiterId(owner)).thenReturn(List.of(created));
 
-        assertEquals(new ObjectId(companyId), created.getCompanyId());
+        assertEquals(companyId, created.getCompanyId());
         assertEquals(owner, created.getRecruiterId());
         assertEquals("draft", created.getStatus());
         assertEquals(requirements, created.getRequirements());
@@ -182,7 +192,7 @@ class JobServiceTest {
         jobService.updateJob(created.getId().toHexString(), request, recruiter);
         assertEquals(createdAt, created.getCreatedAt());
         assertEquals(owner, created.getRecruiterId());
-        assertEquals(new ObjectId(companyId), created.getCompanyId());
+        assertEquals(companyId, created.getCompanyId());
         assertEquals("published", jobService.updateJobStatus(created.getId().toHexString(), "published", recruiter).getStatus());
         jobService.deleteJob(created.getId().toHexString(), recruiter);
         verify(jobRepository).delete(created);
@@ -192,8 +202,10 @@ class JobServiceTest {
     void hrCannotReadUpdateOrDeleteAnotherRecruitersJob() {
         User recruiter = new User();
         recruiter.setId(new ObjectId().toHexString());
+        ObjectId owner = new ObjectId();
         ObjectId jobId = new ObjectId();
-        when(jobRepository.findByIdAndRecruiterId(jobId, new ObjectId(recruiter.getId())))
+        when(recruiterIdentity.requireProfileId(recruiter)).thenReturn(owner);
+        when(jobRepository.findByIdAndRecruiterId(jobId, owner))
                 .thenReturn(Optional.empty());
 
         assertEquals(404, assertThrows(ResponseStatusException.class,

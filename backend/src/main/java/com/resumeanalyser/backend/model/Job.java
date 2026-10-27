@@ -257,12 +257,20 @@ public class Job {
     public static class Requirements {
         private List<String> requiredSkills = new ArrayList<>();
         private List<String> preferredSkills = new ArrayList<>();
+        private Education education;
+        private MinimumGpa minimumGpa;
+        private List<LanguageRequirement> languages = new ArrayList<>();
 
         public Requirements() {}
 
-        public Requirements(List<String> requiredSkills, List<String> preferredSkills) {
+        public Requirements(List<String> requiredSkills, List<String> preferredSkills,
+                           Education education, MinimumGpa minimumGpa,
+                           List<LanguageRequirement> languages) {
             this.requiredSkills = requiredSkills != null ? requiredSkills : new ArrayList<>();
             this.preferredSkills = preferredSkills != null ? preferredSkills : new ArrayList<>();
+            this.education = education;
+            this.minimumGpa = minimumGpa;
+            this.languages = languages != null ? languages : new ArrayList<>();
         }
 
         public List<String> getRequiredSkills() { return requiredSkills; }
@@ -270,5 +278,68 @@ public class Job {
 
         public List<String> getPreferredSkills() { return preferredSkills; }
         public void setPreferredSkills(List<String> preferredSkills) { this.preferredSkills = preferredSkills; }
+
+        public Education getEducation() { return education; }
+        public void setEducation(Education education) { this.education = education; }
+
+        public MinimumGpa getMinimumGpa() { return minimumGpa; }
+        public void setMinimumGpa(MinimumGpa minimumGpa) { this.minimumGpa = minimumGpa; }
+
+        public List<LanguageRequirement> getLanguages() { return languages; }
+        public void setLanguages(List<LanguageRequirement> languages) { this.languages = languages; }
+    }
+
+    public static class Education {
+        private String minimumDegree;
+        private List<String> preferredMajors = new ArrayList<>();
+
+        public Education() {}
+
+        public Education(String minimumDegree, List<String> preferredMajors) {
+            this.minimumDegree = minimumDegree;
+            this.preferredMajors = preferredMajors != null ? preferredMajors : new ArrayList<>();
+        }
+
+        public String getMinimumDegree() { return minimumDegree; }
+        public void setMinimumDegree(String minimumDegree) { this.minimumDegree = minimumDegree; }
+
+        public List<String> getPreferredMajors() { return preferredMajors; }
+        public void setPreferredMajors(List<String> preferredMajors) { this.preferredMajors = preferredMajors; }
+    }
+
+    public static class MinimumGpa {
+        private Double value;
+        private Integer scale;
+
+        public MinimumGpa() {}
+
+        public MinimumGpa(Double value, Integer scale) {
+            this.value = value;
+            this.scale = scale;
+        }
+
+        public Double getValue() { return value; }
+        public void setValue(Double value) { this.value = value; }
+
+        public Integer getScale() { return scale; }
+        public void setScale(Integer scale) { this.scale = scale; }
+    }
+
+    public static class LanguageRequirement {
+        private String name;
+        private String minimumLevel;
+
+        public LanguageRequirement() {}
+
+        public LanguageRequirement(String name, String minimumLevel) {
+            this.name = name;
+            this.minimumLevel = minimumLevel;
+        }
+
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+
+        public String getMinimumLevel() { return minimumLevel; }
+        public void setMinimumLevel(String minimumLevel) { this.minimumLevel = minimumLevel; }
     }
 }

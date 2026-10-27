@@ -26,7 +26,21 @@ const employmentTypeLabels = {
 
 const formatDate = (date) => {
   if (!date) return 'Chưa cập nhật';
-  return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'long' }).format(new Date(date));
+  const parsedDate = new Date(date);
+  return Number.isNaN(parsedDate.getTime())
+    ? 'Chưa cập nhật'
+    : new Intl.DateTimeFormat('vi-VN', { dateStyle: 'long' }).format(parsedDate);
+};
+
+const formatExperience = (experience) => {
+  if (!experience) return 'Chưa cập nhật';
+  if (experience.level) return experience.level;
+  if (experience.minYears != null || experience.maxYears != null) {
+    const min = experience.minYears ?? 0;
+    const max = experience.maxYears ?? min;
+    return min === max ? `${min} năm` : `${min} - ${max} năm`;
+  }
+  return 'Chưa cập nhật';
 };
 
 const getSkillList = (requirements, key) => {
@@ -116,7 +130,7 @@ const JobDetail = () => {
         <Link className="job-detail-back" to="/candidate">← Quay lại danh sách việc làm</Link>
 
         <header className="job-detail-hero">
-          <div className="job-detail-company-mark" aria-hidden="true">{company.logoUrl ? <img src={company.logoUrl} alt={`Logo ${company.name}`} /> : company.name?.slice(0, 2).toUpperCase() || 'CO'}</div>
+          <div className="job-detail-company-mark" aria-hidden="true">{company?.logoUrl ? <img src={company.logoUrl} alt="" /> : company?.name?.slice(0, 2).toUpperCase() || 'CO'}</div>
           <div className="job-detail-hero-content">
             <span className="job-detail-eyebrow">{job.category || 'Cơ hội nghề nghiệp'}</span>
             {/* HIỂN THỊ API: các field job.title, job.category, job.location và job.employmentType */}
@@ -173,12 +187,12 @@ const JobDetail = () => {
 
           <aside className="job-detail-side-column">
             <section className="job-detail-panel job-detail-summary-panel">
-              <button type="button" className="job-detail-button job-detail-button--primary job-detail-apply-button">
+              <Link to="/cv" className="job-detail-button job-detail-button--primary job-detail-apply-button">
                 Ứng tuyển ngay
-              </button>
+              </Link>
               <dl className="job-detail-summary-list">
                 <div><dt>Mức lương</dt><dd>{formatSalary(job.salary)}</dd></div>
-                <div><dt>Kinh nghiệm</dt><dd>{job.experience?.level || `${job.experience?.minYears || 0} - ${job.experience?.maxYears || 0} năm`}</dd></div>
+                <div><dt>Kinh nghiệm</dt><dd>{formatExperience(job.experience)}</dd></div>
                 <div><dt>Địa điểm</dt><dd>{formatLocation(job.location)}</dd></div>
                 <div><dt>Hạn nộp hồ sơ</dt><dd>{formatDate(job.deadline)}</dd></div>
               </dl>
@@ -196,7 +210,7 @@ const JobDetail = () => {
           </aside>
         </div>
       </div>
-      <div className="job-detail-mobile-apply"><button type="button" className="job-detail-button job-detail-button--primary">Ứng tuyển ngay</button></div>
+      <div className="job-detail-mobile-apply"><Link to="/cv" className="job-detail-button job-detail-button--primary">Ứng tuyển ngay</Link></div>
     </main>
   );
 };

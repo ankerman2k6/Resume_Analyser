@@ -6,6 +6,8 @@ import com.resumeanalyser.backend.model.User;
 import com.resumeanalyser.backend.repository.UserRepository;
 import com.resumeanalyser.backend.security.*;
 import com.resumeanalyser.backend.service.ApplicationService;
+import com.resumeanalyser.backend.service.HrApplicationDetailsService;
+import com.resumeanalyser.backend.dto.HrApplicationResponse;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +41,7 @@ class HrApplicationControllerTests {
     @Autowired MockMvc mvc;
     @Autowired JwtService jwt;
     @MockitoBean ApplicationService service;
+    @MockitoBean HrApplicationDetailsService details;
     @MockitoBean UserRepository users;
     User recruiter;
     String token;
@@ -62,17 +65,17 @@ class HrApplicationControllerTests {
         application.setCandidateId(new ObjectId());
         application.setCvId(new ObjectId());
         application.setStatus("interview");
-        when(service.getApplicationsByJob(jobId, recruiter.getId())).thenReturn(List.of(application));
+        when(details.getByJob(jobId, recruiter.getId())).thenReturn(List.of(new HrApplicationResponse(appId, jobId, application.getCandidateId().toHexString(), application.getCvId().toHexString(), "Ứng viên", "candidate@test.invalid", "0900000000", null, "interview", null, null, null)));
         mvc.perform(get("/api/hr/jobs/{id}/applications", jobId).header("Authorization", token)
                         .param("recruiterId", new ObjectId().toHexString()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value(appId))
                 .andExpect(jsonPath("$[0].jobId").value(jobId))
                 .andExpect(jsonPath("$[0].status").value("interview"));
-        verify(service).getApplicationsByJob(jobId, recruiter.getId());
+        verify(details).getByJob(jobId, recruiter.getId());
     }
 
     @Test void getEmptyApplicationsIsEmptyJsonArray() throws Exception {
-        when(service.getApplicationsByJob(jobId, recruiter.getId())).thenReturn(List.of());
+        when(details.getByJob(jobId, recruiter.getId())).thenReturn(List.of());
         mvc.perform(get("/api/hr/jobs/{id}/applications", jobId).header("Authorization", token))
                 .andExpect(status().isOk()).andExpect(content().json("[]"));
     }
@@ -80,7 +83,7 @@ class HrApplicationControllerTests {
     @Test void getMapsBadIdMissingJobAndForbiddenOwner() throws Exception {
         for (RuntimeException error : List.of(new IllegalArgumentException("Invalid Job ID"),
                 new NotFoundException("Job not found"), new ForbiddenException("Forbidden"))) {
-            doThrow(error).when(service).getApplicationsByJob(jobId, recruiter.getId());
+            doThrow(error).when(details).getByJob(jobId, recruiter.getId());
             int expected = error instanceof IllegalArgumentException ? 400 : error instanceof NotFoundException ? 404 : 403;
             mvc.perform(get("/api/hr/jobs/{id}/applications", jobId).header("Authorization", token))
                     .andExpect(status().is(expected)).andExpect(jsonPath("$.status").value(expected));
@@ -152,7 +155,7 @@ class HrApplicationControllerTests {
     }
 
     @Test void unexpectedOrMissingPrincipalIsUnauthorizedInsteadOfClassCastOrNullPointer() {
-        var controller = new HrApplicationController(service);
+        var controller = new HrApplicationController(service, details);
         assertThrows(UnauthorizedException.class, () -> controller.getApplications(jobId, null));
         var auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
                 "hr@test.invalid", null, List.of());

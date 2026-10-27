@@ -23,7 +23,9 @@ import com.resumeanalyser.backend.dto.CreateJobRequest;
 import com.resumeanalyser.backend.dto.JobResponse;
 import com.resumeanalyser.backend.dto.PageResponse;
 import com.resumeanalyser.backend.exception.BadRequestException;
+import com.resumeanalyser.backend.exception.ForbiddenException;
 import com.resumeanalyser.backend.model.Job;
+import com.resumeanalyser.backend.model.RecruiterProfile;
 import com.resumeanalyser.backend.model.User;
 import com.resumeanalyser.backend.repository.JobRepository;
 
@@ -37,82 +39,82 @@ public class JobService {
 
     private final JobRepository jobRepository;
     private final MongoTemplate mongoTemplate;
+    private final RecruiterIdentityService recruiterIdentity;
 
-    public JobService(JobRepository jobRepository, MongoTemplate mongoTemplate) {
+    public JobService(
+            JobRepository jobRepository,
+            MongoTemplate mongoTemplate,
+            RecruiterIdentityService recruiterIdentity) {
         this.jobRepository = jobRepository;
         this.mongoTemplate = mongoTemplate;
+        this.recruiterIdentity = recruiterIdentity;
     }
 
     // Lấy danh sách Job thuộc HR đang đăng nhập
     public List<Job> getMyJobs(User recruiter) {
-
-        // Kiểm tra ID HR có đúng định dạng MongoDB ObjectId
-        if (!ObjectId.isValid(recruiter.getId())) {
-            throw new IllegalStateException("HR ID không hợp lệ");
-        }
-
-        ObjectId recruiterId = new ObjectId(recruiter.getId());
-
-        // Chỉ lấy Job có recruiterId trùng với HR
+        ObjectId recruiterId = recruiterIdentity.requireProfileId(recruiter);
         return jobRepository.findByRecruiterId(recruiterId);
     }
 
 
 
-    //Tạo job
+    // Tạo job và luôn gắn đúng recruiter profile/company của tài khoản đăng nhập.
     public Job createJob(CreateJobRequest request, User recruiter) {
+        RecruiterProfile profile = recruiterIdentity.requireProfile(recruiter);
+        if (profile.getCompanyId() == null) {
+            throw new ForbiddenException(
+                    "RECRUITER_COMPANY_REQUIRED",
+                    "Hồ sơ nhà tuyển dụng chưa được liên kết với công ty.");
+        }
+        if (request.companyId() != null && !request.companyId().isBlank()) {
+            if (!ObjectId.isValid(request.companyId())) {
+                throw new IllegalArgumentException("Company ID không hợp lệ");
+            }
+            if (!profile.getCompanyId().equals(new ObjectId(request.companyId()))) {
+                throw new ForbiddenException(
+                        "RECRUITER_COMPANY_MISMATCH",
+                        "Không thể tạo Job cho công ty khác.");
+            }
+        }
 
-    if (!ObjectId.isValid(recruiter.getId())) {
-        throw new IllegalArgumentException("Recruiter ID không hợp lệ");
-    }
+        if (request.title() == null
+                || request.title().isBlank()) {
+            throw new IllegalArgumentException("Title không được để trống");
+        }
 
-    if (request.companyId() == null
-            || !ObjectId.isValid(request.companyId())) {
-        throw new IllegalArgumentException("Company ID không hợp lệ");
-    }
+        if (request.deadline() == null
+                || !request.deadline().isAfter(Instant.now())) {
+            throw new IllegalArgumentException("Deadline phải ở tương lai");
+        }
 
-    if (request.title() == null
-            || request.title().isBlank()) {
-        throw new IllegalArgumentException("Title không được để trống");
-    }
+        validateJobSchema(request);
 
-    if (request.deadline() == null
-            || !request.deadline().isAfter(Instant.now())) {
-        throw new IllegalArgumentException("Deadline phải ở tương lai");
-    }
+        Job job = new Job();
 
-    validateJobSchema(request);
+        job.setCompanyId(profile.getCompanyId());
+        job.setRecruiterId(profile.getId());
 
-    //Tạo đối tượng job
-    Job job = new Job();
+        job.setTitle(request.title());
+        job.setDescription(request.description());
+        job.setCategory(request.category());
+        job.setEmploymentType(request.employmentType());
 
-    job.setCompanyId(new ObjectId(request.companyId()));
+        job.setLocation(request.location());
+        job.setSalary(request.salary());
+        job.setExperience(request.experience());
+        job.setRequirements(request.requirements());
+        job.setBenefits(request.benefits());
 
-    // Quan trọng: lấy HR ID từ JWT, không lấy từ request
-    job.setRecruiterId(new ObjectId(recruiter.getId()));
+        job.setDeadline(request.deadline());
 
-    job.setTitle(request.title());
-    job.setDescription(request.description());
-    job.setCategory(request.category());
-    job.setEmploymentType(request.employmentType());
+        // Job mới mặc định ở trạng thái draft
+        job.setStatus("draft");
 
-    job.setLocation(request.location());
-    job.setSalary(request.salary());
-    job.setExperience(request.experience());
-    job.setRequirements(request.requirements());
-    job.setBenefits(request.benefits());
+        Instant now = Instant.now();
+        job.setCreatedAt(now);
+        job.setUpdatedAt(now);
 
-    job.setDeadline(request.deadline());
-
-    // Job mới mặc định ở trạng thái draft
-    job.setStatus("draft");
-
-
-    Instant now = Instant.now();
-    job.setCreatedAt(now);
-    job.setUpdatedAt(now);
-
-    return jobRepository.save(job);
+        return jobRepository.save(job);
     }
 
     private static void validateJobSchema(CreateJobRequest request) {
@@ -214,12 +216,8 @@ public class JobService {
         throw new IllegalArgumentException("Job ID không hợp lệ");
     }
 
-    if (!ObjectId.isValid(recruiter.getId())) {
-        throw new IllegalStateException("Recruiter ID không hợp lệ");
-    }
-
     ObjectId id = new ObjectId(jobId);
-    ObjectId recruiterId = new ObjectId(recruiter.getId());
+    ObjectId recruiterId = recruiterIdentity.requireProfileId(recruiter);
 
     return jobRepository
             .findByIdAndRecruiterId(id, recruiterId)
@@ -248,7 +246,7 @@ public class JobService {
     }
 
     ObjectId id = new ObjectId(jobId);
-    ObjectId recruiterId = new ObjectId(recruiter.getId());
+    ObjectId recruiterId = recruiterIdentity.requireProfileId(recruiter);
 
     // Chỉ tìm Job thuộc HR đang đăng nhập
     Job job = jobRepository
@@ -293,14 +291,6 @@ public class JobService {
         );
     }
 
-    if (recruiter.getId() == null
-            || !ObjectId.isValid(recruiter.getId())) {
-        throw new ResponseStatusException(
-                HttpStatus.UNAUTHORIZED,
-                "Invalid recruiter"
-        );
-    }
-
     // Kiểm tra status hợp lệ
     if (newStatus == null
             || !List.of("draft", "published", "closed")
@@ -313,7 +303,7 @@ public class JobService {
     }
 
     ObjectId id = new ObjectId(jobId);
-    ObjectId recruiterId = new ObjectId(recruiter.getId());
+    ObjectId recruiterId = recruiterIdentity.requireProfileId(recruiter);
 
     // Chỉ tìm Job thuộc HR đang đăng nhập
     Job job = jobRepository
@@ -341,16 +331,8 @@ public class JobService {
         );
     }
 
-    if (recruiter.getId() == null ||
-            !ObjectId.isValid(recruiter.getId())) {
-        throw new ResponseStatusException(
-                HttpStatus.UNAUTHORIZED,
-                "Invalid recruiter"
-        );
-    }
-
     ObjectId id = new ObjectId(jobId);
-    ObjectId recruiterId = new ObjectId(recruiter.getId());
+    ObjectId recruiterId = recruiterIdentity.requireProfileId(recruiter);
 
     // Chỉ tìm Job thuộc HR đang đăng nhập
     Job job = jobRepository

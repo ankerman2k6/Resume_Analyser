@@ -32,15 +32,18 @@ public class InterviewService {
     private final InterviewRepository interviewRepository;
     private final ApplicationRepository applicationRepository;
     private final JobRepository jobRepository;
+    private final RecruiterIdentityService recruiterIdentity;
 
     public InterviewService(
             InterviewRepository interviewRepository,
             ApplicationRepository applicationRepository,
-            JobRepository jobRepository) {
+            JobRepository jobRepository,
+            RecruiterIdentityService recruiterIdentity) {
 
         this.interviewRepository = interviewRepository;
         this.applicationRepository = applicationRepository;
         this.jobRepository = jobRepository;
+        this.recruiterIdentity = recruiterIdentity;
     }
 
     // =========================
@@ -59,17 +62,7 @@ public class InterviewService {
     }
 
     private ObjectId getRecruiterId(User recruiter) {
-        if (recruiter == null ||
-                recruiter.getId() == null ||
-                !ObjectId.isValid(recruiter.getId())) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED,
-                    "Invalid recruiter"
-            );
-        }
-
-        return new ObjectId(recruiter.getId());
+        return recruiterIdentity.requireProfileId(recruiter);
     }
 
     private Application getOwnedApplication(

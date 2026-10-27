@@ -1,7 +1,12 @@
-import { beforeEach, describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import App from './App';
+
+vi.mock('@react-three/fiber', async (importOriginal) => ({
+  ...await importOriginal(),
+  Canvas: () => <div data-testid="landing-canvas" />,
+}));
 
 describe('App Component', () => {
   beforeEach(() => {
@@ -26,6 +31,7 @@ describe('App Component', () => {
   });
 
   it('sends guests to login when they click the create CV button', async () => {
+    window.history.pushState({}, '', '/candidate');
     render(<App />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Tạo CV' }));

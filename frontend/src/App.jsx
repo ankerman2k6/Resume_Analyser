@@ -2,10 +2,14 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import MainLayout from './layouts/MainLayout';
+import HrLayout from './layouts/HrLayout';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import HRPage from './pages/hr/index';
+import DashboardPage from './pages/hr/DashboardPage';
+import CandidatesPage from './pages/hr/Candidates';
+import JobsPage from './pages/hr/Jobs';
 import CandidatePage from './pages/candiate/index';
 import JobDetail from './pages/candiate/JobDetail';
 import CompanyDetail from './pages/candiate/CompanyDetail';
@@ -54,8 +58,13 @@ function App() {
             />
           </Route>
 
-          {/* Phân hệ Nhà tuyển dụng: không có Navbar ở trên */}
-          <Route path="/hr" element={<HRPage />} />
+          {/* Phân hệ Nhà tuyển dụng: có Sidebar HR Layout */}
+          <Route path="/hr" element={<HrLayout />}>
+            <Route index element={<HRPage />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="candidates" element={<CandidatesPage />} />
+            <Route path="jobs" element={<JobsPage />} />
+          </Route>
 
           {/* Các trang xác thực độc lập */}
           <Route path="/login" element={<LoginPage />} />

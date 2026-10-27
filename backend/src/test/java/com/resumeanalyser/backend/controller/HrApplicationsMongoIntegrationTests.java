@@ -52,7 +52,7 @@ class HrApplicationsMongoIntegrationTests {
     @Autowired JwtService jwt;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     User recruiter;
-    ObjectId jobId, applicationId;
+    ObjectId recruiterProfileId, jobId, applicationId;
     Document original;
     String token;
 
@@ -74,10 +74,17 @@ class HrApplicationsMongoIntegrationTests {
         recruiter.setStatus("active");
         users.save(recruiter);
         token = jwt.generateToken(recruiter);
+        recruiterProfileId = new ObjectId();
+        mongo.getCollection("recruiter_profiles").insertOne(new Document("_id", recruiterProfileId)
+                .append("userId", new ObjectId(recruiter.getId()))
+                .append("companyId", new ObjectId())
+                .append("fullName", "Test Recruiter")
+                .append("phone", "0900000000")
+                .append("position", "Recruiter"));
         jobId = new ObjectId();
         applicationId = new ObjectId();
         mongo.getCollection("jobs").insertOne(new Document("_id", jobId)
-                .append("recruiterId", new ObjectId(recruiter.getId())).append("status", "active"));
+                .append("recruiterId", recruiterProfileId).append("status", "active"));
         Date applied = Date.from(Instant.parse("2026-10-04T00:00:00Z"));
         original = new Document("_id", applicationId).append("jobId", jobId)
                 .append("candidateId", new ObjectId()).append("cvId", new ObjectId())
@@ -122,7 +129,7 @@ class HrApplicationsMongoIntegrationTests {
     @Test void realHttpGetReturnsEmptyArrayForEmptyJob() throws Exception {
         ObjectId emptyJob = new ObjectId();
         mongo.getCollection("jobs").insertOne(new Document("_id", emptyJob)
-                .append("recruiterId", new ObjectId(recruiter.getId())));
+                .append("recruiterId", recruiterProfileId));
         var response = request("GET", getPath(emptyJob), token, null);
         assertEquals(200, response.statusCode(), response.body());
         assertEquals("[]", response.body());

@@ -24,6 +24,13 @@
     color: var(--brand-secondary)
 }
 
+.job-detail-back:focus-visible,
+.job-detail-company-link:focus-visible,
+.job-detail-button:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 3px var(--ring-focus)
+}
+
 .job-detail-hero {
     display: flex;
     align-items: center;
@@ -31,7 +38,7 @@
     padding: 28px;
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-xl)
+    border-radius: var(--radius-lg)
 }
 
 .job-detail-company-mark {
@@ -127,7 +134,7 @@
     padding: 24px;
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-xl)
+    border-radius: var(--radius-lg)
 }
 
 .job-detail-panel h2 {
@@ -159,6 +166,7 @@
     border-radius: var(--radius-md);
     font: 600 14px/1.2 var(--font-family);
     cursor: pointer;
+    text-decoration: none;
     transition: background-color .2s ease, border-color .2s ease, color .2s ease
 }
 
@@ -171,11 +179,6 @@
 .job-detail-button--primary:hover {
     background: var(--brand-secondary);
     border-color: var(--brand-secondary)
-}
-
-.job-detail-button:focus-visible {
-    outline: 0;
-    box-shadow: 0 0 0 3px var(--ring-focus)
 }
 
 .job-detail-summary-list {

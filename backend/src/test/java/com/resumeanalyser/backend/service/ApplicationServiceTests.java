@@ -23,14 +23,17 @@ import static org.mockito.Mockito.*;
 class ApplicationServiceTests {
     @Mock ApplicationRepository applications;
     @Mock JobRepository jobs;
+    @Mock RecruiterIdentityService recruiterIdentity;
     ApplicationService service;
-    ObjectId owner = new ObjectId(), jobId = new ObjectId(), appId = new ObjectId();
+    ObjectId userId = new ObjectId(), owner = new ObjectId(), jobId = new ObjectId(), appId = new ObjectId();
     Job job;
     Application application;
 
     @BeforeEach
     void setup() {
-        service = new ApplicationService(applications, jobs);
+        service = new ApplicationService(applications, jobs, recruiterIdentity);
+        lenient().when(recruiterIdentity.requireProfileId(userId.toHexString())).thenReturn(owner);
+        lenient().when(recruiterIdentity.requireUserId(userId.toHexString())).thenReturn(userId);
         job = new Job();
         job.setId(jobId);
         job.setRecruiterId(owner);
@@ -49,22 +52,26 @@ class ApplicationServiceTests {
     @Test void listsApplicationsForOwnedJob() {
         when(jobs.findById(jobId)).thenReturn(Optional.of(job));
         when(applications.findByJobId(jobId)).thenReturn(List.of(application));
-        assertEquals(List.of(application), service.getApplicationsByJob(jobId.toHexString(), owner.toHexString()));
+        assertEquals(List.of(application), service.getApplicationsByJob(jobId.toHexString(), userId.toHexString()));
     }
 
     @Test void returnsEmptyList() {
         when(jobs.findById(jobId)).thenReturn(Optional.of(job));
         when(applications.findByJobId(jobId)).thenReturn(List.of());
-        assertTrue(service.getApplicationsByJob(jobId.toHexString(), owner.toHexString()).isEmpty());
+        assertTrue(service.getApplicationsByJob(jobId.toHexString(), userId.toHexString()).isEmpty());
     }
 
     @Test void rejectsInvalidResourceIdsBeforeDatabaseAccess() {
-        assertThrows(IllegalArgumentException.class, () -> service.getApplicationsByJob("bad", owner.toHexString()));
-        assertThrows(IllegalArgumentException.class, () -> service.updateStatus("bad", "shortlisted", owner.toHexString()));
+        assertThrows(IllegalArgumentException.class, () -> service.getApplicationsByJob("bad", userId.toHexString()));
+        assertThrows(IllegalArgumentException.class, () -> service.updateStatus("bad", "shortlisted", userId.toHexString()));
         verifyNoInteractions(applications, jobs);
     }
 
     @Test void invalidRecruiterIsUnauthorized() {
+        when(recruiterIdentity.requireProfileId("bad"))
+                .thenThrow(new UnauthorizedException("Authenticated user ID is invalid"));
+        when(recruiterIdentity.requireProfileId((String) null))
+                .thenThrow(new UnauthorizedException("Authenticated user ID is invalid"));
         assertThrows(UnauthorizedException.class, () -> service.getApplicationsByJob(jobId.toHexString(), "bad"));
         assertThrows(UnauthorizedException.class, () -> service.updateStatus(appId.toHexString(), "shortlisted", null));
         verifyNoInteractions(applications, jobs);
@@ -72,26 +79,26 @@ class ApplicationServiceTests {
 
     @Test void missingJobIsNotFound() {
         when(jobs.findById(jobId)).thenReturn(Optional.empty());
-        assertThrows(NotFoundException.class, () -> service.getApplicationsByJob(jobId.toHexString(), owner.toHexString()));
+        assertThrows(NotFoundException.class, () -> service.getApplicationsByJob(jobId.toHexString(), userId.toHexString()));
         verifyNoInteractions(applications);
     }
 
     @Test void unownedJobCannotBeListed() {
         job.setRecruiterId(new ObjectId());
         when(jobs.findById(jobId)).thenReturn(Optional.of(job));
-        assertThrows(ForbiddenException.class, () -> service.getApplicationsByJob(jobId.toHexString(), owner.toHexString()));
+        assertThrows(ForbiddenException.class, () -> service.getApplicationsByJob(jobId.toHexString(), userId.toHexString()));
         verifyNoInteractions(applications);
     }
 
     @Test void missingApplicationIsNotFound() {
         when(applications.findById(appId)).thenReturn(Optional.empty());
-        assertThrows(NotFoundException.class, () -> service.updateStatus(appId.toHexString(), "shortlisted", owner.toHexString()));
+        assertThrows(NotFoundException.class, () -> service.updateStatus(appId.toHexString(), "shortlisted", userId.toHexString()));
         verifyNoInteractions(jobs);
     }
 
     @Test void rejectsNullAndUnsupportedStatus() {
         for (String status : new String[]{null, "", "SHORTLISTED", "applied", "invalid"}) {
-            assertThrows(IllegalArgumentException.class, () -> service.updateStatus(appId.toHexString(), status, owner.toHexString()));
+            assertThrows(IllegalArgumentException.class, () -> service.updateStatus(appId.toHexString(), status, userId.toHexString()));
         }
         verifyNoInteractions(applications, jobs);
     }
@@ -100,16 +107,16 @@ class ApplicationServiceTests {
         job.setRecruiterId(new ObjectId());
         when(applications.findById(appId)).thenReturn(Optional.of(application));
         when(jobs.findById(jobId)).thenReturn(Optional.of(job));
-        assertThrows(ForbiddenException.class, () -> service.updateStatus(appId.toHexString(), "shortlisted", owner.toHexString()));
+        assertThrows(ForbiddenException.class, () -> service.updateStatus(appId.toHexString(), "shortlisted", userId.toHexString()));
         verify(applications, never()).updateStatus(any(), any(), any(), any(), any());
     }
 
     @Test void missingOrNullApplicationJobIsNotFound() {
         when(applications.findById(appId)).thenReturn(Optional.of(application));
         when(jobs.findById(jobId)).thenReturn(Optional.empty());
-        assertThrows(NotFoundException.class, () -> service.updateStatus(appId.toHexString(), "shortlisted", owner.toHexString()));
+        assertThrows(NotFoundException.class, () -> service.updateStatus(appId.toHexString(), "shortlisted", userId.toHexString()));
         application.setJobId(null);
-        assertThrows(NotFoundException.class, () -> service.updateStatus(appId.toHexString(), "shortlisted", owner.toHexString()));
+        assertThrows(NotFoundException.class, () -> service.updateStatus(appId.toHexString(), "shortlisted", userId.toHexString()));
         verify(applications, never()).updateStatus(any(), any(), any(), any(), any());
     }
 
@@ -118,7 +125,7 @@ class ApplicationServiceTests {
         when(applications.findById(appId)).thenReturn(Optional.of(application));
         when(jobs.findById(jobId)).thenReturn(Optional.of(job));
         Instant before = Instant.now();
-        when(applications.updateStatus(eq(appId), eq(jobId), eq(status), any(Instant.class), eq(owner)))
+        when(applications.updateStatus(eq(appId), eq(jobId), eq(status), any(Instant.class), eq(userId)))
                 .thenAnswer(invocation -> {
                     Instant changedAt = invocation.getArgument(3);
                     assertFalse(changedAt.isBefore(before));
@@ -131,7 +138,7 @@ class ApplicationServiceTests {
         var oldHistory = application.getStatusHistory();
         var oldCv = application.getCvId();
         var oldCandidate = application.getCandidateId();
-        var result = service.updateStatus(appId.toHexString(), status, owner.toHexString());
+        var result = service.updateStatus(appId.toHexString(), status, userId.toHexString());
         assertEquals(status, result.getStatus());
         assertNotNull(result.getUpdatedAt());
         assertEquals(jobId, application.getJobId());

@@ -6,6 +6,11 @@ import com.resumeanalyser.backend.exception.UnauthorizedException;
 import com.resumeanalyser.backend.model.Application;
 import com.resumeanalyser.backend.model.User;
 import com.resumeanalyser.backend.service.ApplicationService;
+import com.resumeanalyser.backend.service.HrApplicationDetailsService;
+import com.resumeanalyser.backend.dto.HrApplicationResponse;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -15,15 +20,26 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/hr")
 public class HrApplicationController {
     private final ApplicationService applicationService;
+    private final HrApplicationDetailsService detailsService;
 
-    public HrApplicationController(ApplicationService applicationService) {
+    public HrApplicationController(ApplicationService applicationService, HrApplicationDetailsService detailsService) {
         this.applicationService = applicationService;
+        this.detailsService = detailsService;
     }
 
     @GetMapping("/jobs/{jobId}/applications")
-    public ResponseEntity<List<Application>> getApplications(
+    public ResponseEntity<List<HrApplicationResponse>> getApplications(
             @PathVariable String jobId, Authentication authentication) {
-        return ResponseEntity.ok(applicationService.getApplicationsByJob(jobId, recruiterId(authentication)));
+        return ResponseEntity.ok(detailsService.getByJob(jobId, recruiterId(authentication)));
+    }
+
+    @GetMapping("/applications/{id}/cv/file")
+    public ResponseEntity<Resource> getCvFile(@PathVariable String id, Authentication authentication) {
+        Resource file = new FileSystemResource(detailsService.getCvFile(id, recruiterId(authentication)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header("Content-Disposition", "attachment; filename=\"cv.pdf\"")
+                .header("Cache-Control", "no-store")
+                .header("X-Content-Type-Options", "nosniff").body(file);
     }
 
     @PatchMapping("/applications/{id}/status")

@@ -8,15 +8,24 @@ import com.resumeanalyser.backend.dto.DashboardOverviewResponse;
 import com.resumeanalyser.backend.dto.DashboardStatusStatsResponse;
 import com.resumeanalyser.backend.model.User;
 import com.resumeanalyser.backend.service.DashboardService;
+import com.resumeanalyser.backend.service.HrDashboardService;
+import com.resumeanalyser.backend.dto.HrDashboardResponse;
 
 @RestController
 @RequestMapping("/api/hr/dashboard")
 public class HrDashboardController {
 
     private final DashboardService dashboardService;
+    private final HrDashboardService hrDashboardService;
 
-    public HrDashboardController(DashboardService dashboardService) {
+    public HrDashboardController(DashboardService dashboardService, HrDashboardService hrDashboardService) {
         this.dashboardService = dashboardService;
+        this.hrDashboardService = hrDashboardService;
+    }
+
+    @GetMapping
+    public ResponseEntity<HrDashboardResponse> getDashboard() {
+        return ResponseEntity.ok(hrDashboardService.getDashboard());
     }
 
     @GetMapping("/overview")

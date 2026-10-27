@@ -1,5 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --color-brand-primary: #051A24;
+  --color-brand-dark: #0D212C;
+  --color-brand-blue: #2563EB;
+  --color-brand-border: #E2E8F0;
+}
+
 :root {
-  color-scheme: light;
   /* ===== LIGHT MODE (Mặc định) ===== */
   --bg-primary: #F4F7FB;
   --bg-surface: #FFFFFF;
@@ -16,23 +26,18 @@
   --tab-active-bg: var(--brand-primary);
   
   --text-primary: #0F172A;
-  --text-secondary: #526077;
+  --text-secondary: #64748B;
   --text-inverse: #FFFFFF;
   
-  --border-hairline: #EFEFF2;
   --border-subtle: #E2E8F0;
-  --border-focus: #2563EB;
-  --ring-focus: rgba(37, 99, 235, 0.12);
+  --border-focus: #3B82F6;
   
-  --status-success: #007A55;
-  --status-success-bg: #ECFDF5;
-  --status-warning: #B45309;
-  --status-warning-bg: #FFFBEB;
-  --status-danger: #E7000B;
-  --status-danger-bg: #FEF2F2;
-  --status-info: #0369A1;
+  --status-success: #10B981;
+  --status-warning: #F59E0B;
+  --status-danger: #EF4444;
+  --status-info: #0EA5E9;
   
-  --font-family: 'SF Pro Display', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   
   --radius-sm: 4px;
   --radius-default: 6px;
@@ -41,7 +46,6 @@
   --radius-xl: 20px;
   --radius-2xl: 24px;
   --radius-full: 9999px;
-  --logo: url('../assets/transparent-logo 1.svg');
   
   --shadow-sm: 0 1px 3px rgba(15, 30, 54, 0.06);
   --shadow-md: 0 4px 12px rgba(15, 30, 54, 0.08);
@@ -49,14 +53,13 @@
 }
 
 [data-theme="dark"] {
-  color-scheme: dark;
   /* ===== DARK MODE ===== */
-  --bg-primary: #0B1019; /* Matching the deep dark blue-black */
-  --bg-surface: #121a28; /* In dark mode, card background blends */
-  --bg-subtle: #162032; /* Tab container */
-  --bg-input: #162032; /* Inputs and social buttons */
+  --bg-primary: #0B1019;
+  --bg-surface: #121a28;
+  --bg-subtle: #162032;
+  --bg-input: #162032;
   
-  --brand-primary: #3B82F6; /* Main actions are bright blue */
+  --brand-primary: #3B82F6;
   --brand-secondary: #60A5FA;
   --brand-accent: rgba(56, 189, 248, 0.15);
   
@@ -69,78 +72,21 @@
   --text-secondary: #94A3B8;
   --text-inverse: #FFFFFF;
   
-  --border-hairline: rgba(160, 180, 220, 0.12);
-  --border-subtle: rgba(160, 180, 220, 0.16);
-  --border-focus: rgba(96, 165, 250, 0.45);
-  --ring-focus: rgba(96, 165, 250, 0.14);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-focus: #60A5FA;
   
-  --status-success: #00D492;
-  --status-success-bg: rgba(0, 188, 125, 0.15);
-  --status-warning: #FF8904;
-  --status-warning-bg: rgba(254, 154, 0, 0.15);
-  --status-danger: #FF6467;
-  --status-danger-bg: rgba(251, 44, 54, 0.12);
+  --status-success: #34D399;
+  --status-warning: #FBBF24;
+  --status-danger: #F87171;
   --status-info: #38BDF8;
   
   --shadow-sm: none;
   --shadow-md: none;
   --shadow-lg: none;
-
-  --logo: url('../assets/transparent-dark.svg'); 
 }
 
 * {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  --scrollbar-thumb: transparent;
-}
-
-*:hover {
-  --scrollbar-thumb: color-mix(in srgb, var(--text-primary) 16%, transparent);
-}
-
-.is-scrolling {
-  --scrollbar-thumb: color-mix(in srgb, var(--text-primary) 28%, transparent);
-}
-
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--text-primary) 40%, transparent);
-}
-
-@supports not selector(::-webkit-scrollbar) {
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-  }
-  *:hover {
-    scrollbar-color: color-mix(in srgb, var(--text-primary) 18%, transparent) transparent;
-  }
-  .is-scrolling {
-    scrollbar-color: color-mix(in srgb, var(--text-primary) 28%, transparent) transparent;
-  }
-}
-
-.scrollbar-clean {
-  scrollbar-width: none;
-}
-
-.scrollbar-clean::-webkit-scrollbar {
-  display: none;
 }
 
 body {
@@ -156,6 +102,54 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* Animations & Effects for KONEK Landing */
+.font-serif-instrument {
+  font-family: 'Instrument Serif', 'Playfair Display', Georgia, serif;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes marquee-reverse {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+.animate-marquee-reverse {
+  display: flex;
+  width: max-content;
+  animation: marquee-reverse 32s linear infinite;
+}
+
+.animate-marquee-reverse:hover {
+  animation-play-state: paused;
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.glass-dark {
+  background: rgba(13, 33, 44, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Button styles */
@@ -177,7 +171,7 @@ a {
 
 .btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25); /* Focus color */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
 .btn-primary {

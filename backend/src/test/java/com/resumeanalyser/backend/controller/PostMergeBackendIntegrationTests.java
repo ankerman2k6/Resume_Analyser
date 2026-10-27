@@ -3,8 +3,10 @@ package com.resumeanalyser.backend.controller;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.resumeanalyser.backend.model.Job;
+import com.resumeanalyser.backend.model.RecruiterProfile;
 import com.resumeanalyser.backend.model.User;
 import com.resumeanalyser.backend.repository.JobRepository;
+import com.resumeanalyser.backend.repository.RecruiterProfileRepository;
 import com.resumeanalyser.backend.repository.UserRepository;
 import com.resumeanalyser.backend.security.JwtService;
 import java.io.IOException;
@@ -70,11 +72,13 @@ class PostMergeBackendIntegrationTests {
     @Value("${local.server.port}") int port;
     @Autowired MongoTemplate mongo;
     @Autowired JobRepository jobs;
+    @Autowired RecruiterProfileRepository recruiterProfiles;
     @Autowired UserRepository users;
     @Autowired JwtService jwt;
     @Autowired PasswordEncoder encoder;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     private User recruiter, otherRecruiter, candidate;
+    private RecruiterProfile recruiterProfile, otherRecruiterProfile;
     private Job published, draft, otherPublished;
     private ObjectId applicationId;
     private String hrToken, otherToken, candidateToken;
@@ -93,12 +97,14 @@ class PostMergeBackendIntegrationTests {
         recruiter = user("recruiter", "hr@test.invalid");
         otherRecruiter = user("recruiter", "other@test.invalid");
         candidate = user("candidate", "candidate@test.invalid");
+        recruiterProfile = recruiterProfile(recruiter, "HR Test");
+        otherRecruiterProfile = recruiterProfile(otherRecruiter, "Other HR");
         hrToken = jwt.generateToken(recruiter);
         otherToken = jwt.generateToken(otherRecruiter);
         candidateToken = jwt.generateToken(candidate);
-        published = job(recruiter, "Java Backend", "published", "HCMC", false, Instant.parse("2026-01-01T00:00:00Z"));
-        draft = job(recruiter, "Java Draft", "draft", "HCMC", false, Instant.parse("2026-01-02T00:00:00Z"));
-        otherPublished = job(otherRecruiter, "Python Data", "published", "Hanoi", true, Instant.parse("2026-01-03T00:00:00Z"));
+        published = job(recruiterProfile, "Java Backend", "published", "HCMC", false, Instant.parse("2026-01-01T00:00:00Z"));
+        draft = job(recruiterProfile, "Java Draft", "draft", "HCMC", false, Instant.parse("2026-01-02T00:00:00Z"));
+        otherPublished = job(otherRecruiterProfile, "Python Data", "published", "Hanoi", true, Instant.parse("2026-01-03T00:00:00Z"));
         applicationId = new ObjectId();
         ObjectId otherApplication = new ObjectId();
         mongo.getCollection("applications").insertMany(List.of(
@@ -107,10 +113,10 @@ class PostMergeBackendIntegrationTests {
                 new Document("_id", otherApplication).append("jobId", otherPublished.getId()).append("status", "accepted")));
         mongo.getCollection("interviews").insertMany(List.of(
                 new Document("_id", new ObjectId()).append("applicationId", applicationId)
-                        .append("scheduledBy", new ObjectId(recruiter.getId())).append("status", "scheduled")
+                        .append("scheduledBy", recruiterProfile.getId()).append("status", "scheduled")
                         .append("scheduledAt", Date.from(Instant.now().plusSeconds(86400))),
                 new Document("_id", new ObjectId()).append("applicationId", otherApplication)
-                        .append("scheduledBy", new ObjectId(recruiter.getId())).append("status", "completed")));
+                        .append("scheduledBy", recruiterProfile.getId()).append("status", "completed")));
     }
 
     private User user(String role, String email) {
@@ -123,10 +129,23 @@ class PostMergeBackendIntegrationTests {
         return users.save(user);
     }
 
-    private Job job(User owner, String title, String status, String city, boolean remote, Instant createdAt) {
+    private RecruiterProfile recruiterProfile(User user, String fullName) {
+        RecruiterProfile profile = new RecruiterProfile();
+        profile.setId(new ObjectId());
+        profile.setUserId(new ObjectId(user.getId()));
+        profile.setCompanyId(new ObjectId());
+        profile.setFullName(fullName);
+        profile.setPhone("0900000000");
+        profile.setPosition("Recruiter");
+        profile.setCreatedAt(Instant.now());
+        profile.setUpdatedAt(profile.getCreatedAt());
+        return recruiterProfiles.save(profile);
+    }
+
+    private Job job(RecruiterProfile owner, String title, String status, String city, boolean remote, Instant createdAt) {
         Job job = new Job();
-        job.setCompanyId(new ObjectId());
-        job.setRecruiterId(new ObjectId(owner.getId()));
+        job.setCompanyId(owner.getCompanyId());
+        job.setRecruiterId(owner.getId());
         job.setTitle(title);
         job.setDescription(title + " development");
         job.setCategory("IT");
@@ -192,7 +211,7 @@ class PostMergeBackendIntegrationTests {
     }
 
     private String jobBody(String title, String requirements) {
-        return new Document("companyId", new ObjectId().toHexString()).append("title", title)
+        return new Document("companyId", recruiterProfile.getCompanyId().toHexString()).append("title", title)
                 .append("description", "Job description").append("category", "IT")
                 .append("employmentType", "full_time").append("deadline", Instant.now().plusSeconds(86400).toString())
                 .append("requirements", Document.parse(requirements)).toJson();
@@ -203,7 +222,7 @@ class PostMergeBackendIntegrationTests {
         Document created = ok(request("POST", "/api/hr/jobs", hrToken, jobBody("New job", "{\"requiredSkills\":[\"Java\"]}")), 201);
         String id = created.getString("id");
         assertEquals("draft", created.getString("status"));
-        assertEquals(recruiter.getId(), created.getString("recruiterId"));
+        assertEquals(recruiterProfile.getId().toHexString(), created.getString("recruiterId"));
         Document invalid = ok(request("PUT", "/api/hr/jobs/" + id, hrToken,
                 jobBody("Invalid update", "{\"education\":\"invalid\"}")), 400);
         assertEquals(400, invalid.getInteger("status"));

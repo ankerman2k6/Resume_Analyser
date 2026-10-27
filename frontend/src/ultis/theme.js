@@ -1,6 +1,6 @@
 /**
  * Design tokens and color palette from design.md
- * CMCV — Smart Recruitment Platform
+ * KONEK — AI-Powered ATS & Resume Screening Platform
  */
 
 export const THEME_COLORS = {

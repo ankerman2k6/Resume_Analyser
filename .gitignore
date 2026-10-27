@@ -19,3 +19,9 @@ graphify-out/*
 mongo-init/*
 skills-lock.json
 .agents/
+graphify-out/
+mongo-init/
+AGENTS.md
+.codex/*
+anti-slop/*
+docs/*

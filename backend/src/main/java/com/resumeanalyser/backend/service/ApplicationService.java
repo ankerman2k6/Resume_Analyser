@@ -2,7 +2,6 @@ package com.resumeanalyser.backend.service;
 
 import com.resumeanalyser.backend.exception.ForbiddenException;
 import com.resumeanalyser.backend.exception.NotFoundException;
-import com.resumeanalyser.backend.exception.UnauthorizedException;
 import com.resumeanalyser.backend.model.Application;
 import com.resumeanalyser.backend.model.Job;
 import com.resumeanalyser.backend.repository.ApplicationRepository;
@@ -19,33 +18,44 @@ public class ApplicationService {
             "pending", "reviewing", "shortlisted", "interview", "accepted", "rejected");
     private final ApplicationRepository applicationRepository;
     private final JobRepository jobRepository;
+    private final RecruiterIdentityService recruiterIdentity;
 
-    public ApplicationService(ApplicationRepository applicationRepository, JobRepository jobRepository) {
+    public ApplicationService(
+            ApplicationRepository applicationRepository,
+            JobRepository jobRepository,
+            RecruiterIdentityService recruiterIdentity) {
         this.applicationRepository = applicationRepository;
         this.jobRepository = jobRepository;
+        this.recruiterIdentity = recruiterIdentity;
     }
 
-    public List<Application> getApplicationsByJob(String jobId, String recruiterId) {
-        ObjectId recruiter = recruiterId(recruiterId);
+    public List<Application> getApplicationsByJob(String jobId, String recruiterUserId) {
         ObjectId id = resourceId(jobId, "Job");
-        requireOwnedJob(id, recruiter);
+        ObjectId recruiterProfileId = recruiterIdentity.requireProfileId(recruiterUserId);
+        requireOwnedJob(id, recruiterProfileId);
         return applicationRepository.findByJobId(id);
     }
 
-    public Application updateStatus(String applicationId, String newStatus, String recruiterId) {
-        ObjectId recruiter = recruiterId(recruiterId);
+    public Application updateStatus(String applicationId, String newStatus, String recruiterUserId) {
         ObjectId id = resourceId(applicationId, "Application");
         if (newStatus == null || !ALLOWED_STATUSES.contains(newStatus)) {
             throw new IllegalArgumentException("Invalid application status");
         }
+        ObjectId recruiterProfileId = recruiterIdentity.requireProfileId(recruiterUserId);
+        ObjectId changedByUserId = recruiterIdentity.requireUserId(recruiterUserId);
         Application application = applicationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Application not found"));
         if (application.getJobId() == null) {
             throw new NotFoundException("Application job not found");
         }
-        requireOwnedJob(application.getJobId(), recruiter);
+        requireOwnedJob(application.getJobId(), recruiterProfileId);
         // Atomic field update preserves unknown document fields and appends history without lost updates.
-        return applicationRepository.updateStatus(id, application.getJobId(), newStatus, Instant.now(), recruiter)
+        return applicationRepository.updateStatus(
+                        id,
+                        application.getJobId(),
+                        newStatus,
+                        Instant.now(),
+                        changedByUserId)
                 .orElseThrow(() -> new NotFoundException("Application not found"));
     }
 
@@ -59,13 +69,6 @@ public class ApplicationService {
     private static ObjectId resourceId(String value, String resource) {
         if (value == null || !ObjectId.isValid(value)) {
             throw new IllegalArgumentException(resource + " ID is invalid");
-        }
-        return new ObjectId(value);
-    }
-
-    private static ObjectId recruiterId(String value) {
-        if (value == null || !ObjectId.isValid(value)) {
-            throw new UnauthorizedException("Authenticated user ID is invalid");
         }
         return new ObjectId(value);
     }

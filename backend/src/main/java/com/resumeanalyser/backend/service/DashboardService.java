@@ -3,9 +3,7 @@ package com.resumeanalyser.backend.service;
 import java.util.Map;
 
 import org.bson.types.ObjectId;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.resumeanalyser.backend.dto.DashboardOverviewResponse;
 import com.resumeanalyser.backend.dto.DashboardStatusStatsResponse;
@@ -16,24 +14,17 @@ import com.resumeanalyser.backend.repository.DashboardRepository;
 public class DashboardService {
 
     private final DashboardRepository dashboardRepository;
+    private final RecruiterIdentityService recruiterIdentity;
 
-    public DashboardService(DashboardRepository dashboardRepository) {
+    public DashboardService(
+            DashboardRepository dashboardRepository,
+            RecruiterIdentityService recruiterIdentity) {
         this.dashboardRepository = dashboardRepository;
+        this.recruiterIdentity = recruiterIdentity;
     }
 
     private ObjectId getRecruiterId(User recruiter) {
-
-        if (recruiter == null
-                || recruiter.getId() == null
-                || !ObjectId.isValid(recruiter.getId())) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED,
-                    "Invalid recruiter"
-            );
-        }
-
-        return new ObjectId(recruiter.getId());
+        return recruiterIdentity.requireProfileId(recruiter);
     }
 
     private long getCount(Map<String, Long> stats, String status) {
