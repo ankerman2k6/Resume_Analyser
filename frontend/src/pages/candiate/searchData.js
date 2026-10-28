@@ -1,0 +1,107 @@
+/**
+ * Dữ liệu phục vụ tìm kiếm cho phân quyền Candidate
+ * Bao gồm: 63 tỉnh thành Việt Nam, danh sách ngành nghề và từ khoá phổ biến.
+ */
+
+export const VIETNAM_PROVINCES = [
+  "An Giang",
+  "Bà Rịa - Vũng Tàu",
+  "Bắc Giang",
+  "Bắc Kạn",
+  "Bạc Liêu",
+  "Bắc Ninh",
+  "Bến Tre",
+  "Bình Định",
+  "Bình Dương",
+  "Bình Phước",
+  "Bình Thuận",
+  "Cà Mau",
+  "Cần Thơ",
+  "Cao Bằng",
+  "Đà Nẵng",
+  "Đắk Lắk",
+  "Đắk Nông",
+  "Điện Biên",
+  "Đồng Nai",
+  "Đồng Tháp",
+  "Gia Lai",
+  "Hà Giang",
+  "Hà Nam",
+  "Hà Nội",
+  "Hà Tĩnh",
+  "Hải Dương",
+  "Hải Phòng",
+  "Hậu Giang",
+  "Hòa Bình",
+  "Hưng Yên",
+  "Khánh Hòa",
+  "Kiên Giang",
+  "Kon Tum",
+  "Lai Châu",
+  "Lâm Đồng",
+  "Lạng Sơn",
+  "Lào Cai",
+  "Long An",
+  "Nam Định",
+  "Nghệ An",
+  "Ninh Bình",
+  "Ninh Thuận",
+  "Phú Thọ",
+  "Phú Yên",
+  "Quảng Bình",
+  "Quảng Trị",
+  "Quảng Ngãi",
+  "Quảng Nam",
+  "Quảng Ninh",
+  "Sóc Trăng",
+  "Sơn La",
+  "Tây Ninh",
+  "Thái Bình",
+  "Thái Nguyên",
+  "Thanh Hóa",
+  "Thừa Thiên Huế",
+  "Tiền Giang",
+  "TP. Hồ Chí Minh",
+  "Trà Vinh",
+  "Tuyên Quang",
+  "Vĩnh Long",
+  "Vĩnh Phúc",
+  "Yên Bái"
+];
+
+export const MAJOR_CITIES = [
+  "Hà Nội",
+  "TP. Hồ Chí Minh",
+  "Đà Nẵng",
+  "Hải Phòng",
+  "Cần Thơ",
+  "Bình Dương"
+];
+
+export const INDUSTRIES = [
+  { id: 'it', name: 'Công nghệ thông tin / Phần mềm', count: '1.240 việc làm' },
+  { id: 'finance', name: 'Tài chính / Ngân hàng / Đầu tư', count: '850 việc làm' },
+  { id: 'marketing', name: 'Marketing / Truyền thông / Quảng cáo', count: '920 việc làm' },
+  { id: 'design', name: 'Thiết kế / Sáng tạo / UI-UX', count: '410 việc làm' },
+  { id: 'sales', name: 'Bán hàng / Kinh doanh / B2B', count: '1.450 việc làm' },
+  { id: 'hr', name: 'Nhân sự / Hành chính / Tuyển dụng', count: '380 việc làm' },
+  { id: 'accounting', name: 'Kế toán / Kiểm toán', count: '520 việc làm' },
+  { id: 'education', name: 'Giáo dục / Đào tạo / Giảng dạy', count: '310 việc làm' },
+  { id: 'logistics', name: 'Logistics / Xuất nhập khẩu', count: '460 việc làm' },
+  { id: 'healthcare', name: 'Y tế / Dược phẩm / Sức khỏe', count: '290 việc làm' },
+  { id: 'construction', name: 'Xây dựng / Bất động sản', count: '630 việc làm' },
+  { id: 'manufacturing', name: 'Sản xuất / Kỹ thuật / Vận hành', count: '780 việc làm' }
+];
+
+export const POPULAR_KEYWORDS = [
+  'Frontend Developer',
+  'ReactJS',
+  'Node.js',
+  'UI/UX Designer',
+  'Digital Marketing',
+  'Kế toán tổng hợp',
+  'Chuyên viên Nhân sự',
+  'Java Backend',
+  'Business Analyst',
+  'QA / QC Tester'
+];

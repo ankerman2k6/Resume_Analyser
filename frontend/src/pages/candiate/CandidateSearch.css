@@ -1,0 +1,1025 @@
+/* ==========================================================================
+   Candidate Search & Filter Modal - Phân quyền Ứng viên (Candidate)
+   Tuân thủ quy chuẩn UI/UX: Flat design, tokens từ src/index.css, dark/light mode
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Container & Search Bar chính
+   -------------------------------------------------------------------------- */
+
+.candidate-search-section {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto 32px auto;
+}
+
+.candidate-search-bar {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.candidate-search-bar:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* Các trường con bên trong search bar */
+.search-field {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 10px;
+  background-color: transparent;
+  border-radius: var(--radius-md);
+  position: relative;
+}
+
+.search-field--keyword {
+  flex: 1.4;
+}
+
+.search-field--select {
+  flex: 1;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: background-color 0.15s ease;
+}
+
+.search-field--select:hover {
+  background-color: var(--bg-subtle);
+}
+
+.search-field-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.search-field-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-family);
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.search-field-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.search-field-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.search-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.search-field-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.search-field-value.is-placeholder {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.search-field-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+/* Vạch ngăn cách giữa các ô */
+.search-bar-divider {
+  width: 1px;
+  height: 28px;
+  background-color: var(--border-subtle);
+  flex-shrink: 0;
+}
+
+/* Nút hành động trên thanh tìm kiếm */
+.search-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-filter-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-filter-trigger:hover {
+  background-color: var(--bg-subtle);
+  border-color: var(--text-secondary);
+}
+
+.btn-filter-trigger.has-filter {
+  border-color: var(--brand-secondary);
+  background-color: var(--brand-accent);
+  color: var(--brand-secondary);
+  font-weight: 600;
+}
+
+.btn-search-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--brand-primary);
+  background-color: var(--brand-primary);
+  color: var(--text-inverse);
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-search-submit:hover {
+  background-color: var(--brand-secondary);
+  border-color: var(--brand-secondary);
+}
+
+.filter-badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background-color: var(--brand-secondary);
+  color: var(--text-inverse);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   Danh sách chip lọc đang áp dụng (Active Filter Chips)
+   -------------------------------------------------------------------------- */
+
+.active-filters-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 0 4px;
+}
+
+.active-filters-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  color: var(--text-primary);
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+}
+
+.filter-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.filter-chip-remove:hover {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: var(--status-danger);
+}
+
+.btn-clear-all-filters {
+  background: transparent;
+  border: none;
+  color: var(--brand-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: text-decoration 0.15s ease;
+}
+
+.btn-clear-all-filters:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   Modal Tìm kiếm (Overlay & Dialog)
+   Tuân thủ M15, M21, M23 cho khối nổi
+   -------------------------------------------------------------------------- */
+
+.candidate-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 16px;
+  overflow-y: auto;
+  animation: modalFadeIn 0.2s ease-out forwards;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.candidate-modal-dialog {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 760px;
+  max-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalSlideUp {
+  from {
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Header Modal */
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.modal-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modal-header-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.modal-header-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.modal-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background-color: transparent;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.modal-close-btn:hover {
+  background-color: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+/* Navigation Tabs: 3 kiểu tìm kiếm */
+.modal-tabs {
+  display: flex;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface);
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.modal-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 4px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.modal-tab-btn:hover {
+  color: var(--text-primary);
+}
+
+.modal-tab-btn.is-active {
+  color: var(--brand-secondary);
+  border-bottom-color: var(--brand-secondary);
+  font-weight: 600;
+}
+
+.tab-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
+.modal-tab-btn.is-active .tab-badge {
+  background-color: var(--brand-accent);
+  color: var(--brand-secondary);
+}
+
+/* Thân Modal (Cuộn nội dung) */
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  max-height: 480px;
+}
+
+/* Khối nội dung từng tab */
+.tab-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   KIỂU 1: Tìm theo Từ khoá
+   -------------------------------------------------------------------------- */
+
+.keyword-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 0 16px;
+  min-height: 50px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.keyword-input-wrap:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.keyword-modal-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-family);
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.keyword-clear-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+}
+
+.keyword-clear-btn:hover {
+  color: var(--text-primary);
+}
+
+.keyword-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.suggestions-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.suggestions-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suggestion-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.suggestion-pill:hover {
+  background-color: var(--brand-accent);
+  border-color: var(--brand-secondary);
+  color: var(--brand-secondary);
+}
+
+/* --------------------------------------------------------------------------
+   KIỂU 2: Tìm theo Ngành nghề
+   -------------------------------------------------------------------------- */
+
+.filter-search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0 12px;
+  min-height: 40px;
+}
+
+.filter-search-box:focus-within {
+  border-color: var(--border-focus);
+}
+
+.filter-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-family);
+  font-size: 13.5px;
+  color: var(--text-primary);
+}
+
+.industry-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.industry-card-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--border-subtle);
+  background-color: var(--bg-surface);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.industry-card-item:hover {
+  border-color: var(--text-secondary);
+  background-color: var(--bg-subtle);
+}
+
+.industry-card-item.is-selected {
+  border-color: var(--brand-secondary);
+  background-color: var(--brand-accent);
+}
+
+.industry-card-item.is-selected .industry-name {
+  color: var(--brand-secondary);
+  font-weight: 600;
+}
+
+.industry-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.industry-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.industry-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.industry-check-indicator {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.industry-card-item.is-selected .industry-check-indicator {
+  background-color: var(--brand-secondary);
+  border-color: var(--brand-secondary);
+  color: var(--text-inverse);
+}
+
+/* --------------------------------------------------------------------------
+   KIỂU 3: Tìm theo Vị trí tỉnh thành (Master Box tick 63 tỉnh Việt Nam)
+   -------------------------------------------------------------------------- */
+
+/* Box tick chọn TẤT CẢ các tỉnh thành Việt Nam */
+.provinces-all-box {
+  background-color: var(--bg-subtle);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.provinces-all-box:hover {
+  border-color: var(--brand-secondary);
+}
+
+.provinces-all-box.is-all-selected {
+  background-color: var(--brand-accent);
+  border-color: var(--brand-secondary);
+}
+
+.provinces-all-box-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.provinces-all-box-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.provinces-all-box-desc {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+/* Custom Checkbox UI chuẩn UI-UX */
+.custom-checkbox-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.custom-checkbox-native {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.custom-checkbox-visual {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-default);
+  border: 1.5px solid var(--border-subtle);
+  background-color: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  transition: all 0.15s ease;
+}
+
+.custom-checkbox-native:checked + .custom-checkbox-visual,
+.custom-checkbox-visual.is-checked {
+  background-color: var(--brand-secondary);
+  border-color: var(--brand-secondary);
+  color: var(--text-inverse);
+}
+
+.custom-checkbox-visual.is-indeterminate {
+  background-color: var(--brand-secondary);
+  border-color: var(--brand-secondary);
+  color: var(--text-inverse);
+}
+
+/* Các tiện ích lọc tỉnh thành */
+.provinces-quick-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.quick-city-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.quick-city-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.btn-quick-city {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-quick-city:hover {
+  background-color: var(--brand-accent);
+  color: var(--brand-secondary);
+}
+
+.btn-quick-city.is-selected {
+  background-color: var(--brand-secondary);
+  border-color: var(--brand-secondary);
+  color: var(--text-inverse);
+}
+
+.provinces-stats-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  padding: 2px 4px;
+}
+
+.provinces-stats-count strong {
+  color: var(--brand-secondary);
+  font-weight: 600;
+}
+
+/* Grid hiển thị 63 tỉnh thành */
+.provinces-grid-scroll {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  max-height: 260px;
+  overflow-y: auto;
+  background-color: var(--bg-surface);
+}
+
+.provinces-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px 12px;
+}
+
+.province-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-default);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.12s ease;
+  min-height: 34px;
+}
+
+.province-checkbox-item:hover {
+  background-color: var(--bg-subtle);
+}
+
+.province-checkbox-item.is-selected {
+  background-color: var(--brand-accent);
+}
+
+.province-checkbox-item.is-selected .province-name {
+  color: var(--brand-secondary);
+  font-weight: 500;
+}
+
+.province-name {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+/* --------------------------------------------------------------------------
+   Footer Modal
+   -------------------------------------------------------------------------- */
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.modal-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-reset-filter {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  transition: color 0.15s ease;
+}
+
+.btn-reset-filter:hover {
+  color: var(--status-danger);
+  text-decoration: underline;
+}
+
+.btn-modal-cancel {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background-color: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-modal-cancel:hover {
+  background-color: var(--bg-subtle);
+}
+
+.btn-modal-apply {
+  min-height: 40px;
+  padding: 0 22px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--brand-primary);
+  background-color: var(--brand-primary);
+  color: var(--text-inverse);
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-modal-apply:hover {
+  background-color: var(--brand-secondary);
+  border-color: var(--brand-secondary);
+}
+
+/* --------------------------------------------------------------------------
+   Thanh cuộn chuẩn (Scrollbar Clean)
+   -------------------------------------------------------------------------- */
+
+.modal-body::-webkit-scrollbar,
+.provinces-grid-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-track,
+.provinces-grid-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-body::-webkit-scrollbar-thumb,
+.provinces-grid-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: var(--radius-full);
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover,
+.provinces-grid-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Design
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .candidate-search-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .search-field--keyword {
+    flex: 1 1 100%;
+  }
+
+  .search-bar-divider {
+    display: none;
+  }
+
+  .search-field--select {
+    flex: 1 1 calc(50% - 6px);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .search-bar-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 4px;
+  }
+
+  .btn-search-submit {
+    flex: 1;
+  }
+}
+
+@media (max-width: 680px) {
+  .candidate-modal-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .candidate-modal-dialog {
+    max-height: calc(100vh - 24px);
+    border-radius: var(--radius-xl);
+  }
+
+  .modal-header,
+  .modal-tabs,
+  .modal-body,
+  .modal-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .industry-options-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .provinces-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .search-field--select {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .provinces-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-tab-btn {
+    padding: 12px 2px;
+    font-size: 13px;
+  }
+
+  .modal-tabs {
+    gap: 8px;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+    gap: 12px;
+  }
+
+  .modal-footer-actions {
+    width: 100%;
+  }
+
+  .btn-modal-cancel,
+  .btn-modal-apply {
+    flex: 1;
+  }
+}

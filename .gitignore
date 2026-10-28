@@ -1,0 +1,27 @@
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.env
+.env.*
+!.env.example
+ci-artifacts/
+uploads/
+.idea/discord.xml
+.codex/*
+graphify-out/*
+mongo-init/*
+skills-lock.json
+.agents/
+graphify-out/
+mongo-init/
+AGENTS.md
+.codex/*
+anti-slop/*
+docs/*

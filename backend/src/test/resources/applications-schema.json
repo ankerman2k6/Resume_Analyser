@@ -1,0 +1,61 @@
+{
+    "bsonType": "object",
+    "required": [
+        "_id",
+        "appliedAt",
+        "candidateId",
+        "cvId",
+        "jobId",
+        "status",
+        "statusHistory",
+        "updatedAt"
+    ],
+    "properties": {
+        "_id": {
+            "bsonType": "objectId"
+        },
+        "appliedAt": {
+            "bsonType": "date"
+        },
+        "candidateId": {
+            "bsonType": "objectId"
+        },
+        "cvId": {
+            "bsonType": "objectId"
+        },
+        "jobId": {
+            "bsonType": "objectId"
+        },
+        "status": {
+            "bsonType": "string"
+        },
+        "statusHistory": {
+            "bsonType": "array",
+            "items": {
+                "bsonType": "object",
+                "properties": {
+                    "changedAt": {
+                        "bsonType": "date"
+                    },
+                    "changedBy": {
+                        "bsonType": "objectId"
+                    },
+                    "note": {
+                        "bsonType": "string"
+                    },
+                    "status": {
+                        "bsonType": "string"
+                    }
+                },
+                "required": [
+                    "changedAt",
+                    "changedBy",
+                    "status"
+                ]
+            }
+        },
+        "updatedAt": {
+            "bsonType": "date"
+        }
+    }
+}

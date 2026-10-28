@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { loginApi } from '../../services/authService';
+import Logo from '../../components/common/Logo';
+import { useAuth } from '../../context/AuthContext';
 import './Login.css';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
   const [role, setRole] = useState('candidate');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -22,18 +26,16 @@ const LoginPage = () => {
     try {
       const data = await loginApi(email, password, role);
 
-      // Lưu Token và thông tin User vào localStorage
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify({
-        id: data.userId,
-        email: data.email,
-        role: data.role,
-      }));
+      login(data);
 
-      // Chuyển hướng về trang chủ
-      if(data.role === 'candidate'){
-        navigate('/candidate');
-      } else if(data.role === 'recruiter'){
+      const redirectPath = location.state?.from?.pathname;
+
+      // Quay lại trang người dùng định mở trước khi được yêu cầu đăng nhập
+      if (redirectPath) {
+        navigate(redirectPath, { replace: true });
+      } else if (data.role === 'candidate') {
+        navigate('/candidate/profile');
+      } else if (data.role === 'recruiter') {
         navigate('/hr');
       } else {
         navigate('/');
@@ -54,6 +56,11 @@ const LoginPage = () => {
         </svg>
       </Link>
       <div className="login-container">
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+          <Link to="/" title="Về trang chủ KONEK">
+            <Logo size="lg" />
+          </Link>
+        </div>
         <h1 className="login-title">Chào mừng trở lại</h1>
         <p className="login-subtitle">Đăng nhập để truy cập công việc và thông tin sơ yếu lý lịch của bạn.</p>
         
