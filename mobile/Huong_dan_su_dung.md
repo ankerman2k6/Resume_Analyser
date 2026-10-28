@@ -54,7 +54,7 @@ npm start
 
 Không commit `node_modules/`, `.expo/`, file `.env*.local` hoặc native folders được sinh tự động.
 
-Cách sử dụng code, chạy code
+## Cách sử dụng code, chạy code
 npm install (tải npm)
 npx expo start -> Sau đó sẽ hiển thị ra mã QR ở console output -> Tải ứng dụng Expo Go rồi quét QR 
 

@@ -1,8 +1,8 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { CandidateTabParamList } from '../types/navigation';
-import { HomeScreen } from '../features/dashboard/screens/HomeScreen';
-import { ApplicationsScreen } from '../features/applications/screens/ApplicationsScreen';
-import { ProfileScreen } from '../features/profile/screens/ProfileScreen';
+import { HomeScreen } from '../features/hr/dashboard/screens/HomeScreen';
+import { ApplicationsScreen } from '../features/hr/applications/screens/ApplicationsScreen';
+import { ProfileScreen } from '../features/candidate/profile/screens/ProfileScreen';
 import { colors } from '../theme';
 
 const Tab = createBottomTabNavigator<CandidateTabParamList>();

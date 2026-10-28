@@ -7,6 +7,7 @@ export type CandidateTabParamList = {
 };
 
 export type RootStackParamList = {
+  Welcome: undefined;
   Login: undefined;
   Register: undefined;
   CandidateTabs: NavigatorScreenParams<CandidateTabParamList> | undefined;
