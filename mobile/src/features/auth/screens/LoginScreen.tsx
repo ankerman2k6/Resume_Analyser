@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import {
   Alert,
   ImageBackground,
@@ -13,11 +15,16 @@ import {
   Text,
   TextInput,
   View,
+
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../types/navigation';
 import { colors } from '../../../theme';
 import { spacing } from '../../../theme/spacing';
+import {
+  ApiError,
+  loginApi,
+} from '../api/authApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 type Role = 'candidate' | 'recruiter';
@@ -45,6 +52,8 @@ export function LoginScreen({ navigation }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberLogin, setRememberLogin] = useState(false);
   const [errors, setErrors] = useState<LoginErrors>({});
+  const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
 
   const clearError = (field: keyof LoginErrors) => {
     setErrors((current) => ({ ...current, [field]: undefined }));
@@ -52,14 +61,12 @@ export function LoginScreen({ navigation }: Props) {
 
   const validateForm = () => {
     const nextErrors: LoginErrors = {};
-    const normalizedIdentifier = identifier.trim().replace(/\s/g, '');
-    const isEmail = /^\S+@\S+\.\S+$/.test(identifier.trim());
-    const isPhone = /^(0|\+84)\d{9}$/.test(normalizedIdentifier);
+    const normalizedEmail = identifier.trim().toLowerCase();
 
-    if (!identifier.trim()) {
-      nextErrors.identifier = 'Vui lòng nhập email hoặc số điện thoại.';
-    } else if (!isEmail && !isPhone) {
-      nextErrors.identifier = 'Email hoặc số điện thoại chưa đúng định dạng.';
+    if (!normalizedEmail) {
+      nextErrors.identifier = 'Vui lòng nhập địa chỉ email.';
+    } else if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      nextErrors.identifier = 'Địa chỉ email chưa đúng định dạng.';
     }
 
     if (!password) {
@@ -67,36 +74,86 @@ export function LoginScreen({ navigation }: Props) {
     }
 
     setErrors(nextErrors);
+
     return Object.keys(nextErrors).length === 0;
   };
+  const handleDevLoginHr = ()=>{
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'HrTabs'}]
+    });
+  };
 
-  const handleLogin = () => {
-    if (!validateForm()) {
+  const handleDevLoginCandidate = ()=>{
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'CandidateTabs'}]
+    });
+  }
+
+  const handleLogin = async () => {
+    if (loading || !validateForm()) {
       return;
     }
 
-    const loginPayload = {
-      role,
-      identifier: identifier.trim(),
-      password,
-      rememberLogin,
-    };
+    setLoading(true);
+    setLoginError('');
 
-    console.log('Login payload:', loginPayload);
+    try {
+      const data = await loginApi({
+        email: identifier.trim().toLowerCase(),
+        password,
+      });
 
-    if (role === 'recruiter') {
-      Alert.alert(
-        'Khu vực Nhà tuyển dụng',
-        'Luồng màn hình dành cho Nhà tuyển dụng chưa được kết nối trong phiên bản hiện tại.',
+      await SecureStore.setItemAsync('auth_token', data.token);
+
+      await SecureStore.setItemAsync(
+        'auth_user',
+        JSON.stringify({
+          userId: data.userId,
+          email: data.email,
+          role: data.role,
+        }),
       );
-      return;
-    }
 
-    navigation.replace('CandidateTabs');
+      navigation.reset({
+        index: 0,
+        routes: [
+          {
+            name: data.role === 'candidate' ? 'CandidateTabs': 'HrTabs',
+          },
+        ],
+      });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          setLoginError('Email hoặc mật khẩu không chính xác.');
+        } else if (error.status === 403) {
+          setLoginError('Tài khoản đã bị khóa hoặc chưa được kích hoạt.');
+        } else {
+          setLoginError(error.message);
+        }
+        return;
+      }
+
+      if (error instanceof TypeError) {
+        setLoginError(
+          'Không thể kết nối tới máy chủ. Hãy kiểm tra địa chỉ API và mạng.',
+        );
+        return;
+      }
+
+      setLoginError(
+        error instanceof Error
+          ? error.message
+          : 'Đã xảy ra lỗi khi đăng nhập.',
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const selectedContent = roleContent[role];
-
   return (
     <ImageBackground
       source={require('../../../assets/images/auth-background.jpg')}
@@ -157,18 +214,18 @@ export function LoginScreen({ navigation }: Props) {
                 <View style={[styles.inputShell, errors.identifier && styles.inputShellError]}>
                   <Ionicons color={colors.light.text.secondary} name="at-outline" size={24} />
                   <TextInput
-                    accessibilityLabel="Email hoặc số điện thoại"
+                    accessibilityLabel="Email "
                     autoCapitalize="none"
-                    autoComplete="username"
+                    autoComplete="email"
                     onChangeText={(value) => {
                       setIdentifier(value);
                       clearError('identifier');
                     }}
-                    placeholder="name@email.com hoặc 090..."
+                    placeholder="user@gmail.com"
                     placeholderTextColor={colors.light.text.secondary}
                     returnKeyType="next"
                     style={styles.input}
-                    textContentType="username"
+                    textContentType="emailAddress"
                     value={identifier}
                   />
                 </View>
@@ -237,17 +294,47 @@ export function LoginScreen({ navigation }: Props) {
                   <Text style={styles.comingSoonText}>Quên mật khẩu? Sắp có</Text>
                 </View>
 
+                {loginError ? (
+                  <Text accessibilityLiveRegion="polite" style={styles.errorText}>
+                    {loginError}
+                  </Text>
+                ) : null}
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityState={{
+                    busy: loading,
+                    disabled: loading,
+                  }}
+                  disabled={loading}
                   onPress={handleLogin}
                   style={({ pressed }) => [
                     styles.primaryButton,
-                    pressed && styles.primaryButtonPressed,
+                    pressed && !loading && styles.primaryButtonPressed,
+                    loading && styles.primaryButtonDisabled,
                   ]}
                 >
-                  <Text style={styles.primaryButtonText}>{selectedContent.button}</Text>
-                  <Ionicons color={colors.light.text.inverse} name="arrow-forward" size={23} />
+                  {loading ? (
+                    <ActivityIndicator color={colors.light.text.inverse} />
+                  ) : (
+                    <>
+                      <Text style={styles.primaryButtonText}>
+                        {selectedContent.button}
+                      </Text>
+
+                      <Ionicons
+                        color={colors.light.text.inverse}
+                        name="arrow-forward"
+                        size={23}
+                      />
+                    </>
+                  )}
                 </Pressable>
+                
+                <View style={styles.fastLogin}>
+                  <Text style={styles.fieldLabel} onPress={handleDevLoginHr}> Dev login HR</Text>
+                  <Text style={styles.fieldLabel} onPress={handleDevLoginCandidate}> Dev login candidate</Text>
+                </View>
+
 
                 <View style={styles.dividerRow}>
                   <View style={styles.divider} />
@@ -344,13 +431,18 @@ function FieldError({ message }: { message?: string }) {
 
 const styles = StyleSheet.create({
   background: { flex: 1 },
-  safeArea: { flex: 1},
+  safeArea: { flex: 1 },
   keyboardView: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   hero: {
     minHeight: 184,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
+  },
+  fastLogin:{
+    display: 'flex',
+    flexDirection:'row',
+    justifyContent: 'space-between'
   },
   backButton: {
     alignItems: 'center',
@@ -467,6 +559,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     minHeight: 58,
     paddingHorizontal: spacing.md,
+  },
+  primaryButtonDisabled: {
+    opacity: 0.6,
   },
   inputShellError: { borderColor: colors.light.status.danger },
   input: {
