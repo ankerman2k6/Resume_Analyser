@@ -4,7 +4,8 @@ import { LoginScreen } from '../features/auth/screens/LoginScreen';
 import { RegisterScreen } from '../features/auth/screens/RegisterScreen';
 import { WelcomeScreen } from '../features/auth/screens/WelcomeScreen';
 import { colors } from '../theme';
-
+import { CandidateTabs } from './CandidateTabs';
+import {HrTabs} from './HrTabs'
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function AppNavigator() {
@@ -20,6 +21,8 @@ export function AppNavigator() {
       <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CandidateTabs" component={CandidateTabs} options={{ headerShown: false }} />
+      <Stack.Screen name="HrTabs" component={HrTabs} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
