@@ -3,9 +3,11 @@ import type { RootStackParamList } from '../types/navigation';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
 import { RegisterScreen } from '../features/auth/screens/RegisterScreen';
 import { WelcomeScreen } from '../features/auth/screens/WelcomeScreen';
+import { CandidateJobDetailScreen } from '../features/candidate/jobs/screens/CandidateJobDetailScreen';
 import { colors } from '../theme';
 import { CandidateTabs } from './CandidateTabs';
-import {HrTabs} from './HrTabs'
+import { HrTabs } from './HrTabs';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function AppNavigator() {
@@ -23,6 +25,11 @@ export function AppNavigator() {
       <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CandidateTabs" component={CandidateTabs} options={{ headerShown: false }} />
       <Stack.Screen name="HrTabs" component={HrTabs} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="CandidateJobDetail"
+        component={CandidateJobDetailScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 }
