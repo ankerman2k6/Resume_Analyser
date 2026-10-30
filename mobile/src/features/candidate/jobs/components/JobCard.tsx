@@ -9,6 +9,9 @@ import {
   formatLocation,
   formatTimeAgo,
 } from '../utils/jobFormatters';
+import { API_BASE_URL } from '../../../../config/api';
+
+const SERVER_URL = API_BASE_URL.replace(/\/api$/, '');
 
 type JobCardProps = {
   job: JobUiItem;
@@ -45,7 +48,11 @@ export const JobCard: React.FC<JobCardProps> = ({
         <View style={styles.logoWrapper}>
           {job.companyLogo ? (
             <Image
-              source={{ uri: job.companyLogo }}
+              source={{
+                uri: job.companyLogo?.startsWith('http')
+                  ? job.companyLogo
+                  : `${SERVER_URL}${job.companyLogo}`,
+              }}
               style={styles.logoImage}
               resizeMode="cover"
             />

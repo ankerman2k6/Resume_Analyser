@@ -69,6 +69,7 @@ public class SecurityConfig {
                                 "/api/companies/**")
                         .permitAll()
                         .requestMatchers("/api/hr/**").hasRole("RECRUITER")
+                        .requestMatchers(HttpMethod.GET, "/company/**").permitAll()
                         .anyRequest().authenticated())
 
                 // Cho JWT filter chạy trước filter login mặc định
