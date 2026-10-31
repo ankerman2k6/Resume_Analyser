@@ -1,34 +1,4 @@
-import {
-  SafeAreaView,
-  StyleSheet,
-  Text,
-} from 'react-native';
-import { colors } from '../../../../theme';
-import { spacing } from '../../../../theme/spacing';
-
-export function HrSettingsScreen() {
-  return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>
-        Settings cho HR
-      </Text>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    backgroundColor:
-      colors.light.background.primary,
-    flex: 1,
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  title: {
-    color: colors.light.text.primary,
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-});
+import {Alert,Pressable,SafeAreaView,StyleSheet,Text} from 'react-native'; import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs'; import type {HrTabParamList,RootStackParamList} from '../../../../types/navigation'; import {colors} from '../../../../theme'; import {spacing} from '../../../../theme/spacing'; import {clearSession} from '../../../../core/apiClient';
+type Props=BottomTabScreenProps<HrTabParamList,'HrSettings'>;
+export function HrSettingsScreen({navigation}:Props){const logout=()=>Alert.alert('Đăng xuất','Bạn muốn kết thúc phiên đăng nhập?',[{text:'Hủy',style:'cancel'},{text:'Đăng xuất',style:'destructive',onPress:async()=>{await clearSession();navigation.getParent()?.reset({index:0,routes:[{name:'Welcome'}] as never});}}]);return <SafeAreaView style={s.page}><Text style={s.title}>Tài khoản nhà tuyển dụng</Text><Text style={s.description}>JWT được lưu an toàn trong SecureStore và tự động gửi cho các API HR.</Text><Pressable style={s.button} onPress={logout}><Text style={s.buttonText}>Đăng xuất</Text></Pressable></SafeAreaView>}
+const s=StyleSheet.create({page:{flex:1,backgroundColor:colors.light.background.primary,padding:spacing.lg},title:{fontSize:22,fontWeight:'800',color:colors.light.text.primary},description:{color:colors.light.text.secondary,lineHeight:22,marginTop:spacing.sm},button:{backgroundColor:colors.light.status.danger,borderRadius:12,padding:spacing.md,alignItems:'center',marginTop:spacing.xl},buttonText:{color:colors.light.text.inverse,fontWeight:'800'}});

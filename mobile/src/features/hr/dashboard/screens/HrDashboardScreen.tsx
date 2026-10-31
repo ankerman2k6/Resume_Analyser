@@ -1,34 +1,3 @@
-import {
-  SafeAreaView,
-  StyleSheet,
-  Text,
-} from 'react-native';
-import { colors } from '../../../../theme';
-import { spacing } from '../../../../theme/spacing';
-
-export function HrDashboardScreen() {
-  return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>
-        Trang Dashboard cho hr
-      </Text>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    backgroundColor:
-      colors.light.background.primary,
-    flex: 1,
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  title: {
-    color: colors.light.text.primary,
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-});
+import {useCallback,useEffect,useState} from 'react'; import {ActivityIndicator,RefreshControl,SafeAreaView,ScrollView,StyleSheet,Text,View} from 'react-native'; import {colors} from '../../../../theme'; import {spacing} from '../../../../theme/spacing'; import {StatePanel} from '../../../../components/feedback/StatePanel'; import {hrApi,type Dashboard,type Overview,type StatusStats} from '../../api/hrApi';
+export function HrDashboardScreen(){const [data,setData]=useState<{dashboard:Dashboard;overview:Overview;applications:StatusStats;interviews:StatusStats}>();const [error,setError]=useState('');const [loading,setLoading]=useState(true);const load=useCallback(async()=>{setError('');try{const [dashboard,overview,applications,interviews]=await Promise.all([hrApi.dashboard(),hrApi.overview(),hrApi.applicationStats(),hrApi.interviewStats()]);setData({dashboard,overview,applications,interviews});}catch(e){setError(e instanceof Error?e.message:'Không tải được dashboard.');}finally{setLoading(false);}},[]);useEffect(()=>{void load();},[load]);if(loading)return <View style={s.center}><ActivityIndicator/></View>;if(error)return <StatePanel title="Không tải được tổng quan" description={error} actionLabel="Thử lại" onAction={()=>{setLoading(true);void load();}}/>;if(!data)return null;const cards=[['Việc đang mở',data.dashboard.totalOpenJobs],['Tổng việc',data.overview.totalJobs],['Ứng tuyển',data.applications.total],['Phỏng vấn',data.interviews.total],['Đã lên lịch',data.overview.scheduledInterviews],['Ứng viên quan tâm',data.dashboard.interestedCandidates]] as const;return <SafeAreaView style={s.page}><ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={load}/>} contentContainerStyle={s.content}><Text style={s.heading}>Tổng quan tuyển dụng</Text><View style={s.grid}>{cards.map(([label,value])=><View style={s.card} key={label}><Text style={s.value}>{value}</Text><Text style={s.label}>{label}</Text></View>)}</View><Text style={s.section}>Trạng thái ứng tuyển</Text>{Object.entries(data.applications.byStatus).map(([k,v])=><View style={s.row} key={k}><Text>{k}</Text><Text style={s.bold}>{v}</Text></View>)}</ScrollView></SafeAreaView>}
+const s=StyleSheet.create({page:{flex:1,backgroundColor:colors.light.background.primary},content:{padding:spacing.md,gap:spacing.sm},center:{flex:1,alignItems:'center',justifyContent:'center'},heading:{fontSize:24,fontWeight:'800',color:colors.light.text.primary,marginBottom:spacing.sm},grid:{flexDirection:'row',flexWrap:'wrap',gap:spacing.sm},card:{backgroundColor:colors.light.background.surface,borderColor:colors.light.border.subtle,borderWidth:1,borderRadius:14,padding:spacing.md,width:'47%'},value:{fontSize:26,fontWeight:'800',color:colors.light.brand.secondary},label:{color:colors.light.text.secondary,marginTop:4},section:{fontSize:18,fontWeight:'800',marginTop:spacing.md},row:{flexDirection:'row',justifyContent:'space-between',backgroundColor:colors.light.background.surface,padding:spacing.md,borderRadius:10},bold:{fontWeight:'800'}});

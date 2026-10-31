@@ -1,34 +1,3 @@
-import {
-  SafeAreaView,
-  StyleSheet,
-  Text,
-} from 'react-native';
-import { colors } from '../../../../theme';
-import { spacing } from '../../../../theme/spacing';
-
-export function HrInterviewsScreen() {
-  return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>
-        Trang lịch phỏng vấn, Popup phỏng vấn cho HR
-      </Text>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    backgroundColor:
-      colors.light.background.primary,
-    flex: 1,
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  title: {
-    color: colors.light.text.primary,
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-});
+import {useCallback,useEffect,useState} from 'react'; import {ActivityIndicator,Alert,FlatList,Pressable,SafeAreaView,StyleSheet,Text,View} from 'react-native'; import {colors} from '../../../../theme'; import {spacing} from '../../../../theme/spacing'; import {StatePanel} from '../../../../components/feedback/StatePanel'; import {hrApi,type Interview} from '../../api/hrApi';
+export function HrInterviewsScreen(){const [rows,setRows]=useState<Interview[]>([]);const [loading,setLoading]=useState(true);const [error,setError]=useState('');const load=useCallback(async()=>{setError('');try{setRows(await hrApi.interviews());}catch(e){setError(e instanceof Error?e.message:'Không tải được lịch phỏng vấn.');}finally{setLoading(false);}},[]);useEffect(()=>{void load();},[load]);const update=async(item:Interview,status:'completed'|'cancelled')=>{try{const value=await hrApi.updateInterviewStatus(item.id,status);setRows(x=>x.map(r=>r.id===item.id?value:r));}catch(e){Alert.alert('Không cập nhật được',e instanceof Error?e.message:'Lỗi');}};if(loading)return <View style={s.center}><ActivityIndicator/></View>;if(error)return <StatePanel title="Không tải được phỏng vấn" description={error} actionLabel="Thử lại" onAction={()=>{setLoading(true);void load();}}/>;return <SafeAreaView style={s.page}><FlatList data={rows} keyExtractor={x=>x.id} refreshing={loading} onRefresh={load} contentContainerStyle={s.content} ListEmptyComponent={<StatePanel title="Chưa có lịch phỏng vấn" description="Các lịch đã tạo sẽ xuất hiện ở đây."/>} renderItem={({item})=><Pressable style={s.card} onPress={async()=>{try{const d=await hrApi.interview(item.id);Alert.alert('Chi tiết phỏng vấn',`${new Date(d.scheduledAt).toLocaleString()}\n${d.mode==='online'?d.meetingLink:d.location}\n${d.notes||''}`);}catch(e){Alert.alert('Không tải được',e instanceof Error?e.message:'Lỗi');}}}><Text style={s.title}>{new Date(item.scheduledAt).toLocaleString('vi-VN')}</Text><Text style={s.meta}>{item.mode} · {item.durationMinutes} phút</Text><Text style={s.status}>{item.status}</Text>{item.status==='scheduled'?<View style={s.actions}><Pressable onPress={()=>void update(item,'completed')}><Text style={s.link}>Hoàn tất</Text></Pressable><Pressable onPress={()=>void update(item,'cancelled')}><Text style={s.danger}>Hủy lịch</Text></Pressable></View>:null}</Pressable>}/></SafeAreaView>}
+const s=StyleSheet.create({page:{flex:1,backgroundColor:colors.light.background.primary},content:{padding:spacing.md,gap:spacing.sm},center:{flex:1,alignItems:'center',justifyContent:'center'},card:{backgroundColor:colors.light.background.surface,padding:spacing.md,borderRadius:14,borderWidth:1,borderColor:colors.light.border.subtle},title:{fontSize:17,fontWeight:'800'},meta:{color:colors.light.text.secondary,marginTop:spacing.sm},status:{color:colors.light.brand.secondary,fontWeight:'700',marginTop:spacing.sm},actions:{flexDirection:'row',gap:spacing.lg,marginTop:spacing.md},link:{color:colors.light.status.success,fontWeight:'700'},danger:{color:colors.light.status.danger,fontWeight:'700'}});

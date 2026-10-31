@@ -18,12 +18,14 @@ import {
     HrSettingsScreen,
 } from '../features/hr/settings/screens/HrSettingsScreen';
 import { colors } from '../theme';
+import { HrJobsScreen } from '../features/hr/jobs/screens/HrJobsScreen';
 
 const Tab =
     createBottomTabNavigator<HrTabParamList>();
 
 const tabIcons = {
     HrDashboard: 'grid-outline',
+    HrJobs: 'briefcase-outline',
     HrApplications: 'people-outline',
     HrInterviews: 'calendar-outline',
     HrSettings: 'settings-outline',
@@ -48,6 +50,14 @@ export function HrTabs() {
                 ),
             })}
         >
+            <Tab.Screen
+                name="HrJobs"
+                component={HrJobsScreen}
+                options={{
+                    title: 'Tin tuyển dụng',
+                    tabBarLabel: 'Công việc',
+                }}
+            />
             <Tab.Screen
                 name="HrDashboard"
                 component={HrDashboardScreen}

@@ -1,34 +1,4 @@
-import {
-  SafeAreaView,
-  StyleSheet,
-  Text,
-} from 'react-native';
-import { colors } from '../../../../theme';
-import { spacing } from '../../../../theme/spacing';
-
-export function HrApplicationsScreen() {
-  return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>
-        Quản lý application cho HR
-      </Text>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    backgroundColor:
-      colors.light.background.primary,
-    flex: 1,
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  title: {
-    color: colors.light.text.primary,
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-});
+import {useCallback,useEffect,useState} from 'react'; import {ActivityIndicator,Alert,FlatList,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,View} from 'react-native'; import {colors} from '../../../../theme'; import {spacing} from '../../../../theme/spacing'; import {StatePanel} from '../../../../components/feedback/StatePanel'; import {hrApi,type HrApplication,type HrJob} from '../../api/hrApi';
+const NEXT:Record<string,string>={pending:'reviewing',reviewing:'shortlisted',shortlisted:'interview',interview:'accepted'};
+export function HrApplicationsScreen(){const [jobs,setJobs]=useState<HrJob[]>([]);const [jobId,setJobId]=useState('');const [rows,setRows]=useState<HrApplication[]>([]);const [loading,setLoading]=useState(true);const [error,setError]=useState('');const loadJobs=useCallback(async()=>{try{const value=await hrApi.jobs();setJobs(value);setJobId(x=>x||value[0]?.id||'');}catch(e){setError(e instanceof Error?e.message:'Không tải được công việc.');}finally{setLoading(false);}},[]);useEffect(()=>{void loadJobs();},[loadJobs]);useEffect(()=>{if(!jobId){setRows([]);return;}setLoading(true);hrApi.applications(jobId).then(setRows).catch(e=>setError(e instanceof Error?e.message:'Không tải được ứng viên.')).finally(()=>setLoading(false));},[jobId]);const advance=async(item:HrApplication)=>{const next=NEXT[item.status]||'reviewing';try{await hrApi.updateApplicationStatus(item.id,next);setRows(x=>x.map(r=>r.id===item.id?{...r,status:next}:r));}catch(e){Alert.alert('Không cập nhật được',e instanceof Error?e.message:'Lỗi');}};return <SafeAreaView style={s.page}><ScrollView horizontal contentContainerStyle={s.filters} showsHorizontalScrollIndicator={false}>{jobs.map(j=><Pressable key={j.id} onPress={()=>setJobId(j.id)} style={[s.chip,j.id===jobId&&s.selected]}><Text style={j.id===jobId?s.selectedText:s.chipText}>{j.title}</Text></Pressable>)}</ScrollView>{loading?<View style={s.center}><ActivityIndicator/></View>:error?<StatePanel title="Không tải được ứng viên" description={error} actionLabel="Thử lại" onAction={()=>{setError('');void loadJobs();}}/>:<FlatList data={rows} keyExtractor={x=>x.id} contentContainerStyle={s.content} ListEmptyComponent={<StatePanel title="Chưa có ứng viên" description="Công việc này chưa nhận được hồ sơ."/>} renderItem={({item})=><View style={s.card}><Text style={s.title}>{item.fullName||'Ứng viên chưa cập nhật tên'}</Text><Text style={s.meta}>{item.email||'Chưa có email'}</Text><Text style={s.status}>{item.status}</Text><View style={s.actions}>{item.cvUrl?<Pressable onPress={()=>Alert.alert('CV được bảo vệ',`Tệp CV: ${hrApi.cvUrl(item.id)}\nỨng dụng cần trình xem tệp có hỗ trợ Bearer token để mở trực tiếp.`)}><Text style={s.link}>Xem CV</Text></Pressable>:null}<Pressable onPress={()=>void advance(item)}><Text style={s.link}>Chuyển bước</Text></Pressable><Pressable onPress={async()=>{try{await hrApi.updateApplicationStatus(item.id,'rejected');setRows(x=>x.map(r=>r.id===item.id?{...r,status:'rejected'}:r));}catch(e){Alert.alert('Không cập nhật được',e instanceof Error?e.message:'Lỗi');}}}><Text style={s.danger}>Từ chối</Text></Pressable></View></View>}/>}</SafeAreaView>}
+const s=StyleSheet.create({page:{flex:1,backgroundColor:colors.light.background.primary},filters:{padding:spacing.sm,gap:spacing.sm},chip:{paddingHorizontal:spacing.md,paddingVertical:spacing.sm,borderRadius:20,backgroundColor:colors.light.background.surface,borderWidth:1,borderColor:colors.light.border.subtle},selected:{backgroundColor:colors.light.brand.secondary},chipText:{color:colors.light.text.primary},selectedText:{color:colors.light.text.inverse,fontWeight:'700'},content:{padding:spacing.md,gap:spacing.sm},center:{flex:1,alignItems:'center',justifyContent:'center'},card:{backgroundColor:colors.light.background.surface,padding:spacing.md,borderRadius:14,borderWidth:1,borderColor:colors.light.border.subtle},title:{fontSize:17,fontWeight:'800'},meta:{color:colors.light.text.secondary,marginTop:4},status:{color:colors.light.brand.secondary,fontWeight:'700',marginTop:spacing.sm},actions:{flexDirection:'row',gap:spacing.md,marginTop:spacing.md},link:{color:colors.light.brand.secondary,fontWeight:'700'},danger:{color:colors.light.status.danger,fontWeight:'700'}});

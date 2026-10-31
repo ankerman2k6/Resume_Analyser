@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import {
-  Alert,
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
@@ -23,6 +22,7 @@ import { colors } from '../../../theme';
 import { spacing } from '../../../theme/spacing';
 import {
   ApiError,
+  ApiNetworkError,
   loginApi,
 } from '../api/authApi';
 
@@ -77,20 +77,6 @@ export function LoginScreen({ navigation }: Props) {
 
     return Object.keys(nextErrors).length === 0;
   };
-  const handleDevLoginHr = ()=>{
-    navigation.reset({
-      index: 0,
-      routes: [{name: 'HrTabs'}]
-    });
-  };
-
-  const handleDevLoginCandidate = ()=>{
-    navigation.reset({
-      index: 0,
-      routes: [{name: 'CandidateTabs'}]
-    });
-  }
-
   const handleLogin = async () => {
     if (loading || !validateForm()) {
       return;
@@ -104,6 +90,11 @@ export function LoginScreen({ navigation }: Props) {
         email: identifier.trim().toLowerCase(),
         password,
       });
+
+      if (data.role !== role) {
+        setLoginError(role === 'recruiter' ? 'Tài khoản này không có quyền nhà tuyển dụng.' : 'Tài khoản này không phải ứng viên.');
+        return;
+      }
 
       await SecureStore.setItemAsync('auth_token', data.token);
 
@@ -130,24 +121,20 @@ export function LoginScreen({ navigation }: Props) {
           setLoginError('Email hoặc mật khẩu không chính xác.');
         } else if (error.status === 403) {
           setLoginError('Tài khoản đã bị khóa hoặc chưa được kích hoạt.');
+        } else if (error.status >= 500) {
+          setLoginError('Máy chủ đang gặp sự cố. Vui lòng thử lại sau.');
         } else {
-          setLoginError(error.message);
+          setLoginError('Không thể đăng nhập. Vui lòng kiểm tra thông tin và thử lại.');
         }
         return;
       }
 
-      if (error instanceof TypeError) {
-        setLoginError(
-          'Không thể kết nối tới máy chủ. Hãy kiểm tra địa chỉ API và mạng.',
-        );
+      if (error instanceof ApiNetworkError) {
+        setLoginError(error.message);
         return;
       }
 
-      setLoginError(
-        error instanceof Error
-          ? error.message
-          : 'Đã xảy ra lỗi khi đăng nhập.',
-      );
+      setLoginError('Đã xảy ra lỗi khi đăng nhập. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -330,12 +317,6 @@ export function LoginScreen({ navigation }: Props) {
                   )}
                 </Pressable>
                 
-                <View style={styles.fastLogin}>
-                  <Text style={styles.fieldLabel} onPress={handleDevLoginHr}> Dev login HR</Text>
-                  <Text style={styles.fieldLabel} onPress={handleDevLoginCandidate}> Dev login candidate</Text>
-                </View>
-
-
                 <View style={styles.dividerRow}>
                   <View style={styles.divider} />
                   <Text style={styles.dividerText}>ĐĂNG NHẬP NHANH, SẮP CÓ</Text>
@@ -438,11 +419,6 @@ const styles = StyleSheet.create({
     minHeight: 184,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
-  },
-  fastLogin:{
-    display: 'flex',
-    flexDirection:'row',
-    justifyContent: 'space-between'
   },
   backButton: {
     alignItems: 'center',

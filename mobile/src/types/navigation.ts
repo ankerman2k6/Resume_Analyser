@@ -10,6 +10,7 @@ export type CandidateTabParamList = {
 
 export type HrTabParamList = {
   HrDashboard: undefined;
+  HrJobs: undefined;
   HrApplications: undefined;
   HrInterviews: undefined;
   HrSettings: undefined;
@@ -27,4 +28,6 @@ export type RootStackParamList = {
   HrTabs:
     | NavigatorScreenParams<HrTabParamList>
     | undefined;
+
+  HrCreateJob: undefined;
 };
