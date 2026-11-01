@@ -35,6 +35,7 @@ export function HrTabs() {
             initialRouteName="HrDashboard"
             screenOptions={({ route }) => ({
                 headerTitleAlign: 'center',
+                headerShown: route.name !== 'HrDashboard',
                 tabBarActiveTintColor:
                     colors.light.brand.secondary,
                 tabBarInactiveTintColor:
