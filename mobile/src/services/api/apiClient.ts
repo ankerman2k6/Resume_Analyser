@@ -52,10 +52,12 @@ async function request<T>(
   }
 
   const token = await getAuthToken();
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+
   const headers: Record<string, string> = {
     Accept: 'application/json',
     'ngrok-skip-browser-warning': 'true',
-    ...(body ? { 'Content-Type': 'application/json' } : {}),
+    ...(body && !isFormData ? { 'Content-Type': 'application/json' } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };
@@ -67,7 +69,7 @@ async function request<T>(
     const response = await fetch(url, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body: isFormData ? (body as any) : body ? JSON.stringify(body) : undefined,
       signal: controller.signal,
     });
 
