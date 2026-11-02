@@ -8,7 +8,10 @@
       "mainClass": "com.resumeanalyser.backend.BackendApplication",
       "projectName": "backend",
       "cwd": "${workspaceFolder}/backend",
-      "envFile": "${workspaceFolder}/.env"
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "JWT_SECRET": "Fra5JRn6E2ELx+qIlVpCQAChWiDOI8F3nFBlTXgepqc="
+      }
     }
   ]
 }

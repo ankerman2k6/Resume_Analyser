@@ -39,6 +39,12 @@ export const colors = {
       danger: '#EF4444',
       info: '#0EA5E9',
     },
+    feedback: {
+      successBackground: '#ECFDF5',
+      successText: '#047857',
+      dangerBackground: '#FEF2F2',
+      dangerText: '#B91C1C',
+    },
   },
   dark: {
     background: {
@@ -79,6 +85,12 @@ export const colors = {
       warning: '#FBBF24',
       danger: '#F87171',
       info: '#38BDF8',
+    },
+    feedback: {
+      successBackground: 'rgba(16, 185, 129, 0.15)',
+      successText: '#6EE7B7',
+      dangerBackground: 'rgba(239, 68, 68, 0.15)',
+      dangerText: '#FCA5A5',
     },
   },
 } as const;

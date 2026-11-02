@@ -56,8 +56,9 @@ export function CandidateTabs() {
         name="CandidateResumes"
         component={CandidateResumesScreen}
         options={{
-          title: 'Hồ sơ CV',
-          tabBarLabel: 'CV',
+          headerShown: false,
+          title: 'Quản lý CV',
+          tabBarLabel: 'Quản lý CV',
         }}
       />
 

@@ -23,6 +23,18 @@ async function getAuthToken(): Promise<string | null> {
   }
 }
 
+export async function getAuthenticatedHeaders(
+  extraHeaders: Record<string, string> = {}
+): Promise<Record<string, string>> {
+  const token = await getAuthToken();
+
+  return {
+    'ngrok-skip-browser-warning': 'true',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extraHeaders,
+  };
+}
+
 type RequestOptions = {
   params?: Record<string, string | number | boolean | undefined | null>;
   headers?: Record<string, string>;
@@ -51,14 +63,13 @@ async function request<T>(
     }
   }
 
-  const token = await getAuthToken();
-  const headers: Record<string, string> = {
+  const hasBody = body !== undefined && body !== null;
+  const isMultipartBody = typeof FormData !== 'undefined' && body instanceof FormData;
+  const headers = await getAuthenticatedHeaders({
     Accept: 'application/json',
-    'ngrok-skip-browser-warning': 'true',
-    ...(body ? { 'Content-Type': 'application/json' } : {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(hasBody && !isMultipartBody ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers || {}),
-  };
+  });
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs ?? 15000);
@@ -67,7 +78,11 @@ async function request<T>(
     const response = await fetch(url, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body: hasBody
+        ? isMultipartBody
+          ? body
+          : JSON.stringify(body)
+        : undefined,
       signal: controller.signal,
     });
 
