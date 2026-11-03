@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { jobApi } from '../api/jobApi';
 import type { JobResponse, CompanyResponse } from '../types/job.types';
+import type { CandidateCvItem } from '../components/JobApplyModal';
 import {
   isJobBookmarked,
   toggleJobBookmark as toggleStorageBookmark,
@@ -65,13 +66,14 @@ export function useJobDetail(jobId: string, initialJob?: JobResponse) {
   }, [jobId, showToast]);
 
   const submitApplication = useCallback(
-    async (coverNote?: string) => {
+    async (coverNote?: string, selectedCv?: CandidateCvItem) => {
       setSubmitting(true);
       try {
         // Giả lập gửi hồ sơ hoặc gọi backend nếu có endpoint
         await new Promise((resolve) => setTimeout(resolve, 900));
         setIsApplyModalVisible(false);
-        showToast('🎉 Nộp đơn ứng tuyển thành công! Nhà tuyển dụng sẽ phản hồi sớm.');
+        const cvName = selectedCv?.fileName ? ` với ${selectedCv.fileName}` : '';
+        showToast(`Đơn ${cvName} nộp thành công!\nNhà tuyển dụng sẽ phản hồi sớm.`);
       } catch (err) {
         showToast('Nộp hồ sơ thất bại. Vui lòng thử lại sau.');
       } finally {
