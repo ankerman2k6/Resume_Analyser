@@ -15,7 +15,7 @@ import { useCandidateResumes } from '../hooks/useCandidateResumes';
 import type { CandidateCv } from '../types/resume.types';
 
 const parseStatusLabels: Record<string, string> = {
-  pending: 'Đang xử lý',
+  pending: 'Chờ phân tích',
   processing: 'Đang xử lý',
   parsed: 'Đã phân tích',
   completed: 'Đã phân tích',
@@ -54,20 +54,31 @@ export function CandidateResumesScreen() {
     refreshing,
     loadingMore,
     uploading,
+    parsingId,
     openingId,
     error,
     feedback,
     refresh,
     loadMore,
     pickAndUpload,
+    parseResume,
     openResume,
   } = useCandidateResumes();
 
   const renderResume = ({ item }: { item: CandidateCv }) => {
     const updatedAt = formatUpdatedAt(item.updatedAt || item.createdAt);
     const parseStatus = item.parseInfo?.status?.toLowerCase();
-    const parseLabel = parseStatus ? parseStatusLabels[parseStatus] || item.parseInfo?.status : null;
+    const isParsing = parsingId === item._id;
+    const parseLabel = isParsing
+      ? 'Đang phân tích'
+      : parseStatus
+        ? parseStatusLabels[parseStatus] || item.parseInfo?.status
+        : 'Chờ phân tích';
     const isOpening = openingId === item._id;
+    const parseCompleted = parseStatus === 'completed' || parseStatus === 'parsed';
+    const parseProcessing = parseStatus === 'processing';
+    const parseFailed = parseStatus === 'failed';
+    const canStartParsing = !parseCompleted && !parseProcessing;
 
     return (
       <View style={styles.resumeCard}>
@@ -89,13 +100,21 @@ export function CandidateResumesScreen() {
                 <View
                   style={[
                     styles.statusBadge,
-                    parseStatus === 'failed' ? styles.statusBadgeError : styles.statusBadgeNeutral,
+                    parseFailed
+                      ? styles.statusBadgeError
+                      : parseCompleted
+                        ? styles.statusBadgeSuccess
+                        : styles.statusBadgeNeutral,
                   ]}
                 >
                   <Text
                     style={[
                       styles.statusText,
-                      parseStatus === 'failed' ? styles.statusTextError : styles.statusTextNeutral,
+                      parseFailed
+                        ? styles.statusTextError
+                        : parseCompleted
+                          ? styles.statusTextSuccess
+                          : styles.statusTextNeutral,
                     ]}
                   >
                     {parseLabel}
@@ -107,25 +126,59 @@ export function CandidateResumesScreen() {
           </View>
         </View>
 
-        {item.canViewFile ? (
-          <Pressable
-            accessibilityLabel={`Xem CV ${item.title}`}
-            accessibilityRole="button"
-            disabled={isOpening}
-            onPress={() => openResume(item)}
-            style={({ pressed }) => [
-              styles.previewButton,
-              pressed && !isOpening ? styles.previewButtonPressed : null,
-            ]}
-          >
-            {isOpening ? (
-              <ActivityIndicator color={colors.light.brand.secondary} size="small" />
-            ) : (
-              <Ionicons color={colors.light.brand.secondary} name="eye-outline" size={21} />
-            )}
-            <Text style={styles.previewButtonText}>{isOpening ? 'Đang mở…' : 'Xem CV'}</Text>
-          </Pressable>
+        {parseFailed ? (
+          <View accessibilityRole="alert" style={styles.parseErrorRow}>
+            <Ionicons color={colors.light.status.danger} name="alert-circle-outline" size={18} />
+            <Text style={styles.parseErrorText}>
+              AI chưa thể đọc CV này. Bạn có thể thử phân tích lại.
+            </Text>
+          </View>
         ) : null}
+
+        <View style={styles.actionRow}>
+          {item.canViewFile ? (
+            <Pressable
+              accessibilityLabel={`Xem CV ${item.title}`}
+              accessibilityRole="button"
+              disabled={isOpening}
+              onPress={() => openResume(item)}
+              style={({ pressed }) => [
+                styles.previewButton,
+                pressed && !isOpening ? styles.previewButtonPressed : null,
+              ]}
+            >
+              {isOpening ? (
+                <ActivityIndicator color={colors.light.brand.secondary} size="small" />
+              ) : (
+                <Ionicons color={colors.light.brand.secondary} name="eye-outline" size={21} />
+              )}
+              <Text style={styles.previewButtonText}>Xem CV</Text>
+            </Pressable>
+          ) : null}
+
+          {canStartParsing ? (
+            <Pressable
+              accessibilityLabel={parseFailed ? 'Thử phân tích lại CV' : 'Phân tích CV bằng AI'}
+              accessibilityRole="button"
+              disabled={Boolean(parsingId)}
+              onPress={() => parseResume(item._id)}
+              style={({ pressed }) => [
+                styles.parseButton,
+                pressed && !parsingId ? styles.parseButtonPressed : null,
+                parsingId && !isParsing ? styles.disabledControl : null,
+              ]}
+            >
+              {isParsing ? (
+                <ActivityIndicator color={colors.light.text.inverse} size="small" />
+              ) : (
+                <Ionicons color={colors.light.text.inverse} name="sparkles-outline" size={18} />
+              )}
+              <Text style={styles.parseButtonText}>
+                {parseFailed ? 'Thử phân tích lại' : 'Phân tích bằng AI'}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
       </View>
     );
   };
@@ -478,10 +531,22 @@ const styles = StyleSheet.create({
   statusBadge: { borderRadius: radii.full, paddingHorizontal: spacing.sm, paddingVertical: 3 },
   statusBadgeNeutral: { backgroundColor: colors.light.background.subtle },
   statusBadgeError: { backgroundColor: colors.light.feedback.dangerBackground },
+  statusBadgeSuccess: { backgroundColor: colors.light.feedback.successBackground },
   statusText: { ...typography.labelSmall },
   statusTextNeutral: { color: colors.light.text.secondary },
   statusTextError: { color: colors.light.feedback.dangerText },
+  statusTextSuccess: { color: colors.light.feedback.successText },
   updatedAt: { color: colors.light.text.secondary, ...typography.bodySmall },
+  parseErrorRow: {
+    alignItems: 'flex-start',
+    backgroundColor: colors.light.feedback.dangerBackground,
+    borderRadius: radii.lg,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    padding: 10,
+  },
+  parseErrorText: { color: colors.light.feedback.dangerText, flex: 1, ...typography.bodySmall },
+  actionRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   previewButton: {
     alignItems: 'center',
     alignSelf: 'flex-start',
@@ -495,6 +560,17 @@ const styles = StyleSheet.create({
   },
   previewButtonPressed: { backgroundColor: colors.light.background.subtle },
   previewButtonText: { color: colors.light.brand.secondary, ...typography.labelMedium },
+  parseButton: {
+    alignItems: 'center',
+    backgroundColor: colors.light.brand.secondary,
+    borderRadius: radii.lg,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    minHeight: 42,
+    paddingHorizontal: 14,
+  },
+  parseButtonPressed: { opacity: 0.88 },
+  parseButtonText: { color: colors.light.text.inverse, ...typography.labelMedium },
   loadingList: { gap: spacing.md },
   skeletonCard: {
     alignItems: 'center',

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
-import { MAX_RESUME_SIZE_BYTES, resumeApi } from '../api/resumeApi';
+import { getCvParseErrorMessage, MAX_RESUME_SIZE_BYTES, resumeApi } from '../api/resumeApi';
 import type { CandidateCv } from '../types/resume.types';
 
 type LoadMode = 'initial' | 'refresh' | 'more' | 'background';
@@ -34,6 +34,7 @@ export function useCandidateResumes() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [parsingId, setParsingId] = useState<string | null>(null);
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
@@ -102,15 +103,51 @@ export function useCandidateResumes() {
       }
 
       setUploading(true);
-      await resumeApi.uploadResume(asset);
-      setFeedback({ tone: 'success', message: 'CV đã được tải lên thành công.' });
-      await loadPage(0, 'background');
+      const uploadedCv = await resumeApi.uploadResume(asset);
+      setResumes((current) => [uploadedCv, ...current.filter((item) => item._id !== uploadedCv._id)]);
+      setTotalElements((current) => current + 1);
+      setUploading(false);
+
+      setParsingId(uploadedCv._id);
+      try {
+        const parsedCv = await resumeApi.parseResume(uploadedCv._id);
+        setResumes((current) => current.map((item) => item._id === parsedCv._id ? parsedCv : item));
+        setFeedback({
+          tone: 'success',
+          message: 'AI đã phân tích CV. Kinh nghiệm, kỹ năng và học vấn đã được cập nhật.',
+        });
+      } catch (parseError) {
+        setFeedback({ tone: 'error', message: getCvParseErrorMessage(parseError) });
+      } finally {
+        setParsingId(null);
+        await loadPage(0, 'background');
+      }
     } catch (uploadError) {
       setFeedback({ tone: 'error', message: getErrorMessage(uploadError) });
     } finally {
       setUploading(false);
     }
   }, [loadPage]);
+
+  const parseResume = useCallback(async (cvId: string) => {
+    if (parsingId) return;
+
+    setFeedback(null);
+    setParsingId(cvId);
+    try {
+      const parsedCv = await resumeApi.parseResume(cvId);
+      setResumes((current) => current.map((item) => item._id === parsedCv._id ? parsedCv : item));
+      setFeedback({
+        tone: 'success',
+        message: 'AI đã phân tích CV. Kinh nghiệm, kỹ năng và học vấn đã được cập nhật.',
+      });
+    } catch (parseError) {
+      setFeedback({ tone: 'error', message: getCvParseErrorMessage(parseError) });
+    } finally {
+      setParsingId(null);
+      await loadPage(0, 'background');
+    }
+  }, [loadPage, parsingId]);
 
   const openResume = useCallback(async (cv: CandidateCv) => {
     setFeedback(null);
@@ -132,12 +169,14 @@ export function useCandidateResumes() {
     refreshing,
     loadingMore,
     uploading,
+    parsingId,
     openingId,
     error,
     feedback,
     refresh,
     loadMore,
     pickAndUpload,
+    parseResume,
     openResume,
   };
 }

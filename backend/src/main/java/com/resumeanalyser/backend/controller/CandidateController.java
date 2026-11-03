@@ -148,6 +148,16 @@ public class CandidateController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/cvs/{cvId}/parse")
+    public ResponseEntity<CvSummaryDto> parseCv(
+            @PathVariable String cvId,
+            Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .body(candidateService.parseCv(user, cvId));
+    }
+
     @GetMapping("/career")
     public ResponseEntity<CareerDto> getCareer(
             @RequestParam(required = false) String cvId,

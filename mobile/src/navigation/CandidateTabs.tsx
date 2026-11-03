@@ -66,6 +66,7 @@ export function CandidateTabs() {
         name="CandidateProfile"
         component={CandidateProfileScreen}
         options={{
+          headerShown: false,
           title: 'Cá nhân',
           tabBarLabel: 'Cá nhân',
         }}

@@ -4,12 +4,34 @@ import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 import { getApiBaseUrl } from '../../../../config/api';
 import {
+  ApiError,
   apiClient,
   getAuthenticatedHeaders,
 } from '../../../../services/api/apiClient';
 import type { CandidateCv, PageResponse } from '../types/resume.types';
 
 export const MAX_RESUME_SIZE_BYTES = 5 * 1024 * 1024;
+
+export function getCvParseErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.code === 'AI_SERVICE_UNAVAILABLE') {
+      return 'Dịch vụ AI đang bận. Vui lòng đợi một chút rồi thử lại.';
+    }
+    if (error.code === 'CV_PARSE_IN_PROGRESS') {
+      return 'CV này đang được phân tích. Kéo xuống để cập nhật trạng thái.';
+    }
+    if (error.code === 'AI_PROCESSING_FAILED') {
+      return 'AI chưa thể đọc CV này. Vui lòng kiểm tra tệp và thử lại.';
+    }
+    if (error.status === 408) {
+      return 'Phân tích mất nhiều thời gian hơn dự kiến và có thể vẫn đang chạy. Kéo xuống để kiểm tra lại.';
+    }
+  }
+
+  return error instanceof Error
+    ? error.message
+    : 'Không thể phân tích CV lúc này. Vui lòng thử lại.';
+}
 
 function sanitizeFileName(value: string): string {
   const safeName = value.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -41,6 +63,14 @@ export const resumeApi = {
       '/resumes/upload',
       createResumeFormData(asset),
       { timeoutMs: 60000 }
+    );
+  },
+
+  parseResume(cvId: string): Promise<CandidateCv> {
+    return apiClient.post<CandidateCv>(
+      `/candidates/me/cvs/${encodeURIComponent(cvId)}/parse`,
+      undefined,
+      { timeoutMs: 90000 }
     );
   },
 

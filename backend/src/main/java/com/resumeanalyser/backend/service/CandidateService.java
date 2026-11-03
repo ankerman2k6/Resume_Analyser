@@ -62,6 +62,7 @@ import com.resumeanalyser.backend.repository.CvRepository;
 import com.resumeanalyser.backend.repository.InterviewRepository;
 import com.resumeanalyser.backend.repository.JobRepository;
 import com.resumeanalyser.backend.repository.UserRepository;
+import com.resumeanalyser.backend.service.ai.CvParsingService;
 
 @Service
 public class CandidateService {
@@ -80,6 +81,7 @@ public class CandidateService {
     private final InterviewRepository interviewRepository;
     private final JobRepository jobRepository;
     private final MongoTemplate mongoTemplate;
+    private final CvParsingService cvParsingService;
     private final Path uploadStorageLocation;
 
     public CandidateService(
@@ -92,6 +94,7 @@ public class CandidateService {
             InterviewRepository interviewRepository,
             JobRepository jobRepository,
             MongoTemplate mongoTemplate,
+            CvParsingService cvParsingService,
             @Value("${app.upload.dir:uploads/resumes}") String uploadDir) {
         this.profileRepository = profileRepository;
         this.userRepository = userRepository;
@@ -102,6 +105,7 @@ public class CandidateService {
         this.interviewRepository = interviewRepository;
         this.jobRepository = jobRepository;
         this.mongoTemplate = mongoTemplate;
+        this.cvParsingService = cvParsingService;
         this.uploadStorageLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
 
         try {
@@ -650,6 +654,13 @@ public class CandidateService {
         }
     }
 
+    public CvSummaryDto parseCv(User user, String cvId) {
+        CandidateProfile profile = requireProfile(user);
+        ObjectId cvObjectId = parseObjectId(cvId, "cvId");
+        Cv parsed = cvParsingService.parseAndSave(cvObjectId, profile.getId());
+        return mapToCvSummaryDto(parsed);
+    }
+
     public CvSummaryDto uploadCv(MultipartFile file, User user) {
         CandidateProfile profile = requireProfile(user);
 
@@ -700,9 +711,18 @@ public class CandidateService {
         Cv cv = new Cv();
         cv.setId(new ObjectId());
         cv.setCandidateId(profile.getId());
+        cv.setTemplateId(null);
         cv.setTitle(title);
         cv.setSource(new Cv.Source("uploaded", originalFilename, targetLocation.toString(), "application/pdf"));
-        cv.setParseInfo(new Cv.ParseInfo("pending", null, null));
+        cv.setParseInfo(new Cv.ParseInfo("pending", now, CvParsingService.PARSER_VERSION));
+        String city = profile.getLocation() != null ? Objects.toString(profile.getLocation().getCity(), "") : "";
+        String country = profile.getLocation() != null ? Objects.toString(profile.getLocation().getCountry(), "") : "";
+        cv.setPersonalInfo(Map.of(
+                "fullName", Objects.toString(profile.getFullName(), ""),
+                "email", Objects.toString(user.getEmail(), ""),
+                "phone", Objects.toString(profile.getPhone(), ""),
+                "address", Map.of("city", city, "country", country)
+        ));
         cv.setCreatedAt(now);
         cv.setUpdatedAt(now);
 
