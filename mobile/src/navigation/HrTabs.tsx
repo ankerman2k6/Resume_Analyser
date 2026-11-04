@@ -61,6 +61,7 @@ export function HrTabs() {
                 name="HrApplications"
                 component={HrApplicationsScreen}
                 options={{
+                    headerShown: false,
                     title: 'Ứng viên',
                     tabBarLabel: 'Ứng viên',
                 }}
