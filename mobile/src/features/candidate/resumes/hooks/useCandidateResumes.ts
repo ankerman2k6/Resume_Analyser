@@ -89,7 +89,7 @@ export function useCandidateResumes() {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: 'application/pdf',
-        copyToCacheDirectory: true,
+        copyToCacheDirectory: false,
         multiple: false,
       });
 
