@@ -58,10 +58,12 @@ export function useCandidateProfile() {
     setFeedback(null);
     try {
       const application = await profileApi.withdrawApplication(id);
-      setData((current) => ({ ...current, applications: current.applications ? {
-        ...current.applications,
-        content: current.applications.content.map((item) => item._id === id ? application : item),
-      } : null }));
+      setData((current) => ({
+        ...current, applications: current.applications ? {
+          ...current.applications,
+          content: current.applications.content.map((item) => item._id === id ? application : item),
+        } : null
+      }));
       setFeedback({ tone: 'success', message: 'Đã rút đơn ứng tuyển.' });
     } finally { setBusyId(null); }
   }, []);
@@ -71,11 +73,13 @@ export function useCandidateProfile() {
     setFeedback(null);
     try {
       await profileApi.deleteCv(id);
-      setData((current) => ({ ...current, cvs: current.cvs ? {
-        ...current.cvs,
-        content: current.cvs.content.filter((item) => item._id !== id),
-        totalElements: Math.max(0, current.cvs.totalElements - 1),
-      } : null }));
+      setData((current) => ({
+        ...current, cvs: current.cvs ? {
+          ...current.cvs,
+          content: current.cvs.content.filter((item) => item._id !== id),
+          totalElements: Math.max(0, current.cvs.totalElements - 1),
+        } : null
+      }));
       setFeedback({ tone: 'success', message: 'CV đã được xóa.' });
     } finally { setBusyId(null); }
   }, []);
