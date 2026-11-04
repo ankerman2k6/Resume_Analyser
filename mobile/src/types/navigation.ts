@@ -1,5 +1,5 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
-import type { JobResponse } from '../features/candidate/jobs/types/job.types';
+import type { JobUiItem } from '../features/candidate/jobs/types/job.types';
 
 export type CandidateTabParamList = {
   CandidateJobs: undefined;
@@ -9,8 +9,8 @@ export type CandidateTabParamList = {
 
 export type HrTabParamList = {
   HrDashboard: undefined;
+  HrJobs: undefined;
   HrApplications: undefined;
-  HrInterviews: undefined;
   HrSettings: undefined;
 };
 
@@ -23,12 +23,14 @@ export type RootStackParamList = {
     | NavigatorScreenParams<CandidateTabParamList>
     | undefined;
 
+  CandidateJobDetail: {
+    jobId: string;
+    initialJob?: JobUiItem;
+  };
+
   HrTabs:
     | NavigatorScreenParams<HrTabParamList>
     | undefined;
 
-  CandidateJobDetail: {
-    jobId: string;
-    initialJob?: JobResponse;
-  };
+  HrCreateJob: undefined;
 };
