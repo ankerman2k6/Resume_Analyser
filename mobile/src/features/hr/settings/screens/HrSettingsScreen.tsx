@@ -1,12 +1,14 @@
-import { Ionicons } from '@expo/vector-icons';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { Ionicons } from "@expo/vector-icons";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import {
   NavigationProp,
+  useFocusEffect,
   useNavigation,
-} from '@react-navigation/native';
-import * as SecureStore from 'expo-secure-store';
-import { useState } from 'react';
+} from "@react-navigation/native";
+import * as SecureStore from "expo-secure-store";
+import { useCallback, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -16,11 +18,15 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../../../../theme';
-import { spacing } from '../../../../theme/spacing';
-import type { HrTabParamList, RootStackParamList } from '../../../../types/navigation';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { colors } from "../../../../theme";
+import { spacing } from "../../../../theme/spacing";
+import type {
+  HrTabParamList,
+  RootStackParamList,
+} from "../../../../types/navigation";
+import { hrSettingsApi, type HrSettingsData } from "../api/hrSettingsApi";
 
 type Profile = {
   fullName: string;
@@ -30,10 +36,10 @@ type Profile = {
 };
 
 const initialProfile: Profile = {
-  fullName: 'Nguyễn Hoàng Nam',
-  email: '',
-  phone: '090 123 4567',
-  position: '',
+  fullName: "",
+  email: "",
+  phone: "",
+  position: "",
 };
 
 type Company = {
@@ -52,28 +58,28 @@ type Location = {
 };
 
 const initialCompany: Company = {
-  name: '',
-  description: '',
-  industry: '',
-  size: '',
-  website: '',
-  logoUrl: '',
+  name: "",
+  description: "",
+  industry: "",
+  size: "",
+  website: "",
+  logoUrl: "",
 };
 
 const createEmptyLocation = (): Location => ({
-  address: '',
-  city: '',
-  country: '',
+  address: "",
+  city: "",
+  country: "",
 });
 
-const requiredProfileFields = ['fullName', 'email'] as const;
+const requiredProfileFields = ["fullName", "email"] as const;
 
 const getRequiredFieldMessage = (profile: Profile, company: Company) => {
   if (requiredProfileFields.some((field) => !profile[field].trim())) {
-    return 'Vui lòng nhập họ tên và email.';
+    return "Vui lòng nhập họ tên và email.";
   }
   if (!company.name.trim()) {
-    return 'Vui lòng nhập tên doanh nghiệp.';
+    return "Vui lòng nhập tên doanh nghiệp.";
   }
   return null;
 };
@@ -86,6 +92,71 @@ export function HrSettingsScreen() {
   const [company, setCompany] = useState(initialCompany);
   const [locations, setLocations] = useState([createEmptyLocation()]);
   const [hasSaved, setHasSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const requestId = useRef(0);
+
+  const applySettings = (data: HrSettingsData) => {
+    setProfile({
+      fullName: data.profile.fullName ?? "",
+      email: data.profile.email ?? "",
+      phone: data.profile.phone ?? "",
+      position: data.profile.position ?? "",
+    });
+    setCompany({
+      name: data.company.name ?? "",
+      description: data.company.description ?? "",
+      industry: data.company.industry ?? "",
+      size: data.company.size ?? "",
+      website: data.company.website ?? "",
+      logoUrl: data.company.logoUrl ?? "",
+    });
+    setLocations(
+      data.company.locations?.length
+        ? data.company.locations.map((location) => ({
+          address: location.address ?? "",
+          city: location.city ?? "",
+          country: location.country ?? "",
+        }))
+        : [createEmptyLocation()],
+    );
+  };
+
+  const loadSettings = useCallback(async () => {
+    const id = ++requestId.current;
+    setLoading(true);
+    setLoaded(false);
+    setError("");
+    try {
+      const data = await hrSettingsApi.get();
+      if (id === requestId.current) {
+        applySettings(data);
+        setLoaded(true);
+        setHasSaved(false);
+      }
+    } catch (requestError) {
+      if (id === requestId.current) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Không tải được cài đặt.",
+        );
+      }
+    } finally {
+      if (id === requestId.current) setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadSettings();
+      return () => {
+        requestId.current += 1;
+      };
+    }, [loadSettings]),
+  );
 
   const updateField = (field: keyof Profile, value: string) => {
     setProfile((current) => ({ ...current, [field]: value }));
@@ -104,55 +175,106 @@ export function HrSettingsScreen() {
   ) => {
     setLocations((current) =>
       current.map((location, locationIndex) =>
-        locationIndex === index
-          ? { ...location, [field]: value }
-          : location,
+        locationIndex === index ? { ...location, [field]: value } : location,
       ),
     );
     setHasSaved(false);
   };
 
-  const saveProfile = () => {
+  const saveProfile = async () => {
+    if (!loaded || saving) return;
     const requiredFieldMessage = getRequiredFieldMessage(profile, company);
     if (requiredFieldMessage) {
-      Alert.alert('Thiếu thông tin', requiredFieldMessage);
+      Alert.alert("Thiếu thông tin", requiredFieldMessage);
       return;
     }
 
-    setHasSaved(true);
-    Alert.alert(
-      'Đã lưu thay đổi',
-      'Thông tin được cập nhật trong phiên hiện tại (bản mô phỏng).',
+    const submittedLocations = locations.filter(
+      (location) =>
+        location.address.trim() ||
+        location.city.trim() ||
+        location.country.trim(),
     );
+    if (
+      submittedLocations.some(
+        (location) =>
+          !location.address.trim() ||
+          !location.city.trim() ||
+          !location.country.trim(),
+      )
+    ) {
+      Alert.alert(
+        "Thiếu thông tin",
+        "Mỗi địa điểm cần có địa chỉ, thành phố và quốc gia.",
+      );
+      return;
+    }
+    setSaving(true);
+    setError("");
+    setHasSaved(false);
+    try {
+      const saved = await hrSettingsApi.update({
+        profile: {
+          fullName: profile.fullName.trim(),
+          email: profile.email.trim(),
+          phone: profile.phone.trim(),
+          position: profile.position.trim(),
+        },
+        company: {
+          name: company.name.trim(),
+          description: company.description.trim(),
+          industry: company.industry.trim(),
+          size: company.size.trim(),
+          website: company.website.trim(),
+          logoUrl: company.logoUrl.trim(),
+          locations: submittedLocations.map((location) => ({
+            address: location.address.trim(),
+            city: location.city.trim(),
+            country: location.country.trim(),
+          })),
+        },
+      });
+      applySettings(saved);
+      setHasSaved(true);
+      Alert.alert("Đã lưu thay đổi", "Thông tin đã được cập nhật.");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Không lưu được cài đặt.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const logout = async () => {
     try {
-      await SecureStore.deleteItemAsync('auth_token');
-      await SecureStore.deleteItemAsync('auth_user');
+      await SecureStore.deleteItemAsync("auth_token");
+      await SecureStore.deleteItemAsync("auth_user");
       rootNavigation?.reset({
         index: 0,
-        routes: [{ name: 'Welcome' }],
+        routes: [{ name: "Welcome" }],
       });
     } catch (error) {
       Alert.alert(
-        'Không thể đăng xuất',
+        "Không thể đăng xuất",
         error instanceof Error
           ? error.message
-          : 'Đã xảy ra lỗi khi xóa thông tin phiên.',
+          : "Đã xảy ra lỗi khi xóa thông tin phiên.",
       );
     }
   };
 
   const confirmLogout = () => {
     Alert.alert(
-      'Đăng xuất tài khoản',
-      'Bạn có chắc chắn muốn đăng xuất khỏi phiên làm việc trên thiết bị này?',
+      "Đăng xuất tài khoản",
+      "Bạn có chắc chắn muốn đăng xuất khỏi phiên làm việc trên thiết bị này?",
       [
-        { text: 'Hủy', style: 'cancel' },
+        { text: "Hủy", style: "cancel" },
         {
-          text: 'Đăng xuất',
-          style: 'destructive',
+          text: "Đăng xuất",
+          style: "destructive",
           onPress: () => {
             void logout();
           },
@@ -162,9 +284,9 @@ export function HrSettingsScreen() {
   };
 
   return (
-    <SafeAreaView edges={['left', 'right']} style={styles.safeArea}>
+    <SafeAreaView edges={["left", "right"]} style={styles.safeArea}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboardAvoiding}
       >
         <ScrollView
@@ -179,252 +301,289 @@ export function HrSettingsScreen() {
             </Text>
           </View>
 
-          <View style={styles.formCard}>
-            <View style={styles.cardHeading}>
-              <View style={styles.headingIcon}>
-                <Ionicons
-                  color={colors.light.brand.secondary}
-                  name="person-outline"
-                  size={19}
-                />
-              </View>
-              <View style={styles.headingCopy}>
-                <Text style={styles.cardTitle}>Thông tin cá nhân</Text>
-                <Text style={styles.cardSubtitle}>
-                  Thông tin liên hệ của người đại diện tuyển dụng.
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.fields}>
-              <FormField
-                autoCapitalize="words"
-                label="Họ và tên"
-                maxLength={120}
-                onChangeText={(value) => updateField('fullName', value)}
-                placeholder="Nhập họ và tên"
-                required
-                value={profile.fullName}
-              />
-              <FormField
-                autoCapitalize="none"
-                keyboardType="email-address"
-                label="Email"
-                maxLength={254}
-                onChangeText={(value) => updateField('email', value)}
-                placeholder="name@company.com"
-                required
-                value={profile.email}
-              />
-              <FormField
-                keyboardType="phone-pad"
-                label="Số điện thoại"
-                maxLength={30}
-                onChangeText={(value) => updateField('phone', value)}
-                placeholder="Nhập số điện thoại"
-                value={profile.phone}
-              />
-              <FormField
-                autoCapitalize="words"
-                label="Chức vụ"
-                maxLength={120}
-                onChangeText={(value) => updateField('position', value)}
-                placeholder="Ví dụ: Chuyên viên tuyển dụng"
-                value={profile.position}
-              />
-            </View>
-          </View>
-
-          <View style={styles.formCard}>
-            <View style={styles.cardHeading}>
-              <View style={styles.headingIcon}>
-                <Ionicons
-                  color={colors.light.brand.secondary}
-                  name="business-outline"
-                  size={19}
-                />
-              </View>
-              <View style={styles.headingCopy}>
-                <Text style={styles.cardTitle}>Thông tin doanh nghiệp</Text>
-                <Text style={styles.cardSubtitle}>
-                  Giới thiệu doanh nghiệp để ứng viên hiểu hơn về bạn.
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.fields}>
-              <FormField
-                autoCapitalize="words"
-                label="Tên doanh nghiệp"
-                maxLength={160}
-                onChangeText={(value) => updateCompanyField('name', value)}
-                placeholder="Nhập tên doanh nghiệp"
-                required
-                value={company.name}
-              />
-              <FormField
-                label="Ngành nghề"
-                maxLength={120}
-                onChangeText={(value) => updateCompanyField('industry', value)}
-                placeholder="Ví dụ: Công nghệ thông tin"
-                value={company.industry}
-              />
-              <FormField
-                label="Quy mô doanh nghiệp"
-                maxLength={120}
-                onChangeText={(value) => updateCompanyField('size', value)}
-                placeholder="Ví dụ: 50–200 nhân viên"
-                value={company.size}
-              />
-              <FormField
-                autoCapitalize="none"
-                keyboardType="url"
-                label="Website"
-                maxLength={2048}
-                onChangeText={(value) => updateCompanyField('website', value)}
-                placeholder="https://congty.com"
-                value={company.website}
-              />
-              <FormField
-                autoCapitalize="none"
-                keyboardType="url"
-                label="Đường dẫn logo"
-                maxLength={2048}
-                onChangeText={(value) => updateCompanyField('logoUrl', value)}
-                placeholder="https://congty.com/logo.png"
-                helperText="Dán đường dẫn logo công khai của doanh nghiệp."
-                value={company.logoUrl}
-              />
-              <FormField
-                label="Mô tả doanh nghiệp"
-                maxLength={2000}
-                multiline
-                onChangeText={(value) =>
-                  updateCompanyField('description', value)
-                }
-                placeholder="Chia sẻ về lĩnh vực hoạt động, văn hóa và môi trường làm việc..."
-                value={company.description}
-              />
-            </View>
-
-            <View style={styles.locationsSection}>
-              <View style={styles.locationHeader}>
-                <View style={styles.locationHeaderCopy}>
-                  <Text style={styles.locationSectionTitle}>
-                    Địa điểm doanh nghiệp
-                  </Text>
-                  <Text style={styles.locationDescription}>
-                    Thêm địa chỉ văn phòng hoặc địa điểm làm việc.
-                  </Text>
-                </View>
+          {loading ? (
+            <ActivityIndicator
+              color={colors.light.brand.secondary}
+              size="large"
+            />
+          ) : null}
+          {error ? (
+            <View style={styles.errorNotice}>
+              <Text style={styles.errorText}>{error}</Text>
+              {!loaded ? (
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => {
-                    setLocations((current) => [
-                      ...current,
-                      createEmptyLocation(),
-                    ]);
-                    setHasSaved(false);
+                    void loadSettings();
                   }}
-                  style={styles.addLocationButton}
                 >
-                  <Ionicons
-                    color={colors.light.brand.secondary}
-                    name="add"
-                    size={18}
-                  />
-                  <Text style={styles.addLocationText}>Thêm địa điểm</Text>
+                  <Text style={styles.retryText}>Thử lại</Text>
                 </Pressable>
-              </View>
+              ) : null}
+            </View>
+          ) : null}
 
-              {locations.map((location, index) => (
-                <View key={index} style={styles.locationCard}>
-                  <View style={styles.locationTitleRow}>
-                    <Text style={styles.locationTitle}>
-                      Địa điểm {index + 1}
-                    </Text>
-                    {locations.length > 1 && (
-                      <Pressable
-                        accessibilityLabel={`Xóa địa điểm ${index + 1}`}
-                        accessibilityRole="button"
-                        onPress={() => {
-                          setLocations((current) =>
-                            current.filter(
-                              (_, locationIndex) => locationIndex !== index,
-                            ),
-                          );
-                          setHasSaved(false);
-                        }}
-                        style={styles.removeLocationButton}
-                      >
-                        <Text style={styles.removeLocationText}>Xóa</Text>
-                      </Pressable>
-                    )}
+          {loaded && !loading ? (
+            <>
+              <View style={styles.formCard}>
+                <View style={styles.cardHeading}>
+                  <View style={styles.headingIcon}>
+                    <Ionicons
+                      color={colors.light.brand.secondary}
+                      name="person-outline"
+                      size={19}
+                    />
                   </View>
-                  <View style={styles.fields}>
-                    <FormField
-                      label="Địa chỉ"
-                      maxLength={240}
-                      onChangeText={(value) =>
-                        updateLocationField(index, 'address', value)
-                      }
-                      placeholder="Số nhà, tên đường"
-                      value={location.address}
-                    />
-                    <FormField
-                      autoCapitalize="words"
-                      label="Thành phố"
-                      maxLength={120}
-                      onChangeText={(value) =>
-                        updateLocationField(index, 'city', value)
-                      }
-                      placeholder="Nhập thành phố"
-                      value={location.city}
-                    />
-                    <FormField
-                      autoCapitalize="words"
-                      label="Quốc gia"
-                      maxLength={120}
-                      onChangeText={(value) =>
-                        updateLocationField(index, 'country', value)
-                      }
-                      placeholder="Nhập quốc gia"
-                      value={location.country}
-                    />
+                  <View style={styles.headingCopy}>
+                    <Text style={styles.cardTitle}>Thông tin cá nhân</Text>
+                    <Text style={styles.cardSubtitle}>
+                      Thông tin liên hệ của người đại diện tuyển dụng.
+                    </Text>
                   </View>
                 </View>
-              ))}
-            </View>
-          </View>
 
-          {hasSaved && (
-            <View style={styles.savedNotice}>
-              <Ionicons
-                color={colors.light.status.success}
-                name="checkmark-circle"
-                size={16}
-              />
-              <Text style={styles.savedNoticeText}>
-                Thông tin đã được lưu.
-              </Text>
-            </View>
-          )}
+                <View style={styles.fields}>
+                  <FormField
+                    autoCapitalize="words"
+                    label="Họ và tên"
+                    maxLength={120}
+                    onChangeText={(value) => updateField("fullName", value)}
+                    placeholder="Nhập họ và tên"
+                    required
+                    value={profile.fullName}
+                  />
+                  <FormField
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    label="Email"
+                    maxLength={254}
+                    onChangeText={(value) => updateField("email", value)}
+                    placeholder="name@company.com"
+                    required
+                    value={profile.email}
+                  />
+                  <FormField
+                    keyboardType="phone-pad"
+                    label="Số điện thoại"
+                    maxLength={30}
+                    onChangeText={(value) => updateField("phone", value)}
+                    placeholder="Nhập số điện thoại"
+                    value={profile.phone}
+                  />
+                  <FormField
+                    autoCapitalize="words"
+                    label="Chức vụ"
+                    maxLength={120}
+                    onChangeText={(value) => updateField("position", value)}
+                    placeholder="Ví dụ: Chuyên viên tuyển dụng"
+                    value={profile.position}
+                  />
+                </View>
+              </View>
 
-          <Pressable
-            accessibilityRole="button"
-            onPress={saveProfile}
-            style={({ pressed }) => [
-              styles.saveButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Ionicons
-              color={colors.light.text.inverse}
-              name="save-outline"
-              size={18}
-            />
-            <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
-          </Pressable>
+              <View style={styles.formCard}>
+                <View style={styles.cardHeading}>
+                  <View style={styles.headingIcon}>
+                    <Ionicons
+                      color={colors.light.brand.secondary}
+                      name="business-outline"
+                      size={19}
+                    />
+                  </View>
+                  <View style={styles.headingCopy}>
+                    <Text style={styles.cardTitle}>Thông tin doanh nghiệp</Text>
+                    <Text style={styles.cardSubtitle}>
+                      Giới thiệu doanh nghiệp để ứng viên hiểu hơn về bạn.
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fields}>
+                  <FormField
+                    autoCapitalize="words"
+                    label="Tên doanh nghiệp"
+                    maxLength={160}
+                    onChangeText={(value) => updateCompanyField("name", value)}
+                    placeholder="Nhập tên doanh nghiệp"
+                    required
+                    value={company.name}
+                  />
+                  <FormField
+                    label="Ngành nghề"
+                    maxLength={120}
+                    onChangeText={(value) =>
+                      updateCompanyField("industry", value)
+                    }
+                    placeholder="Ví dụ: Công nghệ thông tin"
+                    value={company.industry}
+                  />
+                  <FormField
+                    label="Quy mô doanh nghiệp"
+                    maxLength={120}
+                    onChangeText={(value) => updateCompanyField("size", value)}
+                    placeholder="Ví dụ: 50–200 nhân viên"
+                    value={company.size}
+                  />
+                  <FormField
+                    autoCapitalize="none"
+                    keyboardType="url"
+                    label="Website"
+                    maxLength={2048}
+                    onChangeText={(value) =>
+                      updateCompanyField("website", value)
+                    }
+                    placeholder="https://congty.com"
+                    value={company.website}
+                  />
+                  <FormField
+                    autoCapitalize="none"
+                    keyboardType="url"
+                    label="Đường dẫn logo"
+                    maxLength={2048}
+                    onChangeText={(value) =>
+                      updateCompanyField("logoUrl", value)
+                    }
+                    placeholder="https://congty.com/logo.png"
+                    helperText="Dán đường dẫn logo công khai của doanh nghiệp."
+                    value={company.logoUrl}
+                  />
+                  <FormField
+                    label="Mô tả doanh nghiệp"
+                    maxLength={2000}
+                    multiline
+                    onChangeText={(value) =>
+                      updateCompanyField("description", value)
+                    }
+                    placeholder="Chia sẻ về lĩnh vực hoạt động, văn hóa và môi trường làm việc..."
+                    value={company.description}
+                  />
+                </View>
+
+                <View style={styles.locationsSection}>
+                  <View style={styles.locationHeader}>
+                    <View style={styles.locationHeaderCopy}>
+                      <Text style={styles.locationSectionTitle}>
+                        Địa điểm doanh nghiệp
+                      </Text>
+                      <Text style={styles.locationDescription}>
+                        Thêm địa chỉ văn phòng hoặc địa điểm làm việc.
+                      </Text>
+                    </View>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => {
+                        setLocations((current) => [
+                          ...current,
+                          createEmptyLocation(),
+                        ]);
+                        setHasSaved(false);
+                      }}
+                      style={styles.addLocationButton}
+                    >
+                      <Ionicons
+                        color={colors.light.brand.secondary}
+                        name="add"
+                        size={18}
+                      />
+                      <Text style={styles.addLocationText}>Thêm địa điểm</Text>
+                    </Pressable>
+                  </View>
+
+                  {locations.map((location, index) => (
+                    <View key={index} style={styles.locationCard}>
+                      <View style={styles.locationTitleRow}>
+                        <Text style={styles.locationTitle}>
+                          Địa điểm {index + 1}
+                        </Text>
+                        {locations.length > 1 && (
+                          <Pressable
+                            accessibilityLabel={`Xóa địa điểm ${index + 1}`}
+                            accessibilityRole="button"
+                            onPress={() => {
+                              setLocations((current) =>
+                                current.filter(
+                                  (_, locationIndex) => locationIndex !== index,
+                                ),
+                              );
+                              setHasSaved(false);
+                            }}
+                            style={styles.removeLocationButton}
+                          >
+                            <Text style={styles.removeLocationText}>Xóa</Text>
+                          </Pressable>
+                        )}
+                      </View>
+                      <View style={styles.fields}>
+                        <FormField
+                          label="Địa chỉ"
+                          maxLength={240}
+                          onChangeText={(value) =>
+                            updateLocationField(index, "address", value)
+                          }
+                          placeholder="Số nhà, tên đường"
+                          value={location.address}
+                        />
+                        <FormField
+                          autoCapitalize="words"
+                          label="Thành phố"
+                          maxLength={120}
+                          onChangeText={(value) =>
+                            updateLocationField(index, "city", value)
+                          }
+                          placeholder="Nhập thành phố"
+                          value={location.city}
+                        />
+                        <FormField
+                          autoCapitalize="words"
+                          label="Quốc gia"
+                          maxLength={120}
+                          onChangeText={(value) =>
+                            updateLocationField(index, "country", value)
+                          }
+                          placeholder="Nhập quốc gia"
+                          value={location.country}
+                        />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {hasSaved && (
+                <View style={styles.savedNotice}>
+                  <Ionicons
+                    color={colors.light.status.success}
+                    name="checkmark-circle"
+                    size={16}
+                  />
+                  <Text style={styles.savedNoticeText}>
+                    Thông tin đã được lưu.
+                  </Text>
+                </View>
+              )}
+
+              <Pressable
+                accessibilityRole="button"
+                disabled={saving}
+                onPress={() => {
+                  void saveProfile();
+                }}
+                style={({ pressed }) => [
+                  styles.saveButton,
+                  (pressed || saving) && styles.pressed,
+                ]}
+              >
+                <Ionicons
+                  color={colors.light.text.inverse}
+                  name="save-outline"
+                  size={18}
+                />
+                <Text style={styles.saveButtonText}>
+                  {saving ? "Đang lưu..." : "Lưu thay đổi"}
+                </Text>
+              </Pressable>
+            </>
+          ) : null}
 
           <View style={styles.logoutCard}>
             <View style={styles.logoutHeading}>
@@ -463,9 +622,9 @@ export function HrSettingsScreen() {
 }
 
 type FormFieldProps = {
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
   helperText?: string;
-  keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'url';
+  keyboardType?: "default" | "email-address" | "phone-pad" | "url";
   label: string;
   maxLength: number;
   multiline?: boolean;
@@ -476,8 +635,8 @@ type FormFieldProps = {
 };
 
 function FormField({
-  autoCapitalize = 'sentences',
-  keyboardType = 'default',
+  autoCapitalize = "sentences",
+  keyboardType = "default",
   helperText,
   label,
   maxLength,
@@ -532,7 +691,7 @@ const styles = StyleSheet.create({
   pageTitle: {
     color: colors.light.text.primary,
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   pageDescription: {
     color: colors.light.text.secondary,
@@ -548,16 +707,16 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   cardHeading: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: spacing.sm,
   },
   headingIcon: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: colors.light.brand.accent,
     borderRadius: 9,
     height: 36,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 36,
   },
   headingCopy: {
@@ -567,7 +726,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: colors.light.text.primary,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   cardSubtitle: {
     color: colors.light.text.secondary,
@@ -583,7 +742,7 @@ const styles = StyleSheet.create({
   label: {
     color: colors.light.text.primary,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   requiredMarker: {
     color: colors.light.status.danger,
@@ -601,7 +760,7 @@ const styles = StyleSheet.create({
   },
   multilineInput: {
     minHeight: 100,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   helperText: {
     color: colors.light.text.secondary,
@@ -616,7 +775,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   locationHeader: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
     gap: spacing.sm,
   },
   locationHeaderCopy: {
@@ -625,7 +784,7 @@ const styles = StyleSheet.create({
   locationSectionTitle: {
     color: colors.light.text.primary,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   locationDescription: {
     color: colors.light.text.secondary,
@@ -633,15 +792,15 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   addLocationButton: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 2,
     minHeight: 36,
   },
   addLocationText: {
     color: colors.light.brand.secondary,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   locationCard: {
     backgroundColor: colors.light.background.primary,
@@ -652,75 +811,87 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   locationTitleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   locationTitle: {
     color: colors.light.text.secondary,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   removeLocationButton: {
     minHeight: 32,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: spacing.xs,
   },
   removeLocationText: {
     color: colors.light.status.danger,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   savedNotice: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: spacing.xs,
   },
   savedNoticeText: {
     color: colors.light.status.success,
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
+  },
+  errorNotice: {
+    backgroundColor: "#FFF3F2",
+    borderRadius: 9,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  errorText: { color: colors.light.status.danger, fontSize: 13 },
+  retryText: {
+    color: colors.light.brand.secondary,
+    fontSize: 13,
+    fontWeight: "700",
   },
   saveButton: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: colors.light.brand.secondary,
     borderRadius: 9,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.xs,
-    justifyContent: 'center',
+    justifyContent: "center",
     minHeight: 48,
     paddingHorizontal: spacing.md,
   },
   saveButtonText: {
     color: colors.light.text.inverse,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   logoutCard: {
     backgroundColor: colors.light.background.surface,
-    borderColor: '#FECACA',
+    borderColor: "#FECACA",
     borderRadius: 12,
     borderWidth: 1,
     gap: spacing.sm,
     padding: spacing.md,
   },
   logoutHeading: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: spacing.sm,
   },
   logoutIcon: {
-    alignItems: 'center',
-    backgroundColor: '#FEF2F2',
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
     borderRadius: 8,
     height: 34,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 34,
   },
   logoutTitle: {
     color: colors.light.status.danger,
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   logoutDescription: {
     color: colors.light.text.secondary,
@@ -728,12 +899,12 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   logoutButton: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderColor: '#FECACA',
+    alignItems: "center",
+    alignSelf: "flex-start",
+    borderColor: "#FECACA",
     borderRadius: 8,
     borderWidth: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.xs,
     minHeight: 42,
     paddingHorizontal: spacing.md,
@@ -741,7 +912,7 @@ const styles = StyleSheet.create({
   logoutButtonText: {
     color: colors.light.status.danger,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   pressed: {
     opacity: 0.75,

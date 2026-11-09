@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { jobApi } from '../api/jobApi';
+import { apiClient } from '../../../../services/api/apiClient';
 import type { JobResponse, CompanyResponse } from '../types/job.types';
 import type { CandidateCvItem } from '../components/JobApplyModal';
 import {
@@ -69,13 +70,18 @@ export function useJobDetail(jobId: string, initialJob?: JobResponse) {
     async (coverNote?: string, selectedCv?: CandidateCvItem) => {
       setSubmitting(true);
       try {
-        // Giả lập gửi hồ sơ hoặc gọi backend nếu có endpoint
-        await new Promise((resolve) => setTimeout(resolve, 900));
+        if (!selectedCv?.id || selectedCv.id.startsWith('cv-')) {
+          throw new Error('Vui lòng chọn CV đã tải lên tài khoản của bạn.');
+        }
+        await apiClient.post(`/candidates/me/jobs/${encodeURIComponent(jobId)}/apply`, {
+          cvId: selectedCv.id,
+          coverNote: coverNote?.trim() || undefined,
+        });
         setIsApplyModalVisible(false);
         const cvName = selectedCv?.fileName ? ` với ${selectedCv.fileName}` : '';
         showToast(`Đơn ${cvName} nộp thành công!\nNhà tuyển dụng sẽ phản hồi sớm.`);
       } catch (err) {
-        showToast('Nộp hồ sơ thất bại. Vui lòng thử lại sau.');
+        showToast(err instanceof Error ? err.message : 'Nộp hồ sơ thất bại. Vui lòng thử lại sau.');
       } finally {
         setSubmitting(false);
       }

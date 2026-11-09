@@ -35,6 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.resumeanalyser.backend.dto.PageResponse;
 import com.resumeanalyser.backend.dto.candidate.CandidateApplicationDto;
+import com.resumeanalyser.backend.dto.candidate.ApplyJobRequest;
 import com.resumeanalyser.backend.dto.candidate.CareerDto;
 import com.resumeanalyser.backend.dto.candidate.CvSummaryDto;
 import com.resumeanalyser.backend.dto.candidate.ProfileDto;
@@ -42,6 +43,7 @@ import com.resumeanalyser.backend.dto.candidate.StatsDto;
 import com.resumeanalyser.backend.dto.candidate.UpdateProfileRequest;
 import com.resumeanalyser.backend.exception.BadRequestException;
 import com.resumeanalyser.backend.exception.ConflictException;
+import com.resumeanalyser.backend.exception.BadRequestException;
 import com.resumeanalyser.backend.exception.FileStorageException;
 import com.resumeanalyser.backend.exception.ForbiddenException;
 import com.resumeanalyser.backend.exception.NotFoundException;
@@ -370,6 +372,36 @@ public class CandidateService {
                 .toList();
 
         return new PageResponse<>(dtoList, page, size, total, totalPages, last);
+    }
+
+    public CandidateApplicationDto applyToJob(User user, String jobId, ApplyJobRequest request) {
+        CandidateProfile profile = requireProfile(user);
+        ObjectId jobObjectId = parseObjectId(jobId, "jobId");
+        ObjectId cvObjectId = parseObjectId(request.cvId(), "cvId");
+        Job job = jobRepository.findById(jobObjectId)
+                .orElseThrow(() -> new NotFoundException("JOB_NOT_FOUND", "Không tìm thấy tin tuyển dụng."));
+        if (!"published".equalsIgnoreCase(job.getStatus())
+                || job.getDeadline() == null || !job.getDeadline().isAfter(Instant.now())) {
+            throw new ConflictException("JOB_NOT_OPEN", "Tin tuyển dụng không còn nhận hồ sơ.");
+        }
+        cvRepository.findByIdAndCandidateId(cvObjectId, profile.getId())
+                .orElseThrow(() -> new BadRequestException("CV_NOT_OWNED", "CV không thuộc tài khoản ứng viên."));
+        if (applicationRepository.findByJobIdAndCandidateId(jobObjectId, profile.getId()).isPresent()) {
+            throw new ConflictException("ALREADY_APPLIED", "Bạn đã ứng tuyển vị trí này rồi.");
+        }
+
+        Instant now = Instant.now();
+        Application application = new Application();
+        application.setJobId(jobObjectId);
+        application.setCandidateId(profile.getId());
+        application.setCvId(cvObjectId);
+        application.setCoverNote(nullIfBlank(request.coverNote()));
+        application.setStatus("applied");
+        application.setAppliedAt(now);
+        application.setUpdatedAt(now);
+        application.setStatusHistory(List.of(new Application.StatusChange(
+                "applied", now, parseObjectId(user.getId(), "userId"), "Ứng viên nộp hồ sơ")));
+        return mapToApplicationDto(applicationRepository.save(application));
     }
 
     public CandidateApplicationDto withdrawApplication(User user, String applicationId) {
