@@ -2,7 +2,7 @@
 # Keep /opt/resume-analyser/backend.env on the VPS; do not copy secrets into Git.
 services:
   mongodb:
-    image: ${MONGO_IMAGE:-antony1552006/resume-mongodb:v0.25-670bdc4}
+    image: ${MONGO_IMAGE:-mongo:7}
     volumes:
       - mongo-data:/data/db
     restart: unless-stopped
