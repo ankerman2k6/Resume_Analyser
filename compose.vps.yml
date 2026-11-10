@@ -10,7 +10,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
   backend:
     image: ${BACKEND_IMAGE:-antony1552006/resume-backend}:${VERSION:?Set VERSION in .env}
     env_file:
@@ -32,7 +31,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
   frontend:
     image: ${FRONTEND_IMAGE:-antony1552006/resume-frontend}:${VERSION:?Set VERSION in .env}
     ports:
@@ -45,7 +43,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
 volumes:
   mongo-data:
   resume-uploads:

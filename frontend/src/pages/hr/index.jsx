@@ -49,4 +49,4 @@ const HRPage = () => {
   );
 };
 
-export default HRPage;
+export default HRPage;
