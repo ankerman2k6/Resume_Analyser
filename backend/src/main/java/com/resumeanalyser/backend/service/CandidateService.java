@@ -2,11 +2,13 @@ package com.resumeanalyser.backend.service;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.text.Normalizer;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,10 +20,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.FindAndModifyOptions;
@@ -37,6 +40,7 @@ import com.resumeanalyser.backend.dto.PageResponse;
 import com.resumeanalyser.backend.dto.candidate.CandidateApplicationDto;
 import com.resumeanalyser.backend.dto.candidate.ApplyJobRequest;
 import com.resumeanalyser.backend.dto.candidate.CareerDto;
+import com.resumeanalyser.backend.dto.candidate.CreateCvFromTemplateRequest;
 import com.resumeanalyser.backend.dto.candidate.CvSummaryDto;
 import com.resumeanalyser.backend.dto.candidate.ProfileDto;
 import com.resumeanalyser.backend.dto.candidate.StatsDto;
@@ -53,6 +57,7 @@ import com.resumeanalyser.backend.model.CandidateProfile;
 import com.resumeanalyser.backend.model.Company;
 import com.resumeanalyser.backend.model.Cv;
 import com.resumeanalyser.backend.model.CvAnalysis;
+import com.resumeanalyser.backend.model.CvTemplate;
 import com.resumeanalyser.backend.model.Interview;
 import com.resumeanalyser.backend.model.Job;
 import com.resumeanalyser.backend.model.User;
@@ -70,6 +75,7 @@ import com.resumeanalyser.backend.service.ai.CvParsingService;
 public class CandidateService {
 
     private static final long MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+    private static final int MAX_TEMPLATE_CV_TOTAL_CHARS = 100_000;
     private static final Set<String> ALLOWED_FILTERS = Set.of(
             "all", "applied", "reviewing", "interview", "accepted", "rejected", "withdrawn"
     );
@@ -84,6 +90,9 @@ public class CandidateService {
     private final JobRepository jobRepository;
     private final MongoTemplate mongoTemplate;
     private final CvParsingService cvParsingService;
+    private final CvTemplateService cvTemplateService;
+    private final CvTemplatePdfRenderer cvTemplatePdfRenderer;
+    private final CvGridFsStorageService cvGridFsStorageService;
     private final Path uploadStorageLocation;
 
     public CandidateService(
@@ -97,6 +106,9 @@ public class CandidateService {
             JobRepository jobRepository,
             MongoTemplate mongoTemplate,
             CvParsingService cvParsingService,
+            CvTemplateService cvTemplateService,
+            CvTemplatePdfRenderer cvTemplatePdfRenderer,
+            CvGridFsStorageService cvGridFsStorageService,
             @Value("${app.upload.dir:uploads/resumes}") String uploadDir) {
         this.profileRepository = profileRepository;
         this.userRepository = userRepository;
@@ -108,6 +120,9 @@ public class CandidateService {
         this.jobRepository = jobRepository;
         this.mongoTemplate = mongoTemplate;
         this.cvParsingService = cvParsingService;
+        this.cvTemplateService = cvTemplateService;
+        this.cvTemplatePdfRenderer = cvTemplatePdfRenderer;
+        this.cvGridFsStorageService = cvGridFsStorageService;
         this.uploadStorageLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
 
         try {
@@ -118,7 +133,11 @@ public class CandidateService {
     }
 
     public record SaveResult(ProfileDto dto, boolean created) {}
-    public record CvFileInfo(Path filePath, String fileName, String mimeType) {}
+    public record CvFileInfo(Resource resource, String fileName, String mimeType) {
+        public CvFileInfo(Path filePath, String fileName, String mimeType) {
+            this(new FileSystemResource(filePath), fileName, mimeType);
+        }
+    }
 
     // -------------------------------------------------------------
     // Security / Resolution Helpers
@@ -633,6 +652,47 @@ public class CandidateService {
         return new PageResponse<>(dtoList, page, size, total, totalPages, last);
     }
 
+    public CvSummaryDto createCvFromTemplate(User user, CreateCvFromTemplateRequest request) {
+        CandidateProfile profile = requireProfile(user);
+        if (request == null) {
+            throw new BadRequestException("VALIDATION_ERROR", "Dữ liệu tạo CV không được để trống.");
+        }
+        validateTemplateCvRequest(request);
+
+        CvTemplate template = cvTemplateService.requireActiveTemplate(request.templateId());
+        byte[] pdfBytes = cvTemplatePdfRenderer.render(template, request);
+
+        String title = request.title().trim();
+        String fileName = buildTemplatePdfFileName(title);
+        ObjectId gridFsFileId = cvGridFsStorageService.storePdf(
+                pdfBytes, fileName, profile.getId(), template.getId());
+
+        Instant now = Instant.now();
+        Cv cv = new Cv();
+        cv.setId(new ObjectId());
+        cv.setCandidateId(profile.getId());
+        cv.setTemplateId(template.getId());
+        cv.setTitle(title);
+        cv.setSource(Cv.Source.template(gridFsFileId, fileName, "application/pdf"));
+        cv.setParseInfo(new Cv.ParseInfo("pending", null, null));
+        cv.setPersonalInfo(buildTemplatePersonalInfo(request.content().personalInfo()));
+        cv.setLinks(mapTemplateLinks(request.content().personalInfo().links()));
+        cv.setSummary(nullIfBlank(trimOrNull(request.content().summary())));
+        cv.setExperience(mapTemplateExperience(request.content().experience()));
+        cv.setEducation(mapTemplateEducation(request.content().education()));
+        cv.setSkills(mapTemplateSkills(request.content().skills()));
+        cv.setCreatedAt(now);
+        cv.setUpdatedAt(now);
+
+        try {
+            Cv saved = cvRepository.save(cv);
+            return mapToCvSummaryDto(saved);
+        } catch (RuntimeException ex) {
+            cvGridFsStorageService.deleteQuietly(gridFsFileId);
+            throw ex;
+        }
+    }
+
     public CvFileInfo getCvFile(User user, String cvId) {
         CandidateProfile profile = requireProfile(user);
         ObjectId cvObjectId = parseObjectId(cvId, "cvId");
@@ -640,7 +700,7 @@ public class CandidateService {
         Cv cv = cvRepository.findByIdAndCandidateId(cvObjectId, profile.getId())
                 .orElseThrow(() -> new NotFoundException("RESOURCE_NOT_FOUND", "Không tìm thấy CV hoặc CV không thuộc về bạn."));
 
-        if (cv.getSource() == null || cv.getSource().getFileUrl() == null || cv.getSource().getFileUrl().isBlank()) {
+        if (cv.getSource() == null) {
             throw new NotFoundException("CV_FILE_NOT_FOUND", "CV không có tệp xem được.");
         }
 
@@ -648,12 +708,24 @@ public class CandidateService {
             throw new UnsupportedFileTypeException("UNSUPPORTED_FILE_TYPE", "Định dạng tệp không được hỗ trợ. Chỉ hỗ trợ PDF.");
         }
 
+        String fileName = cv.getSource().getFileName() != null ? cv.getSource().getFileName() : "cv.pdf";
+        if ("template".equalsIgnoreCase(cv.getSource().getType())) {
+            if (cv.getSource().getFileId() == null) {
+                throw new NotFoundException("CV_FILE_NOT_FOUND", "Không tìm thấy tệp CV trong hệ thống lưu trữ.");
+            }
+            Resource resource = cvGridFsStorageService.getPdfResource(cv.getSource().getFileId());
+            return new CvFileInfo(resource, fileName, "application/pdf");
+        }
+
+        if (cv.getSource().getFileUrl() == null || cv.getSource().getFileUrl().isBlank()) {
+            throw new NotFoundException("CV_FILE_NOT_FOUND", "CV không có tệp xem được.");
+        }
+
         Path path = Paths.get(cv.getSource().getFileUrl());
         if (!Files.exists(path)) {
             throw new NotFoundException("CV_FILE_NOT_FOUND", "Không tìm thấy tệp CV trên hệ thống lưu trữ.");
         }
 
-        String fileName = cv.getSource().getFileName() != null ? cv.getSource().getFileName() : "cv.pdf";
         return new CvFileInfo(path, fileName, "application/pdf");
     }
 
@@ -670,6 +742,14 @@ public class CandidateService {
 
         if (inApplications || inAnalyses) {
             throw new ConflictException("CV_IN_USE", "CV đang được sử dụng trong đơn ứng tuyển hoặc báo cáo phân tích, không thể xóa.");
+        }
+
+        if (cv.getSource() != null && "template".equalsIgnoreCase(cv.getSource().getType())) {
+            if (cv.getSource().getFileId() != null) {
+                cvGridFsStorageService.delete(cv.getSource().getFileId());
+            }
+            cvRepository.delete(cv);
+            return;
         }
 
         // Delete from DB
@@ -769,6 +849,177 @@ public class CandidateService {
         }
     }
 
+    private void validateTemplateCvRequest(CreateCvFromTemplateRequest request) {
+        CreateCvFromTemplateRequest.ContentInput content = request.content();
+        CreateCvFromTemplateRequest.PersonalInfoInput personal = content.personalInfo();
+
+        long totalChars = safeLength(request.templateId())
+                + safeLength(request.title())
+                + safeLength(personal.fullName())
+                + safeLength(personal.email())
+                + safeLength(personal.phone())
+                + safeLength(personal.location())
+                + safeLength(content.summary());
+
+        if (personal.links() != null) {
+            for (String link : personal.links()) {
+                if (link == null || link.isBlank()) {
+                    throw new BadRequestException("VALIDATION_ERROR", "Liên kết không được để trống.");
+                }
+                validateHttpUrl(link.trim());
+                totalChars += link.length();
+            }
+        }
+        if (content.experience() != null) {
+            for (CreateCvFromTemplateRequest.ExperienceInput item : content.experience()) {
+                if (item == null) {
+                    throw new BadRequestException("VALIDATION_ERROR", "Mục kinh nghiệm không được null.");
+                }
+                totalChars += safeLength(item.role())
+                        + safeLength(item.company())
+                        + safeLength(item.startDate())
+                        + safeLength(item.endDate())
+                        + safeLength(item.description());
+            }
+        }
+        if (content.education() != null) {
+            for (CreateCvFromTemplateRequest.EducationInput item : content.education()) {
+                if (item == null) {
+                    throw new BadRequestException("VALIDATION_ERROR", "Mục học vấn không được null.");
+                }
+                totalChars += safeLength(item.school())
+                        + safeLength(item.degree())
+                        + safeLength(item.startDate())
+                        + safeLength(item.endDate())
+                        + safeLength(item.description());
+            }
+        }
+        if (content.skills() != null) {
+            for (String skill : content.skills()) {
+                if (skill == null || skill.isBlank()) {
+                    throw new BadRequestException("VALIDATION_ERROR", "Tên kỹ năng không được để trống.");
+                }
+                totalChars += skill.length();
+            }
+        }
+        if (totalChars > MAX_TEMPLATE_CV_TOTAL_CHARS) {
+            throw new BadRequestException("VALIDATION_ERROR", "Dữ liệu CV vượt quá kích thước cho phép.");
+        }
+    }
+
+    private void validateHttpUrl(String value) {
+        try {
+            URI uri = URI.create(value);
+            String scheme = uri.getScheme();
+            if (scheme == null
+                    || (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme))
+                    || uri.getHost() == null
+                    || uri.getHost().isBlank()) {
+                throw new BadRequestException("VALIDATION_ERROR", "Liên kết phải sử dụng http:// hoặc https://.");
+            }
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("VALIDATION_ERROR", "Liên kết không đúng định dạng URL.");
+        }
+    }
+
+    private int safeLength(String value) {
+        return value == null ? 0 : value.length();
+    }
+
+    private String trimOrNull(String value) {
+        return value == null ? null : value.trim();
+    }
+
+    private String buildTemplatePdfFileName(String title) {
+        String replaced = title.replace('đ', 'd').replace('Đ', 'D');
+        String ascii = Normalizer.normalize(replaced, Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        String slug = ascii.replaceAll("[^A-Za-z0-9]+", "_").replaceAll("^_+|_+$", "");
+        if (slug.isBlank()) {
+            slug = "cv";
+        }
+        if (slug.length() > 80) {
+            slug = slug.substring(0, 80).replaceAll("_+$", "");
+            if (slug.isBlank()) {
+                slug = "cv";
+            }
+        }
+        return slug + ".pdf";
+    }
+
+    private Map<String, Object> buildTemplatePersonalInfo(CreateCvFromTemplateRequest.PersonalInfoInput personal) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("fullName", personal.fullName().trim());
+        map.put("email", personal.email().trim());
+        String phone = nullIfBlank(trimOrNull(personal.phone()));
+        if (phone != null) {
+            map.put("phone", phone);
+        }
+        String location = nullIfBlank(trimOrNull(personal.location()));
+        if (location != null) {
+            map.put("address", Map.of("city", location));
+        }
+        return map;
+    }
+
+    private List<Cv.Link> mapTemplateLinks(List<String> links) {
+        if (links == null || links.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return links.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .map(url -> new Cv.Link(null, url))
+                .toList();
+    }
+
+    private List<Cv.Experience> mapTemplateExperience(List<CreateCvFromTemplateRequest.ExperienceInput> items) {
+        if (items == null || items.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Cv.Experience> mapped = new ArrayList<>();
+        for (CreateCvFromTemplateRequest.ExperienceInput item : items) {
+            Cv.Experience exp = new Cv.Experience();
+            exp.setPosition(nullIfBlank(trimOrNull(item.role())));
+            exp.setCompany(nullIfBlank(trimOrNull(item.company())));
+            exp.setStartDate(nullIfBlank(trimOrNull(item.startDate())));
+            exp.setEndDate(nullIfBlank(trimOrNull(item.endDate())));
+            exp.setDescription(nullIfBlank(trimOrNull(item.description())));
+            mapped.add(exp);
+        }
+        return mapped;
+    }
+
+    private List<Cv.Education> mapTemplateEducation(List<CreateCvFromTemplateRequest.EducationInput> items) {
+        if (items == null || items.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Cv.Education> mapped = new ArrayList<>();
+        for (CreateCvFromTemplateRequest.EducationInput item : items) {
+            Cv.Education edu = new Cv.Education();
+            edu.setInstitution(nullIfBlank(trimOrNull(item.school())));
+            edu.setDegree(nullIfBlank(trimOrNull(item.degree())));
+            edu.setStartDate(nullIfBlank(trimOrNull(item.startDate())));
+            edu.setEndDate(nullIfBlank(trimOrNull(item.endDate())));
+            edu.setDescription(nullIfBlank(trimOrNull(item.description())));
+            mapped.add(edu);
+        }
+        return mapped;
+    }
+
+    private List<Cv.Skill> mapTemplateSkills(List<String> skills) {
+        if (skills == null || skills.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return skills.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .map(name -> new Cv.Skill(name, null, null, null))
+                .toList();
+    }
+
     private CvSummaryDto mapToCvSummaryDto(Cv cv) {
         CvSummaryDto.SourceInfo sourceInfo = null;
         boolean canViewFile = false;
@@ -778,8 +1029,14 @@ public class CandidateService {
                     cv.getSource().getFileName(),
                     cv.getSource().getMimeType()
             );
-            canViewFile = cv.getSource().getFileUrl() != null && !cv.getSource().getFileUrl().isBlank()
-                    && "application/pdf".equalsIgnoreCase(cv.getSource().getMimeType());
+            boolean isPdf = "application/pdf".equalsIgnoreCase(cv.getSource().getMimeType());
+            if ("template".equalsIgnoreCase(cv.getSource().getType())) {
+                canViewFile = isPdf && cv.getSource().getFileId() != null;
+            } else {
+                canViewFile = isPdf
+                        && cv.getSource().getFileUrl() != null
+                        && !cv.getSource().getFileUrl().isBlank();
+            }
         }
 
         CvSummaryDto.ParseInfoDto parseInfoDto = null;
@@ -810,6 +1067,7 @@ public class CandidateService {
 
         return new CvSummaryDto(
                 cv.getId().toHexString(),
+                cv.getTemplateId() != null ? cv.getTemplateId().toHexString() : null,
                 cv.getTitle(),
                 sourceInfo,
                 parseInfoDto,

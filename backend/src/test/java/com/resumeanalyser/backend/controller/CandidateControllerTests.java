@@ -37,8 +37,13 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.resumeanalyser.backend.dto.PageResponse;
 import com.resumeanalyser.backend.dto.candidate.CandidateApplicationDto;
+import java.io.ByteArrayInputStream;
+import org.springframework.core.io.InputStreamResource;
 import com.resumeanalyser.backend.dto.candidate.CareerDto;
+import com.resumeanalyser.backend.dto.candidate.CreateCvFromTemplateRequest;
 import com.resumeanalyser.backend.dto.candidate.CvSummaryDto;
+import com.resumeanalyser.backend.exception.FileStorageException;
+import com.resumeanalyser.backend.exception.PayloadTooLargeException;
 import com.resumeanalyser.backend.dto.candidate.ProfileDto;
 import com.resumeanalyser.backend.dto.candidate.StatsDto;
 import com.resumeanalyser.backend.dto.candidate.UpdateProfileRequest;
@@ -335,6 +340,7 @@ class CandidateControllerTests {
         String cvId = new ObjectId().toHexString();
         CvSummaryDto cvSummaryDto = new CvSummaryDto(
                 cvId,
+                null,
                 "CV Frontend",
                 new CvSummaryDto.SourceInfo("upload", "cv.pdf", "application/pdf"),
                 new CvSummaryDto.ParseInfoDto("completed", Instant.now(), "v1"),
@@ -401,6 +407,7 @@ class CandidateControllerTests {
         String cvId = new ObjectId().toHexString();
         CvSummaryDto parsed = new CvSummaryDto(
                 cvId,
+                null,
                 "Parsed CV",
                 new CvSummaryDto.SourceInfo("uploaded", "cv.pdf", "application/pdf"),
                 new CvSummaryDto.ParseInfoDto("completed", Instant.now(), "gemini-cv-v1"),
@@ -416,6 +423,128 @@ class CandidateControllerTests {
                 .andExpect(jsonPath("$.skills[0].name").value("Java"));
 
         verify(candidateService).parseCv(any(User.class), eq(cvId));
+    }
+
+    @Test
+    void createCvFromTemplate_successReturns201AndLocation() throws Exception {
+        String templateId = new ObjectId().toHexString();
+        String cvId = new ObjectId().toHexString();
+        CvSummaryDto created = new CvSummaryDto(
+                cvId,
+                templateId,
+                "CV Nguyen Van A - Fresher",
+                new CvSummaryDto.SourceInfo("template", "CV_Nguyen_Van_A_Fresher.pdf", "application/pdf"),
+                new CvSummaryDto.ParseInfoDto("pending", null, null),
+                List.of(new CvSummaryDto.SkillDto("Java", null, null, null)),
+                Instant.parse("2026-10-04T01:30:00Z"),
+                Instant.parse("2026-10-04T01:30:00Z"),
+                true,
+                true,
+                null
+        );
+        when(candidateService.createCvFromTemplate(any(User.class), any(CreateCvFromTemplateRequest.class)))
+                .thenReturn(created);
+
+        String body = """
+                {
+                    "templateId": "%s",
+                    "title": "CV Nguyen Van A - Fresher",
+                    "content": {
+                        "personalInfo": {
+                            "fullName": "Nguyen Van A",
+                            "email": "a@example.com",
+                            "phone": "0900000000",
+                            "location": "Ha Noi",
+                            "links": ["https://github.com/example"]
+                        },
+                        "summary": "Sinh vien moi tot nghiep",
+                        "experience": [],
+                        "education": [],
+                        "skills": ["Java"]
+                    }
+                }
+                """.formatted(templateId);
+
+        mvc.perform(post("/api/candidates/me/cvs/from-template")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Location", "/api/candidates/me/cvs/" + cvId + "/file"))
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$._id").value(cvId))
+                .andExpect(jsonPath("$.templateId").value(templateId))
+                .andExpect(jsonPath("$.source.type").value("template"))
+                .andExpect(jsonPath("$.source.fileId").doesNotExist())
+                .andExpect(jsonPath("$.canViewFile").value(true));
+    }
+
+    @Test
+    void createCvFromTemplate_requiresAuthentication() throws Exception {
+        mvc.perform(post("/api/candidates/me/cvs/from-template")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    }
+
+    @Test
+    void createCvFromTemplate_maps403And413And502() throws Exception {
+        String templateId = new ObjectId().toHexString();
+        String body = """
+                {
+                    "templateId": "%s",
+                    "title": "CV Test",
+                    "content": {
+                        "personalInfo": {
+                            "fullName": "Nguyen Van A",
+                            "email": "a@example.com"
+                        }
+                    }
+                }
+                """.formatted(templateId);
+
+        when(candidateService.createCvFromTemplate(any(User.class), any(CreateCvFromTemplateRequest.class)))
+                .thenThrow(new ForbiddenException("FORBIDDEN", "Not candidate"))
+                .thenThrow(new PayloadTooLargeException("FILE_TOO_LARGE", "Too large"))
+                .thenThrow(new FileStorageException("FILE_STORAGE_UNAVAILABLE", "GridFS down"));
+
+        mvc.perform(post("/api/candidates/me/cvs/from-template")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        mvc.perform(post("/api/candidates/me/cvs/from-template")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(jsonPath("$.code").value("FILE_TOO_LARGE"));
+
+        mvc.perform(post("/api/candidates/me/cvs/from-template")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.code").value("FILE_STORAGE_UNAVAILABLE"));
+    }
+
+    @Test
+    void getCvFile_streamsGridFsResourceForTemplateCv() throws Exception {
+        String cvId = new ObjectId().toHexString();
+        byte[] pdfBytes = "%PDF-1.4 template pdf".getBytes();
+        when(candidateService.getCvFile(any(User.class), eq(cvId)))
+                .thenReturn(new CandidateService.CvFileInfo(
+                        new InputStreamResource(new ByteArrayInputStream(pdfBytes)),
+                        "CV_Test.pdf",
+                        "application/pdf"));
+
+        mvc.perform(get("/api/candidates/me/cvs/{id}/file", cvId).header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "application/pdf"))
+                .andExpect(content().bytes(pdfBytes));
     }
 
     @Test

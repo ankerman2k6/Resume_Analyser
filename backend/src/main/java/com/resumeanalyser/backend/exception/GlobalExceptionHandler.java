@@ -121,6 +121,13 @@ public class GlobalExceptionHandler {
                 .body(new ApiErrorResponse("FILE_TOO_LARGE", "Kích thước file vượt quá giới hạn cho phép (tối đa 5MB)", 413));
     }
 
+    @ExceptionHandler(PayloadTooLargeException.class)
+    public ResponseEntity<ApiErrorResponse> handlePayloadTooLarge(PayloadTooLargeException ex) {
+        String code = ex.getCode() != null ? ex.getCode() : "FILE_TOO_LARGE";
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(new ApiErrorResponse(code, ex.getMessage(), 413));
+    }
+
     @ExceptionHandler(MultipartException.class)
     public ResponseEntity<ApiErrorResponse> handleMultipartException(MultipartException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
