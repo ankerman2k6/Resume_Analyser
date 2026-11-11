@@ -11,6 +11,13 @@ const RegisterPage = () => {
 
   // State quản lý form
   const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+const [avatarUrl, setAvatarUrl] = useState('');
+const [position, setPosition] = useState('');
+const [address, setAddress] = useState('');
+const [district, setDistrict] = useState('');
+const [city, setCity] = useState('');
+const [country, setCountry] = useState('Việt Nam');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -62,7 +69,10 @@ const RegisterPage = () => {
           <button 
             type="button"
             className={`role-btn ${role === 'candidate' ? 'active' : ''}`}
-            onClick={() => setRole('candidate')}
+            onClick={() => {
+            setRole('candidate');
+             setErrorMessage('');
+              }}
           >
             Ứng viên
           </button>
@@ -70,7 +80,10 @@ const RegisterPage = () => {
           <button 
             type="button"
             className={`role-btn ${role === 'recruiter' ? 'active' : ''}`}
-            onClick={() => setRole('recruiter')}
+            onClick={() => {
+            setRole('recruiter');
+             setErrorMessage('');
+              }}
           >
             Nhà tuyển dụng
           </button>
@@ -118,6 +131,65 @@ const RegisterPage = () => {
               required 
             />
           </div>
+
+          <div className="form-group">
+            <label>Số điện thoại</label>
+            <input
+              type="tel"
+              placeholder="0901234567"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+            />
+          </div>
+
+          {role === 'candidate' && (
+  <>
+    <div className="form-group">
+      <label>Ảnh đại diện</label>
+      <input
+        type="url"
+        placeholder="https://example.com/avatar.jpg"
+        value={avatarUrl}
+        onChange={(event) => setAvatarUrl(event.target.value)}
+      />
+    </div>
+
+    <div className="form-group">
+      <label>Địa chỉ</label>
+      <input
+        placeholder="Số nhà, tên đường"
+        value={address}
+        onChange={(event) => setAddress(event.target.value)}
+      />
+    </div>
+
+    <div className="register-grid">
+      <div className="form-group">
+        <label>Quận/Huyện</label>
+        <input
+          value={district}
+          onChange={(event) => setDistrict(event.target.value)}
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Thành phố</label>
+        <input
+          value={city}
+          onChange={(event) => setCity(event.target.value)}
+        />
+      </div>
+    </div>
+
+    <div className="form-group">
+      <label>Quốc gia</label>
+      <input
+        value={country}
+        onChange={(event) => setCountry(event.target.value)}
+      />
+    </div>
+  </>
+)}
 
           <div className="form-group">
             <label>Địa chỉ Email</label>

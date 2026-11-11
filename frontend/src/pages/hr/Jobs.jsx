@@ -46,7 +46,6 @@ const EXPERIENCE_LEVEL_OPTIONS = [
 ];
 
 const EMPTY_FORM = {
-  companyId: '',
   title: '',
   description: '',
   category: '',
@@ -114,7 +113,6 @@ const employmentTypeLabel = (value) => EMPLOYMENT_TYPE_OPTIONS.find((item) => it
 
 const jobToForm = (job) => ({
   companyId: job.companyId || '',
-  title: job.title || '',
   description: job.description || '',
   category: job.category || '',
   employmentType: job.employmentType || 'full_time',
@@ -142,7 +140,6 @@ const jobToForm = (job) => ({
 const nullableNumber = (value) => (value === '' ? null : Number(value));
 
 const formToPayload = (form) => ({
-  companyId: form.companyId.trim(),
   title: form.title.trim(),
   description: form.description.trim(),
   category: form.category.trim() || null,
@@ -265,7 +262,6 @@ export const JobsPage = () => {
   };
 
   const validateForm = () => {
-    if (!/^[a-f\d]{24}$/i.test(formData.companyId.trim())) return 'Company ID phải là MongoDB ObjectId gồm 24 ký tự.';
     if (!formData.title.trim()) return 'Vui lòng nhập tiêu đề Job.';
     if (!formData.description.trim()) return 'Vui lòng nhập mô tả công việc.';
     if (!formData.deadline) return 'Vui lòng chọn hạn nộp hồ sơ.';
@@ -475,7 +471,7 @@ export const JobsPage = () => {
         <form id="job-drawer-form" onSubmit={handleSaveJob} className="flex-1 overflow-y-auto p-6 space-y-5">
           {validationError && <div role="alert" className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 text-xs font-medium flex items-start gap-2"><AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /><span>{validationError}</span></div>}
 
-          <div className="space-y-1.5"><label htmlFor="job-company-id" className={labelClass}>Company ID <span className="text-rose-500">*</span></label><input id="job-company-id" value={formData.companyId} onChange={(event) => handleInputChange('companyId', event.target.value)} disabled={Boolean(editingJobId)} placeholder="MongoDB ObjectId của công ty" className={`${fieldClass} disabled:cursor-not-allowed disabled:opacity-60`} /></div>
+          
           <div className="space-y-1.5"><label htmlFor="job-title" className={labelClass}>Tiêu đề Job <span className="text-rose-500">*</span></label><input id="job-title" value={formData.title} onChange={(event) => handleInputChange('title', event.target.value)} placeholder="VD: Senior Fullstack Engineer" className={fieldClass} /></div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

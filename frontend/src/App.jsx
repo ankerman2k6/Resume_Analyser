@@ -6,6 +6,7 @@ import HrLayout from './layouts/HrLayout';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
+import RecruiterCompanyPage from './pages/auth/RecruiterCompanyPage';
 import HRPage from './pages/hr/index';
 import DashboardPage from './pages/hr/DashboardPage';
 import CandidatesPage from './pages/hr/Candidates';
@@ -73,6 +74,7 @@ function App() {
           {/* Các trang xác thực độc lập */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/register/company" element={<RecruiterCompanyPage />} />
 
           <Route path="/auth/login" element={<Navigate to="/login" replace />} />
           <Route path="/auth/register" element={<Navigate to="/register" replace />} />

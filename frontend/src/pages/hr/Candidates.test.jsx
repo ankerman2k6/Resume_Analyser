@@ -7,6 +7,7 @@ import * as api from '../../services/hrApplicationsService';
 vi.mock('../../services/hrApplicationsService', () => ({
   getHrJobsApi: vi.fn(), getHrApplicationsApi: vi.fn(),
   updateHrApplicationStatusApi: vi.fn(), downloadHrCvApi: vi.fn(),
+  getHrApplicationInterviewsApi: vi.fn(), createHrInterviewApi: vi.fn(),
 }));
 
 describe('HR applications API integration', () => {
@@ -20,6 +21,7 @@ describe('HR applications API integration', () => {
       appliedAt: '2026-10-25T00:00:00Z', cvUrl: '/api/hr/applications/application-id/cv/file',
     }]);
     api.downloadHrCvApi.mockResolvedValue();
+    api.getHrApplicationInterviewsApi.mockResolvedValue([]);
     render(<CandidatesPage />);
     expect(await screen.findByText('contact@example.test')).toBeInTheDocument();
     expect(screen.getByText('0900000000')).toBeInTheDocument();
@@ -28,6 +30,39 @@ describe('HR applications API integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Xem chi tiết' }));
     fireEvent.click(screen.getByRole('button', { name: 'Tải CV đã nộp' }));
     await waitFor(() => expect(api.downloadHrCvApi).toHaveBeenCalledWith('application-id'));
+  });
+
+  it('creates an interview from the candidate drawer', async () => {
+    api.getHrJobsApi.mockResolvedValue([{ id: 'job-id', title: 'Backend Developer' }]);
+    api.getHrApplicationsApi.mockResolvedValue([{
+      id: 'application-id', jobId: 'job-id', fullName: 'Nguyễn Văn A',
+      email: 'candidate@example.test', phone: '0900000000', status: 'shortlisted',
+      appliedAt: '2026-10-25T00:00:00Z', cvUrl: '/cv.pdf',
+    }]);
+    api.getHrApplicationInterviewsApi.mockResolvedValue([]);
+    api.createHrInterviewApi.mockResolvedValue({
+      id: 'interview-id', applicationId: 'application-id',
+      scheduledAt: '2027-01-10T02:00:00Z', durationMinutes: 60,
+      mode: 'online', status: 'scheduled',
+    });
+    api.updateHrApplicationStatusApi.mockResolvedValue({ status: 'interview' });
+
+    render(<CandidatesPage />);
+    await screen.findByText('candidate@example.test');
+    fireEvent.click(screen.getByRole('button', { name: 'Xem chi tiết' }));
+    fireEvent.change(screen.getByLabelText('Ngày giờ *'), {
+      target: { value: '2027-01-10T09:00' },
+    });
+    fireEvent.change(screen.getByLabelText('Đường dẫn phòng họp *'), {
+      target: { value: 'https://meet.google.com/example' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận lịch phỏng vấn' }));
+
+    await waitFor(() => expect(api.createHrInterviewApi).toHaveBeenCalledWith(expect.objectContaining({
+      applicationId: 'application-id', mode: 'online', durationMinutes: 60,
+      meetingLink: 'https://meet.google.com/example',
+    })));
+    expect(api.updateHrApplicationStatusApi).toHaveBeenCalledWith('application-id', 'interview');
   });
 
   it('shows API errors without falling back to sample candidates', async () => {
