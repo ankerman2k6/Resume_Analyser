@@ -66,16 +66,7 @@ public class JobService {
                     "RECRUITER_COMPANY_REQUIRED",
                     "Hồ sơ nhà tuyển dụng chưa được liên kết với công ty.");
         }
-        if (request.companyId() != null && !request.companyId().isBlank()) {
-            if (!ObjectId.isValid(request.companyId())) {
-                throw new IllegalArgumentException("Company ID không hợp lệ");
-            }
-            if (!profile.getCompanyId().equals(new ObjectId(request.companyId()))) {
-                throw new ForbiddenException(
-                        "RECRUITER_COMPANY_MISMATCH",
-                        "Không thể tạo Job cho công ty khác.");
-            }
-        }
+        
 
         if (request.title() == null
                 || request.title().isBlank()) {

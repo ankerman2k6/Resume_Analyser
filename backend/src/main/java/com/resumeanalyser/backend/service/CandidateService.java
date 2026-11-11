@@ -287,7 +287,7 @@ public class CandidateService {
             switch (status) {
                 case "applied" -> applied++;
                 case "reviewing", "shortlisted" -> reviewing++;
-                case "interview_scheduled" -> interview++;
+                case "interview", "interview_scheduled" -> interview++;
                 case "accepted" -> accepted++;
                 case "rejected" -> rejected++;
                 case "withdrawn" -> withdrawn++;
@@ -363,7 +363,7 @@ public class CandidateService {
         switch (f) {
             case "applied" -> criteria.and("status").is("applied");
             case "reviewing" -> criteria.and("status").in("reviewing", "shortlisted");
-            case "interview" -> criteria.and("status").is("interview_scheduled");
+            case "interview" -> criteria.and("status").in("interview", "interview_scheduled");
             case "accepted" -> criteria.and("status").is("accepted");
             case "rejected" -> criteria.and("status").is("rejected");
             case "withdrawn" -> criteria.and("status").is("withdrawn");
@@ -564,9 +564,11 @@ public class CandidateService {
             }
         }
 
-        // Interview: only if status is "interview_scheduled"
+        // Accept the current HR status and legacy interview_scheduled records.
         CandidateApplicationDto.InterviewInfo interviewInfo = null;
-        if ("interview_scheduled".equalsIgnoreCase(app.getStatus()) && app.getId() != null) {
+        if (("interview".equalsIgnoreCase(app.getStatus())
+                || "interview_scheduled".equalsIgnoreCase(app.getStatus()))
+                && app.getId() != null) {
             Instant now = Instant.now();
             // Upcoming nearest (scheduledAt >= now, scheduledAt ASC, _id ASC)
             Query upcomingQ = Query.query(Criteria.where("applicationId").is(app.getId())

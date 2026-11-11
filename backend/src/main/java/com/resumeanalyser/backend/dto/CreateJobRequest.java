@@ -7,7 +7,6 @@ import java.util.Map;
 import com.resumeanalyser.backend.model.Job;
 
 public record CreateJobRequest(
-        String companyId,
         String title,
         String description,
         String category,

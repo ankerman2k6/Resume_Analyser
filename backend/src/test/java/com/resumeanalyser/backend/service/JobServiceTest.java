@@ -169,7 +169,10 @@ class JobServiceTest {
         profile.setCompanyId(companyId);
         Map<String, Object> requirements = Map.of("requiredSkills", List.of("Java"),
                 "education", Map.of("minimumDegree", "bachelor"));
-        CreateJobRequest request = new CreateJobRequest(companyId.toHexString(), "Backend", "Description", "IT",
+        CreateJobRequest request = new CreateJobRequest(
+        "Backend",
+        "Description",
+        "IT",
                 "full_time", new Job.Location("Address", "City", "Country", false),
                 new Job.Salary(100L, 200L, "USD", true), new Job.Experience(1, 3, "junior"),
                 requirements, List.of("Training"), Instant.now().plusSeconds(86400));
