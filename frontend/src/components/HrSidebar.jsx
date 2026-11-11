@@ -11,7 +11,8 @@ import {
   Moon,
   Sparkles,
   ExternalLink,
-  X
+  X,
+  Settings,
 } from 'lucide-react';
 import Logo from './common/Logo';
 
@@ -76,6 +77,11 @@ export const HrSidebar = ({ isOpen, onClose }) => {
       to: '/hr',
       label: 'Cổng HR Portal',
       icon: Home,
+    },
+    {
+      to: '/hr/settings',
+      label: 'Cài đặt',
+      icon: Settings,
     },
   ];
 

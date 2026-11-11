@@ -78,6 +78,22 @@
   color: var(--brand-secondary);
 }
 
+.hr-settings-feedback {
+  margin: 0 0 18px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.hr-settings-feedback--error {
+  border-color: color-mix(in srgb, var(--status-danger) 35%, var(--border-subtle));
+  background: color-mix(in srgb, var(--status-danger) 8%, var(--bg-surface));
+  color: var(--status-danger);
+}
+
 .hr-settings-heading-icon svg {
   width: 23px;
   height: 23px;
