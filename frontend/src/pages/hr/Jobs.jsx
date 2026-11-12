@@ -26,8 +26,10 @@ import {
 const STATUS_OPTIONS = [
   { value: 'draft', label: 'Bản nháp' },
   { value: 'published', label: 'Đang tuyển' },
-  // { value: 'closed', label: 'Đã đóng' },
+  { value: 'closed', label: 'Đã đóng' },
 ];
+
+const CREATE_STATUS_OPTIONS = STATUS_OPTIONS.filter((item) => item.value !== 'closed');
 
 const EMPLOYMENT_TYPE_OPTIONS = [
   { value: 'full_time', label: 'Toàn thời gian' },
@@ -486,7 +488,7 @@ export const JobsPage = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5"><label htmlFor="job-deadline" className={labelClass}>Hạn nộp <span className="text-rose-500">*</span></label><input id="job-deadline" type="date" value={formData.deadline} onChange={(event) => handleInputChange('deadline', event.target.value)} className={fieldClass} /></div>
-            <div className="space-y-1.5"><label htmlFor="job-status" className={labelClass}>Trạng thái</label><select id="job-status" value={formData.status} onChange={(event) => handleInputChange('status', event.target.value)} className={fieldClass}>{STATUS_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
+            <div className="space-y-1.5"><label htmlFor="job-status" className={labelClass}>Trạng thái</label><select id="job-status" value={formData.status} onChange={(event) => handleInputChange('status', event.target.value)} className={fieldClass}>{(editingJobId ? STATUS_OPTIONS : CREATE_STATUS_OPTIONS).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
           </div>
 
           <div className="space-y-1.5"><label htmlFor="job-description" className={labelClass}>Mô tả công việc <span className="text-rose-500">*</span></label><textarea id="job-description" rows={4} value={formData.description} onChange={(event) => handleInputChange('description', event.target.value)} placeholder="Vai trò và trách nhiệm chính..." className={`${fieldClass} resize-y`} /></div>

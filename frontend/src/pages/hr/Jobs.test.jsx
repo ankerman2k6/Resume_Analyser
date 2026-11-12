@@ -64,6 +64,18 @@ describe('JobsPage', () => {
     expect(await screen.findByText('Backend Developer')).toBeInTheDocument();
   });
 
+  it('chỉ cho chọn bản nháp hoặc đang tuyển khi tạo Job', async () => {
+    render(<JobsPage />);
+
+    await screen.findByText('Backend Developer');
+    fireEvent.click(screen.getByRole('button', { name: 'Tạo Job mới' }));
+
+    const statusSelect = screen.getByLabelText('Trạng thái');
+    expect(within(statusSelect).getByRole('option', { name: 'Bản nháp' })).toBeInTheDocument();
+    expect(within(statusSelect).getByRole('option', { name: 'Đang tuyển' })).toBeInTheDocument();
+    expect(within(statusSelect).queryByRole('option', { name: 'Đã đóng' })).not.toBeInTheDocument();
+  });
+
   it('giữ nguyên các requirement chưa có ô chỉnh sửa khi gửi PUT', async () => {
     api.updateHrJobApi.mockResolvedValue({ ...job, title: 'Backend Platform Developer' });
     render(<JobsPage />);
@@ -88,6 +100,7 @@ describe('JobsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sửa' }));
 
     expect(screen.getByLabelText(/Tiêu đề Job/)).toHaveValue('Backend Developer');
+    expect(within(screen.getByLabelText('Trạng thái')).getByRole('option', { name: 'Đã đóng' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Trạng thái'), {
       target: { value: 'closed' },
     });
