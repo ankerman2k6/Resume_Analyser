@@ -66,18 +66,6 @@
   line-height: 1.55;
 }
 
-.hr-settings-heading-icon {
-  display: grid;
-  width: 52px;
-  height: 52px;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface);
-  color: var(--brand-secondary);
-}
-
 .hr-settings-feedback {
   margin: 0 0 18px;
   padding: 12px 16px;
@@ -92,16 +80,6 @@
   border-color: color-mix(in srgb, var(--status-danger) 35%, var(--border-subtle));
   background: color-mix(in srgb, var(--status-danger) 8%, var(--bg-surface));
   color: var(--status-danger);
-}
-
-.hr-settings-heading-icon svg {
-  width: 23px;
-  height: 23px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .hr-settings-tabs {
@@ -391,11 +369,6 @@
 
   .hr-settings-heading {
     margin-bottom: 18px;
-  }
-
-  .hr-settings-heading-icon {
-    width: 44px;
-    height: 44px;
   }
 
   .hr-settings-tabs {
