@@ -78,4 +78,24 @@ describe('JobsPage', () => {
     await waitFor(() => expect(api.updateHrJobApi).toHaveBeenCalledTimes(1));
     expect(api.updateHrJobApi.mock.calls[0][1].requirements).toEqual(job.requirements);
   });
+
+  it('điền tiêu đề hiện tại và đồng bộ trạng thái đã sửa qua API', async () => {
+    api.updateHrJobApi.mockResolvedValue({ ...job });
+    api.updateHrJobStatusApi.mockResolvedValue({ ...job, status: 'closed' });
+    render(<JobsPage />);
+
+    await screen.findByText('Backend Developer');
+    fireEvent.click(screen.getByRole('button', { name: 'Sửa' }));
+
+    expect(screen.getByLabelText(/Tiêu đề Job/)).toHaveValue('Backend Developer');
+    fireEvent.change(screen.getByLabelText('Trạng thái'), {
+      target: { value: 'closed' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu Job' }));
+
+    await waitFor(() => {
+      expect(api.updateHrJobStatusApi).toHaveBeenCalledWith(job.id, 'closed');
+    });
+    expect(within(screen.getByRole('table')).getByText('Đã đóng')).toBeInTheDocument();
+  });
 });

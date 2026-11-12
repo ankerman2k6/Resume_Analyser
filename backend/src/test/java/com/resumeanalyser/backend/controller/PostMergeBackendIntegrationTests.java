@@ -234,7 +234,10 @@ class PostMergeBackendIntegrationTests {
         assertEquals(Instant.parse(created.getString("createdAt")).truncatedTo(ChronoUnit.MILLIS),
                 Instant.parse(updated.getString("createdAt")));
         assertEquals("draft", updated.getString("status"));
-        ok(request("PATCH", "/api/hr/jobs/" + id + "/status", hrToken, "{\"status\":\"published\"}"), 200);
+        Document statusUpdated = ok(request("PATCH", "/api/hr/jobs/" + id + "/status", hrToken,
+                "{\"status\":\"published\"}"), 200);
+        assertEquals("published", statusUpdated.getString("status"));
+        assertEquals("published", jobs.findById(new ObjectId(id)).orElseThrow().getStatus());
         ok(request("GET", "/api/jobs/" + id, null, null), 200);
         assertEquals(404, request("DELETE", "/api/hr/jobs/" + id, otherToken, null).statusCode());
         assertEquals(204, request("DELETE", "/api/hr/jobs/" + id, hrToken, null).statusCode());

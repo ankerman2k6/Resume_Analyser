@@ -26,7 +26,7 @@ import {
 const STATUS_OPTIONS = [
   { value: 'draft', label: 'Bản nháp' },
   { value: 'published', label: 'Đang tuyển' },
-  { value: 'closed', label: 'Đã đóng' },
+  // { value: 'closed', label: 'Đã đóng' },
 ];
 
 const EMPLOYMENT_TYPE_OPTIONS = [
@@ -113,6 +113,7 @@ const employmentTypeLabel = (value) => EMPLOYMENT_TYPE_OPTIONS.find((item) => it
 
 const jobToForm = (job) => ({
   companyId: job.companyId || '',
+  title: job.title || '',
   description: job.description || '',
   category: job.category || '',
   employmentType: job.employmentType || 'full_time',
