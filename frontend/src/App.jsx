@@ -65,10 +65,8 @@ function App() {
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="candidates" element={<CandidatesPage />} />
             <Route path="jobs" element={<JobsPage />} />
+            <Route path="settings" element={<RecruiterSettings />} />
           </Route>
-          {/* Phân hệ Nhà tuyển dụng: không có Navbar ở trên */}
-          <Route path="/hr" element={<HRPage />} />
-          <Route path="/hr/settings" element={<RecruiterSettings />} />
 
           {/* Các trang xác thực độc lập */}
           <Route path="/login" element={<LoginPage />} />

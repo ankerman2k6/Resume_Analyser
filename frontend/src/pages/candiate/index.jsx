@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import CandidateSearch from './CandidateSearch';
 import './index.css';
-import { searchJobsApi } from '../../services/jobsService';
+import { searchJobsApi, getCompanyDetailApi} from '../../services/jobsService';
 
 //CAC HAM HELPER
 const formatSalary = (salary) => {
@@ -105,7 +105,26 @@ const CandidatePage = () => {
         size: 10
       });
 
-      setJobs(data.content || []);
+      const jobList = data.content || [];
+      const companyIds = [...new Set(jobList.map(job => job.companyId).filter(Boolean))];
+
+      const companies = await Promise.all(
+        companyIds.map(async (companyId) => {
+          try{
+            return [companyId, await getCompanyDetailApi(companyId)];
+          }catch(error){
+            return [companyId, null];
+          }
+        })
+      );
+      const companyByID = Object.fromEntries(companies);
+      setJobs(jobList.map(job => ({
+        ...job, 
+        company: companyByID[job.companyId] ?? null
+      })))
+
+
+
       setTotalPages(data.totalPages || 0);
       setTotalElements(data.totalElements || 0);
       setCurrentPage(data.page ?? 0);
@@ -221,7 +240,7 @@ const CandidatePage = () => {
                   >
                     <div className="job-card-main">
                       <div className="job-company-logo" aria-hidden="true">
-                        {getCompanyLogoText(job.title, job.companyId)}
+                        {job.company?.logoUrl ? <img src={job.company.logoUrl} alt=''></img> : getCompanyLogoText(job.company?.name || job.title)}
                       </div>
                       <div className="job-details">
                         <div className="job-title-row">
