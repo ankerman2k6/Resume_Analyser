@@ -131,7 +131,7 @@ const DashboardPage = () => {
                   </div>
                 </div>
 
-                <p className="panel-note">Database chưa có trường phân hệ riêng; hiện nhóm theo jobs.category.</p>
+                
 
                 <div className="donut-wrapper">
                   <ResponsiveContainer width="100%" height="100%">

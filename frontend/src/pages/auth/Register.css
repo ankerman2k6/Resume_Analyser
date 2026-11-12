@@ -23,6 +23,7 @@
   justify-content: center;
   color: var(--text-primary);
   transition: background-color 0.2s;
+  outline: none;
 }
 
 .back-button:hover {
@@ -55,13 +56,14 @@
 .role-selector {
   display: flex;
   align-items: center;
+  gap: 8px;
   margin-bottom: 24px;
   font-size: 14px;
 }
 
 .role-label {
   color: var(--text-secondary);
-  margin-right: 12px;
+  margin-right: 4px;
 }
 
 .role-btn {
@@ -74,17 +76,14 @@
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
+  outline: none;
 }
 
 .role-btn.active {
   border-color: var(--role-active-border);
   color: var(--role-active-text);
   background-color: var(--role-active-bg);
-}
-
-.role-divider {
-  color: var(--border-subtle);
-  margin: 0 8px;
 }
 
 .auth-tabs {
@@ -103,9 +102,10 @@
   padding: 12px 0;
   font-size: 16px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   cursor: pointer;
   transition: all 0.2s;
+  outline: none;
 }
 
 .auth-tab.active {
@@ -132,6 +132,10 @@
   color: var(--text-primary);
 }
 
+.required-mark {
+  color: var(--status-danger);
+}
+
 .form-group input {
   padding: 14px 16px;
   border: 1px solid var(--border-subtle);
@@ -150,7 +154,7 @@
 }
 
 .form-group input::placeholder {
-  color: #94A3B8;
+  color: color-mix(in srgb, var(--text-primary) 65%, var(--bg-input));
 }
 
 .password-input-wrapper {
@@ -161,7 +165,9 @@
 
 .toggle-password {
   position: absolute;
-  right: 16px;
+  right: 4px;
+  width: 44px;
+  height: 44px;
   background: none;
   border: none;
   color: var(--text-secondary);
@@ -170,6 +176,7 @@
   align-items: center;
   justify-content: center;
   padding: 0;
+  outline: none;
 }
 
 .submit-btn {
@@ -186,6 +193,7 @@
   align-items: center;
   margin-top: 8px;
   transition: background-color 0.2s;
+  outline: none;
 }
 
 .submit-btn:hover {
@@ -233,6 +241,7 @@
   color: var(--text-primary);
   cursor: pointer;
   transition: background-color 0.2s;
+  outline: none;
 }
 
 .social-btn:hover {
@@ -257,10 +266,74 @@
 }
 
 @media (max-width: 640px) {
+  .role-selector {
+    flex-wrap: wrap;
+  }
+
+  .role-label {
+    flex-basis: 100%;
+    margin-right: 0;
+  }
+
   .register-container {
     padding: 32px 24px;
   }
   .social-login {
     flex-direction: column;
+  }
+}
+
+.register-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.register-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.register-logo a,
+.auth-footer a {
+  outline: none;
+}
+
+.register-error {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--status-danger) 30%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--status-danger) 10%, transparent);
+  color: var(--status-danger);
+  font-size: 14px;
+}
+
+.form-group textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font: inherit;
+  resize: vertical;
+}
+
+.form-group textarea:focus {
+  border-color: var(--border-focus);
+  outline: none;
+}
+
+.submit-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+@media (max-width: 640px) {
+  .register-grid {
+    grid-template-columns: 1fr;
   }
 }

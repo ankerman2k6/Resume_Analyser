@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { getHrSettingsApi, updateHrSettingsApi } from '../../services/hrSettingsService';
 import './RecruiterSettings.css';
 
 const createEmptyLocation = () => ({
@@ -10,7 +11,7 @@ const createEmptyLocation = () => ({
 });
 
 const RecruiterSettings = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [profile, setProfile] = useState({
     fullName: user?.fullName || '',
     email: user?.email || '',
@@ -28,17 +29,58 @@ const RecruiterSettings = () => {
   const [locations, setLocations] = useState([createEmptyLocation()]);
   const [isSaved, setIsSaved] = useState(false);
   const [activeSection, setActiveSection] = useState('personal-information');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    const loadSettings = async () => {
+      try {
+        const data = await getHrSettingsApi();
+        if (!active) return;
+        setProfile({
+          fullName: data.profile?.fullName || '',
+          email: data.profile?.email || '',
+          phone: data.profile?.phone || '',
+          position: data.profile?.position || '',
+        });
+        setCompany({
+          name: data.company?.name || '',
+          description: data.company?.description || '',
+          industry: data.company?.industry || '',
+          size: data.company?.size || '',
+          website: data.company?.website || '',
+          logoUrl: data.company?.logoUrl || '',
+        });
+        setLocations((data.company?.locations || []).map((location) => ({
+          address: location.address || '',
+          city: location.city || '',
+          country: location.country || '',
+        })));
+        setErrorMessage('');
+      } catch (error) {
+        if (active) setErrorMessage(error.message || 'Không thể tải thông tin cài đặt.');
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    };
+    loadSettings();
+    return () => { active = false; };
+  }, []);
 
   const updateProfile = (event) => {
     const { name, value } = event.target;
     setProfile((current) => ({ ...current, [name]: value }));
     setIsSaved(false);
+    setErrorMessage('');
   };
 
   const updateCompany = (event) => {
     const { name, value } = event.target;
     setCompany((current) => ({ ...current, [name]: value }));
     setIsSaved(false);
+    setErrorMessage('');
   };
 
   const updateLocation = (index, event) => {
@@ -49,11 +91,46 @@ const RecruiterSettings = () => {
       )
     );
     setIsSaved(false);
+    setErrorMessage('');
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    setIsSaved(true);
+    if (isSaving) return;
+    setIsSaving(true);
+    setIsSaved(false);
+    setErrorMessage('');
+    try {
+      const data = await updateHrSettingsApi({
+        profile,
+        company: { ...company, locations },
+      });
+      setProfile({
+        fullName: data.profile?.fullName || '',
+        email: data.profile?.email || '',
+        phone: data.profile?.phone || '',
+        position: data.profile?.position || '',
+      });
+      setCompany({
+        name: data.company?.name || '',
+        description: data.company?.description || '',
+        industry: data.company?.industry || '',
+        size: data.company?.size || '',
+        website: data.company?.website || '',
+        logoUrl: data.company?.logoUrl || '',
+      });
+      setLocations((data.company?.locations || []).map((location) => ({
+        address: location.address || '',
+        city: location.city || '',
+        country: location.country || '',
+      })));
+      updateUser({ fullName: data.profile?.fullName, email: data.profile?.email });
+      setIsSaved(true);
+    } catch (error) {
+      setErrorMessage(error.message || 'Không thể lưu thông tin cài đặt.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -72,13 +149,16 @@ const RecruiterSettings = () => {
             <h1>Cài đặt</h1>
             <p>Quản lý thông tin cá nhân và hồ sơ doanh nghiệp của bạn.</p>
           </div>
-          <div className="hr-settings-heading-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.76 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.76a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.24 9c.2.46.65.76 1.15.76H21a2 2 0 1 1 0 4h-.09c-.5 0-.95.3-1.51 1Z" />
-            </svg>
-          </div>
         </header>
+
+        {errorMessage && (
+          <div className="hr-settings-feedback hr-settings-feedback--error" role="alert">
+            {errorMessage}
+          </div>
+        )}
+        {isLoading && (
+          <div className="hr-settings-feedback" role="status">Đang tải thông tin cài đặt…</div>
+        )}
 
         <nav className="hr-settings-tabs" aria-label="Mục cài đặt">
           <a
@@ -323,13 +403,13 @@ const RecruiterSettings = () => {
 
           <footer className="hr-settings-footer">
             <p role="status" aria-live="polite">
-              {isSaved ? 'Đã cập nhật thông tin trên giao diện. Dữ liệu chưa được gửi đến máy chủ.' : ''}
+              {isSaved ? 'Đã lưu thông tin cài đặt thành công.' : ''}
             </p>
-            <button className="hr-settings-save" type="submit">
+            <button className="hr-settings-save" disabled={isLoading || isSaving} type="submit">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2ZM17 21v-8H7v8M7 3v5h8" />
               </svg>
-              Lưu thay đổi
+              {isSaving ? 'Đang lưu…' : 'Lưu thay đổi'}
             </button>
           </footer>
         </form>

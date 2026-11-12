@@ -211,7 +211,7 @@ class PostMergeBackendIntegrationTests {
     }
 
     private String jobBody(String title, String requirements) {
-        return new Document("companyId", recruiterProfile.getCompanyId().toHexString()).append("title", title)
+        return new Document("title", title)
                 .append("description", "Job description").append("category", "IT")
                 .append("employmentType", "full_time").append("deadline", Instant.now().plusSeconds(86400).toString())
                 .append("requirements", Document.parse(requirements)).toJson();

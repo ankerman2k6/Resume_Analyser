@@ -73,6 +73,18 @@ export const withdrawApplicationApi = (applicationId) =>
 export const getCandidateCvsApi = ({ page = 0, size = 10, signal } = {}) =>
   request(`${CANDIDATE_API}/cvs?${new URLSearchParams({ page, size })}`, { signal });
 
+/** POST /api/candidates/me/jobs/{jobId}/apply; body: { cvId, coverNote? }.
+ * Backend kiểm tra CV thuộc ứng viên và trả đơn ứng tuyển vừa tạo.
+ */
+export const applyToJobApi = (jobId, cvId) =>
+  request(`${CANDIDATE_API}/jobs/${encodeURIComponent(jobId)}/apply`, {
+    method: 'POST', body: { cvId }
+  });
+
+/** Tạo CV từ mẫu; backend kết xuất PDF, lưu GridFS và trả CvSummaryDto. */
+export const createCvFromTemplateApi = (payload) =>
+  request(`${CANDIDATE_API}/cvs/from-template`, { method: 'POST', body: payload });
+
 /** GET /api/candidates/me/cvs/{cvId}/file → binary PDF có kiểm tra JWT/owner.
  * Trả Blob để UI tạo object URL; không mở endpoint trực tiếp thiếu Bearer.
  */

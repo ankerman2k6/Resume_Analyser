@@ -5,6 +5,7 @@ import java.util.List;
 
 public record CvSummaryDto(
         String _id,
+        String templateId,
         String title,
         SourceInfo source,
         ParseInfoDto parseInfo,

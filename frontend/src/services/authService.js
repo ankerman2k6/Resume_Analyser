@@ -17,23 +17,25 @@ export const loginApi = async (email, password, role) => {
 };
 
 // Api đăng ký người dùng
-export const registerApi = async (email, password, role) => {
-  const respone = await fetch('/api/auth/register', {
+export const registerApi = async (payload) => {
+  const response = await fetch('/api/auth/register', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     },
-    body: JSON.stringify({email, password, role}),
+    body: JSON.stringify(payload),
   });
 
-  const data = await respone.json();
+  const data = await response.json().catch(() => ({}));
 
-  if(!respone.ok){
-    if(data.errors){
-      const firstError = Object.values(data.errors)[0];
+  if (!response.ok) {
+    const firstError = data.errors && Object.values(data.errors)[0];
+    if (firstError) {
       throw new Error(firstError);
     }
-    throw new Error(data.message || 'Đăng ký tài khoản thất bại')
+
+    throw new Error(data.message || 'Đăng ký tài khoản thất bại');
   }
+
   return data;
-}
+};

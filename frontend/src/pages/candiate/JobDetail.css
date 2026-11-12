@@ -181,6 +181,47 @@
     border-color: var(--brand-secondary)
 }
 
+.job-detail-button:disabled { opacity: .6; cursor: not-allowed }
+
+.job-detail-button--secondary { background: var(--bg-surface); border-color: var(--border-subtle); color: var(--text-primary) }
+.job-detail-button--secondary:hover { background: var(--bg-subtle) }
+.job-detail-apply-success { margin: 12px 0 0; color: var(--status-success); font-size: 13px; line-height: 1.5 }
+.job-detail-apply-success a { color: inherit; text-decoration: underline }
+
+.job-detail-apply-overlay { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(8, 18, 35, .6) }
+.job-detail-apply-dialog { display: flex; flex-direction: column; width: min(100%, 560px); max-height: min(720px, calc(100dvh - 32px)); overflow: hidden; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-surface); box-shadow: 0 20px 60px rgba(0, 0, 0, .2) }
+.job-detail-apply-header { display: flex; justify-content: space-between; gap: 20px; padding: 22px 24px 16px; border-bottom: 1px solid var(--border-hairline) }
+.job-detail-apply-header h2 { margin: 0; font-size: 20px }
+.job-detail-apply-header p { margin: 6px 0 0; color: var(--text-secondary); font-size: 14px }
+.job-detail-apply-close { align-self: flex-start; display: grid; place-items: center; width: 32px; height: 32px; flex: none; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-secondary); font-size: 24px; cursor: pointer }
+.job-detail-apply-close:hover { background: var(--bg-subtle) }
+.job-detail-apply-body { min-height: 100px; overflow-y: auto; padding: 20px 24px }
+.job-detail-apply-body > p { margin: 0; color: var(--text-secondary) }
+.job-detail-cv-list { display: grid; gap: 10px }
+.job-detail-cv-option { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 14px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); cursor: pointer }
+.job-detail-cv-option:hover { background: var(--bg-subtle) }
+.job-detail-cv-option.is-selected { border-color: var(--brand-primary); background: var(--brand-accent) }
+.job-detail-cv-option.is-unavailable { opacity: .6; cursor: not-allowed }
+.job-detail-cv-option input { flex: none; accent-color: var(--brand-primary) }
+.job-detail-cv-copy { display: grid; min-width: 0; gap: 4px }
+.job-detail-cv-copy strong { overflow-wrap: anywhere; font-size: 14px }
+.job-detail-cv-copy small { overflow-wrap: anywhere; color: var(--text-secondary); font-size: 12px }
+.job-detail-cv-pages { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 18px; font-size: 13px }
+.job-detail-cv-pages button, .job-detail-apply-message button { padding: 7px 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text-primary); cursor: pointer }
+.job-detail-cv-pages button:disabled { opacity: .5; cursor: not-allowed }
+.job-detail-apply-message { text-align: center; color: var(--text-secondary); font-size: 14px }
+.job-detail-apply-message a { color: var(--brand-secondary); font-weight: 600 }
+.job-detail-apply-error { margin-top: 14px !important; color: var(--status-danger) !important; font-size: 13px }
+.job-detail-apply-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--border-hairline) }
+.job-detail-apply-footer .job-detail-button { width: auto }
+.job-detail-apply-close:focus-visible, .job-detail-cv-option:focus-within, .job-detail-cv-pages button:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px }
+
+@media (max-width: 420px) {
+    .job-detail-apply-header, .job-detail-apply-body, .job-detail-apply-footer { padding-right: 16px; padding-left: 16px }
+    .job-detail-apply-footer { flex-direction: column-reverse }
+    .job-detail-apply-footer .job-detail-button { width: 100% }
+}
+
 .job-detail-summary-list {
     display: grid;
     gap: 0;
