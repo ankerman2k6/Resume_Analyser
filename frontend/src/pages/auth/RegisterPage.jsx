@@ -12,12 +12,11 @@ const RegisterPage = () => {
   // State quản lý form
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-const [avatarUrl, setAvatarUrl] = useState('');
-const [position, setPosition] = useState('');
-const [address, setAddress] = useState('');
-const [district, setDistrict] = useState('');
-const [city, setCity] = useState('');
-const [country, setCountry] = useState('Việt Nam');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [address, setAddress] = useState('');
+  const [district, setDistrict] = useState('');
+  const [city, setCity] = useState('');
+  const [country, setCountry] = useState('Việt Nam');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -26,25 +25,45 @@ const [country, setCountry] = useState('Việt Nam');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading || successMessage) return;
     setErrorMessage('');
     setSuccessMessage('');
 
+    if (!fullName.trim()) {
+      setErrorMessage('Vui lòng nhập họ và tên.');
+      return;
+    }
     if(password.length < 6){
-      setErrorMessage("Mật khẩu phải chứa nhiều hơn 6 ký tự");
+      setErrorMessage('Mật khẩu phải có ít nhất 6 ký tự.');
       return;
     } 
+    const payload = {
+      email: email.trim().toLowerCase(), password, role,
+      fullName: fullName.trim(), phone: phone.trim(),
+      ...(role === 'candidate' ? {
+        avatarUrl: avatarUrl.trim(),
+        location: {
+          address: address.trim(), district: district.trim(),
+          city: city.trim(), country: country.trim(),
+        },
+      } : {}),
+    };
+    if (role === 'recruiter') {
+      navigate('/register/company', { state: { registration: payload } });
+      return;
+    }
     setLoading(true);
 
     try{
       //Gửi json sang be
-      await registerApi(email, password, role);
+      await registerApi(payload);
       setSuccessMessage('Đăng ký tài khoản thành công! Đang chuyển đến trang đăng nhập...');
 
       setTimeout(() => {
         navigate('/login')
       }, 1500);
     } catch(err){
-      setErrorMessage(err.messange)
+      setErrorMessage(err.message || 'Không thể đăng ký tài khoản.')
     } finally {
       setLoading(false)
     }
@@ -220,7 +239,7 @@ const [country, setCountry] = useState('Việt Nam');
             </div>
           </div>
 
-          <button type="submit" className="submit-btn">
+          <button type="submit" className="submit-btn" disabled={loading || Boolean(successMessage)}>
             Đăng ký
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginLeft: '8px'}}><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
           </button>

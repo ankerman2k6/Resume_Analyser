@@ -29,8 +29,8 @@ export const registerApi = async (payload) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    if (data.errors) {
-      const firstError = Object.values(data.errors)[0];
+    const firstError = data.errors && Object.values(data.errors)[0];
+    if (firstError) {
       throw new Error(firstError);
     }
 

@@ -44,4 +44,14 @@ describe('authentication API through the same-origin Nginx proxy', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ message: 'Rejected' }) }));
     await expect(registerApi({ email: 'user@example.com' })).rejects.toThrow('Rejected');
   });
+
+  it('preserves the server message when the field error map is empty', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ message: 'Email đã tồn tại', errors: {} }) }));
+    await expect(registerApi({ email: 'user@example.com' })).rejects.toThrow('Email đã tồn tại');
+  });
+
+  it('shows field validation errors from the backend', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ message: 'Validation failed', errors: { password: 'Mật khẩu quá ngắn' } }) }));
+    await expect(registerApi({})).rejects.toThrow('Mật khẩu quá ngắn');
+  });
 });

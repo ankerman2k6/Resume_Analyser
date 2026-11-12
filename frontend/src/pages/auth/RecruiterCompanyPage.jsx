@@ -43,6 +43,7 @@ const RecruiterCompanyPage = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (loading) return;
     setErrorMessage('');
 
     if (!company.name.trim()) {
