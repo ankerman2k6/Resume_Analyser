@@ -1,0 +1,48 @@
+# Deployment on the Ubuntu VPS. Build images on Jenkins and pull them here.
+# Keep /opt/resume-analyser/backend.env on the VPS; do not copy secrets into Git.
+services:
+  mongodb:
+    image: ${MONGO_IMAGE:-mongo:7}
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+  backend:
+    image: ${BACKEND_IMAGE:-antony1552006/resume-backend}:${VERSION:?Set VERSION in .env}
+    env_file:
+      - /opt/resume-analyser/backend.env
+    environment:
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/cv_screening
+    volumes:
+      - resume-uploads:/app/uploads/resumes
+    depends_on:
+      - mongodb
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+  frontend:
+    image: ${FRONTEND_IMAGE:-antony1552006/resume-frontend}:${VERSION:?Set VERSION in .env}
+    ports:
+      - "${WEB_BIND_HOST:-127.0.0.1}:${WEB_PORT:-3000}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  mongo-data:
+  resume-uploads:

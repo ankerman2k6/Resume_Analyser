@@ -1,8 +1,8 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import CandidateSearch from './CandidateSearch';
 import './index.css';
-import { searchJobsApi } from '../../services/jobsService';
+import { searchJobsApi, getCompanyDetailApi} from '../../services/jobsService';
 
 //CAC HAM HELPER
 const formatSalary = (salary) => {
@@ -51,12 +51,12 @@ const formatTimeAgo = (dateString) =>{
   return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
 };
 
-const getCompanyLogoText = (title = '', companyId = '') => {
-  const words = title.trim().split(/\s+/);
+const getCompanyLogoText = (name = '') => {
+  const words = name.trim().split(/\s+/);
   if(words.length >= 2){
     return (words[0][0] + words[1][0]).toUpperCase();
   }
-  return title.slice(0,2).toUpperCase() || 'JB'
+  return name.slice(0,2).toUpperCase() || 'CO'
 };
 
 
@@ -70,6 +70,7 @@ const CandidatePage = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const latestRequest = useRef(0);
 
   //2. Quản lý phân trang theo DTO
   const [currentPage, setCurrentPage] = useState(0);
@@ -85,6 +86,7 @@ const CandidatePage = () => {
 
   //4 hàm thực hiện gọi API tìm kiếm việc làm từ backend
   const fetchJobs = useCallback(async(criteria, page) => {
+    const requestId = ++latestRequest.current;
     setLoading(true);
     setError(null);
 
@@ -105,15 +107,38 @@ const CandidatePage = () => {
         size: 10
       });
 
-      setJobs(data.content || []);
+      const jobList = data.content || [];
+      const companyIds = [...new Set(jobList.map(job => job.companyId).filter(Boolean))];
+
+      const companies = await Promise.all(
+        companyIds.map(async (companyId) => {
+          try{
+            return [companyId, await getCompanyDetailApi(companyId)];
+          }catch(error){
+            return [companyId, null];
+          }
+        })
+      );
+      const companyByID = Object.fromEntries(companies);
+      if (requestId !== latestRequest.current) return;
+      setJobs(jobList.map(job => ({
+        ...job, 
+        company: companyByID[job.companyId]?.id === job.companyId
+          ? companyByID[job.companyId]
+          : null
+      })))
+
+
+
       setTotalPages(data.totalPages || 0);
       setTotalElements(data.totalElements || 0);
       setCurrentPage(data.page ?? 0);
     } catch (error) {
+      if (requestId !== latestRequest.current) return;
       console.error('Lỗi khi tìm kiếm việc làm:', error);
       setError(error.message || 'Đã xảy ra lỗi khi tìm kiếm việc làm.');
     } finally {
-      setLoading(false);
+      if (requestId === latestRequest.current) setLoading(false);
     }
   }, []);
 
@@ -221,7 +246,7 @@ const CandidatePage = () => {
                   >
                     <div className="job-card-main">
                       <div className="job-company-logo" aria-hidden="true">
-                        {getCompanyLogoText(job.title, job.companyId)}
+                        {job.company?.logoUrl ? <img src={job.company.logoUrl} alt="" /> : getCompanyLogoText(job.company?.name)}
                       </div>
                       <div className="job-details">
                         <div className="job-title-row">
@@ -229,7 +254,7 @@ const CandidatePage = () => {
                           <span className="job-salary-badge">{formatSalary(job.salary)}</span>
                         </div>
                         <span className="job-company-name">
-                          {job.category || 'Công nghệ thông tin'}
+                          {job.company?.name || 'Chưa có thông tin công ty'}
                         </span>
 
                         <div className="job-meta-row">

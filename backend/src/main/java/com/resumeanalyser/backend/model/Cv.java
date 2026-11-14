@@ -8,6 +8,7 @@ import java.util.Map;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import com.resumeanalyser.backend.config.ObjectIdStringSerializer;
 import tools.jackson.databind.annotation.JsonSerialize;
@@ -22,6 +23,9 @@ public class Cv {
     @JsonSerialize(using = ObjectIdStringSerializer.class)
     private ObjectId candidateId;
 
+    @Field(write = Field.Write.ALWAYS)
+    private ObjectId templateId;
+
     private String title;
     private Source source;
     private ParseInfo parseInfo;
@@ -31,6 +35,7 @@ public class Cv {
     private List<Experience> experience = new ArrayList<>();
     private List<Education> education = new ArrayList<>();
     private List<Certificate> certificates = new ArrayList<>();
+    private List<Link> links = new ArrayList<>();
 
     private Instant createdAt;
     private Instant updatedAt;
@@ -52,6 +57,14 @@ public class Cv {
 
     public void setCandidateId(ObjectId candidateId) {
         this.candidateId = candidateId;
+    }
+
+    public ObjectId getTemplateId() {
+        return templateId;
+    }
+
+    public void setTemplateId(ObjectId templateId) {
+        this.templateId = templateId;
     }
 
     public String getTitle() {
@@ -126,6 +139,14 @@ public class Cv {
         this.certificates = certificates != null ? certificates : new ArrayList<>();
     }
 
+    public List<Link> getLinks() {
+        return links;
+    }
+
+    public void setLinks(List<Link> links) {
+        this.links = links != null ? links : new ArrayList<>();
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -144,6 +165,7 @@ public class Cv {
 
     public static class Source {
         private String type;
+        private ObjectId fileId;
         private String fileName;
         private String fileUrl;
         private String mimeType;
@@ -156,6 +178,23 @@ public class Cv {
             this.fileName = fileName;
             this.fileUrl = fileUrl;
             this.mimeType = mimeType;
+        }
+
+        public static Source template(ObjectId fileId, String fileName, String mimeType) {
+            Source source = new Source();
+            source.setType("template");
+            source.setFileId(fileId);
+            source.setFileName(fileName);
+            source.setMimeType(mimeType);
+            return source;
+        }
+
+        public ObjectId getFileId() {
+            return fileId;
+        }
+
+        public void setFileId(ObjectId fileId) {
+            this.fileId = fileId;
         }
 
         public String getType() {
@@ -539,6 +578,35 @@ public class Cv {
 
         public void setExpirationDate(String expirationDate) {
             this.expirationDate = expirationDate;
+        }
+    }
+
+    public static class Link {
+        private String type;
+        private String url;
+
+        public Link() {
+        }
+
+        public Link(String type, String url) {
+            this.type = type;
+            this.url = url;
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
+        }
+
+        public String getUrl() {
+            return url;
+        }
+
+        public void setUrl(String url) {
+            this.url = url;
         }
     }
 }

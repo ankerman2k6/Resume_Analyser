@@ -20,6 +20,24 @@ export const updateHrApplicationStatusApi = async (id, status) =>
     method: 'PATCH', body: JSON.stringify({ status }),
   })).json();
 
+export const getHrApplicationInterviewsApi = async (applicationId) =>
+  (await request(`/api/hr/applications/${encodeURIComponent(applicationId)}/interviews`)).json();
+
+export const createHrInterviewApi = async (payload) =>
+  (await request('/api/hr/interviews', {
+    method: 'POST', body: JSON.stringify(payload),
+  })).json();
+
+export const updateHrInterviewApi = async (id, payload) =>
+  (await request(`/api/hr/interviews/${encodeURIComponent(id)}`, {
+    method: 'PUT', body: JSON.stringify(payload),
+  })).json();
+
+export const updateHrInterviewStatusApi = async (id, status) =>
+  (await request(`/api/hr/interviews/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH', body: JSON.stringify({ status }),
+  })).json();
+
 export const downloadHrCvApi = async (applicationId) => {
   const response = await request(`/api/hr/applications/${encodeURIComponent(applicationId)}/cv/file`);
   const url = URL.createObjectURL(await response.blob());

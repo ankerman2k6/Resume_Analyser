@@ -51,6 +51,27 @@
   font-weight: 600;
 }
 
+.hr-settings-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+  padding: 10px 16px;
+  border: 1px solid var(--brand-primary);
+  border-radius: var(--radius-default);
+  background: var(--brand-primary);
+  color: var(--text-inverse);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.hr-settings-link:hover {
+  border-color: var(--brand-secondary);
+  background: var(--brand-secondary);
+}
+
 @media (max-width: 640px) {
   .hr-intro-page {
     padding: 24px 16px;

@@ -3,9 +3,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import App from './App';
 
-vi.mock('@react-three/fiber', async (importOriginal) => ({
-  ...await importOriginal(),
-  Canvas: () => <div data-testid="landing-canvas" />,
+vi.mock('./pages/landing/components/Hero3D', () => ({
+  Hero3D: () => <div data-testid="landing-canvas" />,
 }));
 
 describe('App Component', () => {

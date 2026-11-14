@@ -17,10 +17,21 @@ import {
   ExternalLink,
   Check,
   Sparkles,
-  UserCheck
+  UserCheck,
+  Video,
+  MapPin,
 } from 'lucide-react';
 
-import { getHrJobsApi, getHrApplicationsApi, updateHrApplicationStatusApi, downloadHrCvApi } from '../../services/hrApplicationsService';
+import {
+  createHrInterviewApi,
+  downloadHrCvApi,
+  getHrApplicationInterviewsApi,
+  getHrApplicationsApi,
+  getHrJobsApi,
+  updateHrInterviewApi,
+  updateHrInterviewStatusApi,
+  updateHrApplicationStatusApi,
+} from '../../services/hrApplicationsService';
 
 const STATUS_LABELS = {
   applied: 'Đã nộp', pending: 'Chờ duyệt', reviewing: 'Đang xem xét',
@@ -28,6 +39,36 @@ const STATUS_LABELS = {
   rejected: 'Từ chối', withdrawn: 'Đã rút',
 };
 const STATUS_OPTIONS = ['Tất cả trạng thái', ...Object.values(STATUS_LABELS)];
+
+const EMPTY_INTERVIEW_FORM = {
+  date: '',
+  time: '',
+  durationMinutes: '60',
+  mode: 'online',
+  meetingLink: '',
+  location: '',
+  notes: '',
+};
+
+const formatInterviewDateTime = (value) => {
+  if (!value) return 'Chưa xác định';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('vi-VN');
+};
+
+const interviewToForm = (interview) => {
+  const date = new Date(interview.scheduledAt);
+  const pad = (value) => String(value).padStart(2, '0');
+  return {
+    date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+    time: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
+    durationMinutes: String(interview.durationMinutes || 60),
+    mode: interview.mode || 'online',
+    meetingLink: interview.meetingLink || '',
+    location: interview.location || '',
+    notes: interview.notes || '',
+  };
+};
 
 export const CandidatesPage = () => {
   const [candidates, setCandidates] = useState([]);
@@ -76,6 +117,14 @@ export const CandidatesPage = () => {
   // Form State trong Drawer
   const [drawerStatus, setDrawerStatus] = useState('Chờ duyệt');
   const [toastMessage, setToastMessage] = useState('');
+  const [interviewForm, setInterviewForm] = useState(EMPTY_INTERVIEW_FORM);
+  const [interviews, setInterviews] = useState([]);
+  const [interviewsLoading, setInterviewsLoading] = useState(false);
+  const [interviewError, setInterviewError] = useState('');
+  const [interviewErrors, setInterviewErrors] = useState({});
+  const [scheduling, setScheduling] = useState(false);
+  const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
+  const [editingInterview, setEditingInterview] = useState(null);
 
   // Lọc danh sách ứng viên
   const filteredCandidates = useMemo(() => {
@@ -97,15 +146,143 @@ export const CandidatesPage = () => {
   }, [candidates, searchQuery, selectedCampaign, selectedStatus]);
 
   // Mở Drawer xem chi tiết
-  const handleOpenDrawer = (candidate) => {
+  const handleOpenDrawer = async (candidate) => {
     setSelectedCandidate(candidate);
     setDrawerStatus(candidate.status);
+    setInterviewForm(EMPTY_INTERVIEW_FORM);
+    setInterviewError('');
+    setInterviewErrors({});
+    setEditingInterview(null);
+    setIsInterviewModalOpen(false);
+    setInterviews([]);
     setIsDrawerOpen(true);
+
+    setInterviewsLoading(true);
+    try {
+      const data = await getHrApplicationInterviewsApi(candidate.id);
+      setInterviews(data);
+    } catch (error) {
+      setInterviewError(error.message || 'Không thể tải lịch phỏng vấn.');
+    } finally {
+      setInterviewsLoading(false);
+    }
   };
 
   // Đóng Drawer
   const handleCloseDrawer = () => {
+    if (saving || scheduling) return;
     setIsDrawerOpen(false);
+  };
+
+  const updateInterviewForm = (field, value) => {
+    setInterviewForm((current) => ({ ...current, [field]: value }));
+    setInterviewError('');
+    setInterviewErrors((current) => ({ ...current, [field]: '' }));
+  };
+
+  const openInterviewModal = (interview = null) => {
+    setEditingInterview(interview);
+    setInterviewForm(interview ? interviewToForm(interview) : EMPTY_INTERVIEW_FORM);
+    setInterviewError('');
+    setInterviewErrors({});
+    setIsInterviewModalOpen(true);
+  };
+
+  const closeInterviewModal = () => {
+    if (scheduling) return;
+    setIsInterviewModalOpen(false);
+    setEditingInterview(null);
+    setInterviewForm(EMPTY_INTERVIEW_FORM);
+    setInterviewError('');
+    setInterviewErrors({});
+  };
+
+  const handleScheduleInterview = async (event) => {
+    event.preventDefault();
+    if (!selectedCandidate || scheduling) return;
+
+    const scheduledAt = new Date(`${interviewForm.date}T${interviewForm.time}`);
+    const durationMinutes = Number(interviewForm.durationMinutes);
+    const nextErrors = {};
+    if (!interviewForm.date) nextErrors.date = 'Vui lòng chọn ngày phỏng vấn.';
+    if (!interviewForm.time) nextErrors.time = 'Vui lòng chọn giờ phỏng vấn.';
+    if (interviewForm.date && interviewForm.time && Number.isNaN(scheduledAt.getTime())) {
+      nextErrors.date = 'Ngày giờ phỏng vấn không hợp lệ.';
+    } else if (scheduledAt <= new Date()) {
+      nextErrors.time = 'Thời gian phỏng vấn phải ở tương lai.';
+    }
+    if (![30, 45, 60, 90].includes(durationMinutes)) {
+      nextErrors.durationMinutes = 'Chọn thời lượng 30, 45, 60 hoặc 90 phút.';
+    }
+    if (interviewForm.mode === 'online' && !interviewForm.meetingLink.trim()) {
+      nextErrors.meetingLink = 'Vui lòng nhập đường dẫn phòng họp trực tuyến.';
+    }
+    if (interviewForm.mode === 'offline' && !interviewForm.location.trim()) {
+      nextErrors.location = 'Vui lòng nhập địa điểm phỏng vấn.';
+    }
+    setInterviewErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
+    setScheduling(true);
+    try {
+      const payload = {
+        scheduledAt: scheduledAt.toISOString(),
+        durationMinutes,
+        mode: interviewForm.mode,
+        meetingLink: interviewForm.mode === 'online' ? interviewForm.meetingLink.trim() : null,
+        location: interviewForm.mode === 'offline' ? interviewForm.location.trim() : null,
+        notes: interviewForm.notes.trim() || null,
+      };
+      const saved = editingInterview
+        ? await updateHrInterviewApi(editingInterview.id, payload)
+        : await createHrInterviewApi({ applicationId: selectedCandidate.id, ...payload });
+
+      let updatedStatus = selectedCandidate.rawStatus;
+      if (!editingInterview && selectedCandidate.rawStatus !== 'interview') {
+        const updated = await updateHrApplicationStatusApi(selectedCandidate.id, 'interview');
+        updatedStatus = updated.status;
+      }
+
+      const statusLabel = STATUS_LABELS[updatedStatus] || updatedStatus;
+      setInterviews((current) => editingInterview
+        ? current.map((item) => item.id === saved.id ? saved : item)
+        : [saved, ...current]);
+      try {
+        const refreshedInterviews = await getHrApplicationInterviewsApi(selectedCandidate.id);
+        setInterviews(refreshedInterviews);
+      } catch {
+        // Giữ dữ liệu trả về từ API tạo/cập nhật nếu lần tải lại bị gián đoạn.
+      }
+      setCandidates((rows) => rows.map((row) => row.id === selectedCandidate.id
+        ? { ...row, status: statusLabel, rawStatus: updatedStatus }
+        : row));
+      setSelectedCandidate((current) => ({
+        ...current,
+        status: statusLabel,
+        rawStatus: updatedStatus,
+      }));
+      setDrawerStatus(statusLabel);
+      closeInterviewModal();
+      showToast(editingInterview ? 'Đã cập nhật lịch phỏng vấn.' : 'Đã đặt lịch phỏng vấn và cập nhật trạng thái hồ sơ.');
+    } catch (error) {
+      setInterviewError(error.message || 'Không thể đặt lịch phỏng vấn.');
+    } finally {
+      setScheduling(false);
+    }
+  };
+
+  const handleCancelInterview = async (interview) => {
+    if (scheduling) return;
+    setScheduling(true);
+    try {
+      const updated = await updateHrInterviewStatusApi(interview.id, 'cancelled');
+      setInterviews((current) => current.map((item) => item.id === updated.id ? updated : item));
+      showToast('Đã hủy lịch phỏng vấn.');
+    } catch (error) {
+      showToast(error.message || 'Không thể hủy lịch phỏng vấn.');
+    } finally {
+      setScheduling(false);
+    }
   };
 
   // Lưu thay đổi trạng thái và lịch phỏng vấn
@@ -413,7 +590,7 @@ export const CandidatesPage = () => {
 
       {/* Drawer Container */}
       <aside
-        className={`fixed inset-y-0 right-0 z-50 w-full md:w-[400px] bg-white dark:bg-[#0C1724] shadow-2xl transition-transform duration-300 ease-in-out flex flex-col border-l border-slate-200 dark:border-slate-800 ${
+        className={`fixed inset-y-0 right-0 z-50 w-full md:w-[520px] bg-white dark:bg-[#0C1724] shadow-2xl transition-transform duration-300 ease-in-out flex flex-col border-l border-slate-200 dark:border-slate-800 ${
           isDrawerOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         role="dialog"
@@ -501,6 +678,74 @@ export const CandidatesPage = () => {
                 </button>
               </div>
 
+              <section className="space-y-4 rounded-2xl border border-slate-200/80 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/30">
+                 <div className="flex items-start justify-between gap-3">
+                   <div>
+                     <div className="flex items-center gap-2 text-xs font-mono font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                       <Calendar className="h-4 w-4 text-[var(--brand-secondary)]" />
+                       Lịch phỏng vấn
+                     </div>
+                     <p className="mt-1 text-xs text-slate-400">
+                       Đặt, chỉnh sửa hoặc hủy lịch cho hồ sơ này.
+                     </p>
+                   </div>
+                   <button
+                     type="button"
+                     onClick={() => openInterviewModal()}
+                     className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--brand-secondary)] px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                   >
+                     <Calendar className="h-3.5 w-3.5" />
+                     Đặt lịch phỏng vấn
+                   </button>
+                 </div>
+
+                {interviewError && (
+                  <div role="alert" className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-400">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{interviewError}</span>
+                  </div>
+                )}
+
+                <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
+                  <div className="mb-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Lịch đã đặt
+                  </div>
+                  {interviewsLoading ? (
+                    <p className="text-xs text-slate-400">Đang tải lịch phỏng vấn…</p>
+                  ) : interviews.length === 0 ? (
+                    <p className="text-xs text-slate-400">Ứng viên chưa có lịch phỏng vấn.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {interviews.map((interview) => (
+                        <li key={interview.id} className="rounded-xl bg-slate-50 p-3 text-xs dark:bg-slate-900/60">
+                          <div className="flex items-center justify-between gap-3">
+                            <strong className="text-[var(--text-primary)]">
+                              {formatInterviewDateTime(interview.scheduledAt)}
+                            </strong>
+                            <span className="rounded-full bg-[var(--brand-accent)] px-2 py-0.5 font-medium text-[var(--brand-secondary)]">
+                              {interview.status === 'scheduled' ? 'Đã lên lịch' : interview.status}
+                            </span>
+                          </div>
+                           <p className="mt-1 text-slate-500 dark:text-slate-400">
+                            {interview.durationMinutes} phút · {interview.mode === 'online' ? 'Trực tuyến' : 'Trực tiếp'}
+                          </p>
+                           <p className="mt-1 break-all text-slate-500 dark:text-slate-400">
+                             {interview.mode === 'online' ? interview.meetingLink : interview.location}
+                           </p>
+                           {interview.notes && <p className="mt-1 text-slate-500 dark:text-slate-400">Ghi chú: {interview.notes}</p>}
+                           {interview.status === 'scheduled' && (
+                             <div className="mt-3 flex justify-end gap-2">
+                               <button type="button" onClick={() => openInterviewModal(interview)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 font-semibold text-slate-600 hover:border-[var(--brand-secondary)] hover:text-[var(--brand-secondary)] dark:border-slate-700 dark:text-slate-300">Sửa</button>
+                               <button type="button" onClick={() => handleCancelInterview(interview)} disabled={scheduling} className="rounded-lg border border-rose-200 px-2.5 py-1.5 font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-800 dark:text-rose-400">Hủy lịch</button>
+                             </div>
+                           )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </section>
+
               {/* Khu vực Cập nhật Trạng thái */}
               <form id="drawer-form" onSubmit={handleSaveStatus} className="space-y-4 pt-2">
                 <div className="space-y-1.5">
@@ -548,6 +793,107 @@ export const CandidatesPage = () => {
           </>
         )}
       </aside>
+
+       {isInterviewModalOpen && selectedCandidate && (
+         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/55 p-4" role="dialog" aria-modal="true" aria-labelledby="interview-modal-title">
+           <div className="flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-2xl">
+             <div className="flex items-start justify-between border-b border-[var(--border-subtle)] px-5 py-4">
+               <div>
+                 <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--brand-secondary)]">Phỏng vấn ứng viên</p>
+                 <h2 id="interview-modal-title" className="mt-1 text-lg font-bold text-[var(--text-primary)]">
+                   {editingInterview ? 'Chỉnh sửa lịch phỏng vấn' : 'Đặt lịch phỏng vấn'}
+                 </h2>
+               </div>
+               <button type="button" onClick={closeInterviewModal} disabled={scheduling} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50" aria-label="Đóng modal">
+                 <X className="h-5 w-5" />
+               </button>
+             </div>
+
+             <form onSubmit={handleScheduleInterview} className="space-y-4 overflow-y-auto p-5">
+               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                 <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 py-2.5">
+                   <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Ứng viên</p>
+                   <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{selectedCandidate.name}</p>
+                 </div>
+                 <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 py-2.5">
+                   <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Vị trí ứng tuyển</p>
+                   <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{selectedCandidate.position}</p>
+                 </div>
+               </div>
+
+               {interviewError && (
+                 <div role="alert" className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-700">
+                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                   <span>{interviewError}</span>
+                 </div>
+               )}
+
+               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                 <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                   <span>Ngày phỏng vấn *</span>
+                   <input type="date" value={interviewForm.date} onChange={(event) => updateInterviewForm('date', event.target.value)} className={`h-11 w-full rounded-xl border bg-[var(--bg-input)] px-3 text-sm text-[var(--text-primary)] focus:border-[var(--border-focus)] focus:outline-none ${interviewErrors.date ? 'border-rose-400' : 'border-[var(--border-subtle)]'}`} />
+                   {interviewErrors.date && <p className="text-xs font-medium text-rose-600">{interviewErrors.date}</p>}
+                 </label>
+                 <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                   <span>Giờ phỏng vấn *</span>
+                   <input type="time" value={interviewForm.time} onChange={(event) => updateInterviewForm('time', event.target.value)} className={`h-11 w-full rounded-xl border bg-[var(--bg-input)] px-3 text-sm text-[var(--text-primary)] focus:border-[var(--border-focus)] focus:outline-none ${interviewErrors.time ? 'border-rose-400' : 'border-[var(--border-subtle)]'}`} />
+                   {interviewErrors.time && <p className="text-xs font-medium text-rose-600">{interviewErrors.time}</p>}
+                 </label>
+               </div>
+
+               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                 <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                   <span>Thời lượng *</span>
+                   <select value={interviewForm.durationMinutes} onChange={(event) => updateInterviewForm('durationMinutes', event.target.value)} className={`h-11 w-full rounded-xl border bg-[var(--bg-input)] px-3 text-sm text-[var(--text-primary)] focus:border-[var(--border-focus)] focus:outline-none ${interviewErrors.durationMinutes ? 'border-rose-400' : 'border-[var(--border-subtle)]'}`}>
+                     {[30, 45, 60, 90].map((duration) => <option key={duration} value={duration}>{duration} phút</option>)}
+                   </select>
+                   {interviewErrors.durationMinutes && <p className="text-xs font-medium text-rose-600">{interviewErrors.durationMinutes}</p>}
+                 </label>
+                 <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                   <span>Hình thức *</span>
+                   <select value={interviewForm.mode} onChange={(event) => updateInterviewForm('mode', event.target.value)} className="h-11 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 text-sm text-[var(--text-primary)] focus:border-[var(--border-focus)] focus:outline-none">
+                     <option value="online">Online</option>
+                     <option value="offline">Offline</option>
+                   </select>
+                 </label>
+               </div>
+
+               {interviewForm.mode === 'online' ? (
+                 <label className="block space-y-1.5 text-xs font-semibold text-slate-600">
+                   <span>Link cuộc họp *</span>
+                   <div className="relative">
+                     <Video className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+                     <input type="url" value={interviewForm.meetingLink} onChange={(event) => updateInterviewForm('meetingLink', event.target.value)} placeholder="https://meet.google.com/..." className={`h-11 w-full rounded-xl border bg-[var(--bg-input)] pl-10 pr-3 text-sm text-[var(--text-primary)] focus:border-[var(--border-focus)] focus:outline-none ${interviewErrors.meetingLink ? 'border-rose-400' : 'border-[var(--border-subtle)]'}`} />
+                   </div>
+                   {interviewErrors.meetingLink && <p className="text-xs font-medium text-rose-600">{interviewErrors.meetingLink}</p>}
+                 </label>
+               ) : (
+                 <label className="block space-y-1.5 text-xs font-semibold text-slate-600">
+                   <span>Địa điểm *</span>
+                   <div className="relative">
+                     <MapPin className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+                     <input value={interviewForm.location} onChange={(event) => updateInterviewForm('location', event.target.value)} placeholder="Địa chỉ phỏng vấn" className={`h-11 w-full rounded-xl border bg-[var(--bg-input)] pl-10 pr-3 text-sm text-[var(--text-primary)] focus:border-[var(--border-focus)] focus:outline-none ${interviewErrors.location ? 'border-rose-400' : 'border-[var(--border-subtle)]'}`} />
+                   </div>
+                   {interviewErrors.location && <p className="text-xs font-medium text-rose-600">{interviewErrors.location}</p>}
+                 </label>
+               )}
+
+               <label className="block space-y-1.5 text-xs font-semibold text-slate-600">
+                 <span>Ghi chú</span>
+                 <textarea rows={3} value={interviewForm.notes} onChange={(event) => updateInterviewForm('notes', event.target.value)} placeholder="Nội dung cần chuẩn bị, người tham gia..." className="w-full resize-y rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-input)] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--border-focus)] focus:outline-none" />
+               </label>
+
+               <div className="flex flex-col-reverse gap-3 border-t border-[var(--border-subtle)] pt-4 sm:flex-row sm:justify-end">
+                 <button type="button" onClick={closeInterviewModal} disabled={scheduling} className="rounded-xl border border-[var(--border-subtle)] px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Hủy</button>
+                 <button type="submit" disabled={scheduling} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-secondary)] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
+                   <Calendar className="h-4 w-4" />
+                   {scheduling ? 'Đang lưu…' : editingInterview ? 'Lưu thay đổi' : 'Xác nhận đặt lịch'}
+                 </button>
+               </div>
+             </form>
+           </div>
+         </div>
+       )}
     </div>
   );
 };

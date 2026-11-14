@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="vi">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <title>{{PAGE_TITLE}}</title>
+  <style type="text/css">
+    @page { size: A4; margin: 17mm 18mm 18mm 18mm; }
+    body { font-family: 'DejaVu Sans', sans-serif; font-size: 9.5pt; line-height: 1.52; color: #243247; margin: 0; }
+    .cv-header { padding-bottom: 13px; margin-bottom: 18px; border-bottom: 2px solid #387e86; }
+    .cv-name { font-size: 23pt; line-height: 1.15; color: #18384d; margin: 0 0 7px 0; font-weight: 700; }
+    .cv-contact { color: #526375; font-size: 8.6pt; margin: 0 0 4px 0; }
+    .cv-links { color: #28747e; font-size: 8.5pt; margin: 0; word-wrap: break-word; }
+    .cv-section { margin-bottom: 16px; }
+    .cv-section-title { color: #28747e; font-size: 10pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; margin: 0 0 8px 0; padding-bottom: 4px; border-bottom: 1px solid #b7d6d8; }
+    .cv-summary, .cv-entry-desc { margin: 0; color: #344559; }
+    .cv-entry { margin-bottom: 11px; page-break-inside: avoid; }
+    .cv-entry-header { width: 100%; border-collapse: collapse; }
+    .cv-entry-title { font-size: 9.5pt; font-weight: 700; color: #18384d; }
+    .cv-entry-dates { text-align: right; white-space: nowrap; font-size: 8pt; color: #68788a; }
+    .cv-entry-subtitle { color: #526375; font-size: 8.8pt; font-style: italic; margin-top: 2px; }
+    .cv-entry-desc { margin-top: 4px; }
+    .cv-skills-list { margin: 0; }
+    .cv-skill-item { display: inline-block; padding: 3px 8px; margin: 0 5px 6px 0; border: 1px solid #bddcdd; color: #245d66; background: #edf7f6; font-size: 8.5pt; }
+  </style>
+</head>
+<body>
+  <div class="cv-header">
+    <h1 class="cv-name">{{FULL_NAME}}</h1>
+    <p class="cv-contact">{{CONTACT_LINE}}</p>
+    {{LINKS_BLOCK}}
+  </div>
+  {{SUMMARY_SECTION}}
+  {{EDUCATION_SECTION}}
+  {{EXPERIENCE_SECTION}}
+  {{SKILLS_SECTION}}
+</body>
+</html>

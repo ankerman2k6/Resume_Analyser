@@ -1,55 +1,56 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   validateResumeFile,
   uploadResumeApi,
-  getResumesApi
-} from '../../services/resumeService';
-import './index.css';
+  getResumesApi,
+} from "../../services/resumeService";
+import "./index.css";
+import TemplateCvBuilder from "./TemplateCvBuilder";
 
 // Dữ liệu mẫu phủ ca biên (tên dài cắt giữa giữ đuôi .pdf, tệp đã tải xong, tệp vượt quá 5MB bị từ chối)
 const INITIAL_SAMPLE_ITEMS = [
   {
-    id: 'sample-1',
+    id: "sample-1",
     originalFileName:
-      'Nguyen-Thanh-An-Senior-Frontend-Developer-Resume-2026-Cap-Nhat.pdf',
+      "Nguyen-Thanh-An-Senior-Frontend-Developer-Resume-2026-Cap-Nhat.pdf",
     fileSize: 1542031,
-    status: 'uploaded',
+    status: "uploaded",
     progress: 100,
-    uploadedAtLabel: '11/10',
+    uploadedAtLabel: "11/10",
     errorMessage: null,
-    fileObject: null
+    fileObject: null,
   },
   {
-    id: 'sample-2',
-    originalFileName: 'CV_Ung_Tuyen_Java_Spring_Boot_Developer.pdf',
+    id: "sample-2",
+    originalFileName: "CV_Ung_Tuyen_Java_Spring_Boot_Developer.pdf",
     fileSize: 2411724,
-    status: 'uploaded',
+    status: "uploaded",
     progress: 100,
-    uploadedAtLabel: '10/10',
+    uploadedAtLabel: "10/10",
     errorMessage: null,
-    fileObject: null
+    fileObject: null,
   },
   {
-    id: 'sample-3',
-    originalFileName: 'Ho_So_Nang_Luc_Portfolio_Full_Resolution.pdf',
+    id: "sample-3",
+    originalFileName: "Ho_So_Nang_Luc_Portfolio_Full_Resolution.pdf",
     fileSize: 7130316,
-    status: 'rejected',
+    status: "rejected",
     progress: 0,
     uploadedAtLabel: null,
-    errorMessage: 'Quá 5 MB (tệp nặng 6,8 MB)',
-    fileObject: null
-  }
+    errorMessage: "Quá 5 MB (tệp nặng 6,8 MB)",
+    fileObject: null,
+  },
 ];
 
 /**
  * Định dạng dung lượng tệp sang MB/KB theo chuẩn tiếng Việt (dấu phẩy thập phân)
  */
 const formatFileSize = (bytes) => {
-  if (!bytes || bytes <= 0) return '0 KB';
+  if (!bytes || bytes <= 0) return "0 KB";
   const mb = bytes / (1024 * 1024);
   if (mb >= 0.1) {
-    return `${mb.toFixed(1).replace('.', ',')} MB`;
+    return `${mb.toFixed(1).replace(".", ",")} MB`;
   }
   const kb = Math.max(1, Math.round(bytes / 1024));
   return `${kb} KB`;
@@ -59,29 +60,29 @@ const formatFileSize = (bytes) => {
  * Định dạng ngày tải lên ngắn gọn (bỏ năm nếu trong năm hiện tại)
  */
 const formatUploadedDate = (isoString) => {
-  if (!isoString) return 'Hôm nay';
+  if (!isoString) return "Hôm nay";
   const date = new Date(isoString);
-  if (Number.isNaN(date.getTime())) return 'Hôm nay';
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
+  if (Number.isNaN(date.getTime())) return "Hôm nay";
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
   return `${day}/${month}`;
 };
 
 /**
  * Cắt tên tệp ở GIỮA, giữ lại ~8 ký tự cuối của phần tên + đuôi .pdf (luật T14)
  */
-const splitFileNameMiddle = (fileName = '') => {
+const splitFileNameMiddle = (fileName = "") => {
   const threshold = 36;
   if (fileName.length <= threshold) {
     return {
       isTruncated: false,
       head: fileName,
-      tail: ''
+      tail: "",
     };
   }
 
-  const dotIndex = fileName.lastIndexOf('.');
-  const ext = dotIndex !== -1 ? fileName.slice(dotIndex) : '';
+  const dotIndex = fileName.lastIndexOf(".");
+  const ext = dotIndex !== -1 ? fileName.slice(dotIndex) : "";
   const baseName = dotIndex !== -1 ? fileName.slice(0, dotIndex) : fileName;
 
   const tailChars = Math.min(8, Math.max(4, baseName.length - 10));
@@ -91,7 +92,7 @@ const splitFileNameMiddle = (fileName = '') => {
   return {
     isTruncated: true,
     head,
-    tail
+    tail,
   };
 };
 
@@ -107,23 +108,27 @@ const CVUploadPage = () => {
   // Tự động đồng bộ danh sách CV thật từ Backend nếu đã đăng nhập
   useEffect(() => {
     let isMounted = true;
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) return undefined;
 
     getResumesApi()
       .then((serverList) => {
-        if (!isMounted || !Array.isArray(serverList) || serverList.length === 0) {
+        if (
+          !isMounted ||
+          !Array.isArray(serverList) ||
+          serverList.length === 0
+        ) {
           return;
         }
         const mapped = serverList.map((item) => ({
           id: item.id,
-          originalFileName: item.originalFileName || 'CV_Ung_Vien.pdf',
+          originalFileName: item.originalFileName || "CV_Ung_Vien.pdf",
           fileSize: item.fileSize || 0,
-          status: 'uploaded',
+          status: "uploaded",
           progress: 100,
           uploadedAtLabel: formatUploadedDate(item.uploadedAt),
           errorMessage: null,
-          fileObject: null
+          fileObject: null,
         }));
         setFileItems(mapped);
       })
@@ -148,18 +153,18 @@ const CVUploadPage = () => {
     setFileItems((prev) =>
       prev.map((it) =>
         it.id === itemId
-          ? { ...it, status: 'uploading', progress: 28, errorMessage: null }
-          : it
-      )
+          ? { ...it, status: "uploading", progress: 28, errorMessage: null }
+          : it,
+      ),
     );
 
     const progressTimer = setInterval(() => {
       setFileItems((prev) =>
         prev.map((it) =>
-          it.id === itemId && it.status === 'uploading'
+          it.id === itemId && it.status === "uploading"
             ? { ...it, progress: Math.min(88, it.progress + 15) }
-            : it
-        )
+            : it,
+        ),
       );
     }, 180);
 
@@ -171,35 +176,39 @@ const CVUploadPage = () => {
         prev.map((it) =>
           it.id === itemId
             ? {
-              ...it,
-              id: created.id || created._id || itemId,
-              originalFileName: created.originalFileName || created.source?.fileName || file.name,
-              fileSize: created.fileSize || file.size,
-              status: 'uploaded',
-              progress: 100,
-              uploadedAtLabel: formatUploadedDate(created.uploadedAt || created.createdAt),
-              errorMessage: null
-            }
-            : it
-        )
+                ...it,
+                id: created.id || created._id || itemId,
+                originalFileName:
+                  created.originalFileName ||
+                  created.source?.fileName ||
+                  file.name,
+                fileSize: created.fileSize || file.size,
+                status: "uploaded",
+                progress: 100,
+                uploadedAtLabel: formatUploadedDate(
+                  created.uploadedAt || created.createdAt,
+                ),
+                errorMessage: null,
+              }
+            : it,
+        ),
       );
 
-      showToast('Đã tải lên 1 bản CV');
+      showToast("Đã tải lên 1 bản CV");
     } catch (err) {
       clearInterval(progressTimer);
       setFileItems((prev) =>
         prev.map((it) =>
           it.id === itemId
             ? {
-              ...it,
-              status: 'error',
-              progress: 0,
-              isAuthError: err.status === 401,
-              errorMessage:
-                err.message || 'Không tải được tệp lên máy chủ'
-            }
-            : it
-        )
+                ...it,
+                status: "error",
+                progress: 0,
+                isAuthError: err.status === 401,
+                errorMessage: err.message || "Không tải được tệp lên máy chủ",
+              }
+            : it,
+        ),
       );
     }
   };
@@ -218,14 +227,14 @@ const CVUploadPage = () => {
           ...prev,
           {
             id: tempId,
-            originalFileName: file.name || 'Tep_khong_hop_le',
+            originalFileName: file.name || "Tep_khong_hop_le",
             fileSize: file.size || 0,
-            status: 'rejected',
+            status: "rejected",
             progress: 0,
             uploadedAtLabel: null,
             errorMessage: validation.error,
-            fileObject: null
-          }
+            fileObject: null,
+          },
         ]);
       } else {
         setFileItems((prev) => [
@@ -234,19 +243,19 @@ const CVUploadPage = () => {
             id: tempId,
             originalFileName: file.name,
             fileSize: file.size,
-            status: 'uploading',
+            status: "uploading",
             progress: 15,
             uploadedAtLabel: null,
             errorMessage: null,
-            fileObject: file
-          }
+            fileObject: file,
+          },
         ]);
         startUploadItem(tempId, file);
       }
     }
 
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -290,7 +299,7 @@ const CVUploadPage = () => {
 
   const handleRetryItem = (item) => {
     if (item.isAuthError) {
-      navigate('/login');
+      navigate("/login");
       return;
     }
     if (item.fileObject) {
@@ -303,9 +312,9 @@ const CVUploadPage = () => {
       <div className="cv-upload-container">
         {/* Đầu trang: Đúng một thẻ h1 */}
         <header className="cv-page-header">
-          <h1 className="cv-page-title">Tải lên &amp; Quản lý CV</h1>
+          <h1 className="cv-page-title">Tải lên &amp; Tạo CV</h1>
           <p className="cv-page-subtitle">
-            Tải hồ sơ định dạng PDF để hệ thống kiểm định an toàn và phân tích mức độ phù hợp với công việc.
+            Tải PDF có sẵn hoặc chọn mẫu để tạo một bản CV mới.
           </p>
         </header>
 
@@ -314,13 +323,13 @@ const CVUploadPage = () => {
           <label
             ref={dropzoneLabelRef}
             tabIndex={0}
-            className={`cv-dropzone ${isDragging ? 'is-dragging' : ''}`}
+            className={`cv-dropzone ${isDragging ? "is-dragging" : ""}`}
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 fileInputRef.current?.click();
               }
@@ -336,7 +345,9 @@ const CVUploadPage = () => {
             />
 
             <p className="cv-dropzone-title">
-              {isDragging ? 'Thả tệp để tải lên' : 'Kéo thả tài liệu CV vào đây'}
+              {isDragging
+                ? "Thả tệp để tải lên"
+                : "Kéo thả tài liệu CV vào đây"}
             </p>
             <p className="cv-dropzone-hint">
               Định dạng PDF (.pdf). Tối đa 5 MB mỗi tệp
@@ -364,6 +375,8 @@ const CVUploadPage = () => {
             </span>
           </label>
 
+          <TemplateCvBuilder />
+
           {/* Danh sách tệp CV */}
           {fileItems.length === 0 ? (
             <p className="cv-empty-text">Chưa có bản CV nào được tải lên</p>
@@ -371,7 +384,7 @@ const CVUploadPage = () => {
             <ul className="cv-file-list" aria-label="Danh sách tệp CV">
               {fileItems.map((item) => {
                 const { isTruncated, head, tail } = splitFileNameMiddle(
-                  item.originalFileName
+                  item.originalFileName,
                 );
 
                 return (
@@ -400,7 +413,9 @@ const CVUploadPage = () => {
                       <div className="cv-file-top">
                         <p
                           className="cv-file-name"
-                          title={isTruncated ? item.originalFileName : undefined}
+                          title={
+                            isTruncated ? item.originalFileName : undefined
+                          }
                         >
                           <span className="cv-file-name-head">{head}</span>
                           {tail && (
@@ -408,14 +423,14 @@ const CVUploadPage = () => {
                           )}
                         </p>
 
-                        {item.status === 'uploading' && (
+                        {item.status === "uploading" && (
                           <p className="cv-file-percent">{item.progress}%</p>
                         )}
                       </div>
 
                       {/* Tầng dưới cao cố định min-h-5 (20px): chứa THANH hoặc MỘT DÒNG CHỮ */}
                       <div className="cv-file-bottom">
-                        {item.status === 'uploading' && (
+                        {item.status === "uploading" && (
                           <div
                             role="progressbar"
                             aria-valuenow={item.progress}
@@ -431,13 +446,13 @@ const CVUploadPage = () => {
                           </div>
                         )}
 
-                        {item.status === 'waiting' && (
+                        {item.status === "waiting" && (
                           <p className="cv-file-meta">
                             Đang chờ · {formatFileSize(item.fileSize)}
                           </p>
                         )}
 
-                        {item.status === 'uploaded' && (
+                        {item.status === "uploaded" && (
                           <p className="cv-file-meta">
                             <svg
                               className="cv-status-check"
@@ -458,29 +473,29 @@ const CVUploadPage = () => {
                               Đã tải xong · {formatFileSize(item.fileSize)}
                               {item.uploadedAtLabel
                                 ? ` · ${item.uploadedAtLabel}`
-                                : ''}
+                                : ""}
                             </span>
                           </p>
                         )}
 
-                        {item.status === 'rejected' && (
+                        {item.status === "rejected" && (
                           <p className="cv-file-error">{item.errorMessage}</p>
                         )}
 
-                        {item.status === 'error' && (
+                        {item.status === "error" && (
                           <p className="cv-file-error-row">
                             <span className="cv-file-error">
                               {item.errorMessage}
                             </span>
                             <span className="cv-file-dot" aria-hidden="true">
-                              {' · '}
+                              {" · "}
                             </span>
                             <button
                               type="button"
                               className="cv-retry-link"
                               onClick={() => handleRetryItem(item)}
                             >
-                              {item.isAuthError ? 'Đăng nhập' : 'Thử lại'}
+                              {item.isAuthError ? "Đăng nhập" : "Thử lại"}
                             </button>
                           </p>
                         )}
@@ -489,13 +504,13 @@ const CVUploadPage = () => {
 
                     {/* Cột phải rộng cố định 32px (w-8) ở mọi dòng để giữ thẳng cột */}
                     <div className="cv-file-action">
-                      {item.status !== 'uploaded' && (
+                      {item.status !== "uploaded" && (
                         <button
                           type="button"
                           className="cv-remove-btn"
                           onClick={() => handleRemoveItem(item.id)}
                           aria-label={
-                            item.status === 'uploading'
+                            item.status === "uploading"
                               ? `Huỷ tải ${item.originalFileName}`
                               : `Bỏ tệp ${item.originalFileName}`
                           }

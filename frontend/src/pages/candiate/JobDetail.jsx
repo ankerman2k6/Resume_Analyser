@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getCompanyDetailApi, getJobDetailApi } from '../../services/jobsService';
+import { applyToJobApi, getCandidateCvsApi } from '../../services/candidateService';
 import './JobDetail.css';
 
 const formatSalary = (salary) => {
@@ -55,6 +56,21 @@ const JobDetail = () => {
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [applyOpen, setApplyOpen] = useState(false);
+  const [cvPage, setCvPage] = useState(0);
+  const [cvList, setCvList] = useState([]);
+  const [cvTotalPages, setCvTotalPages] = useState(0);
+  const [cvLoading, setCvLoading] = useState(false);
+  const [cvError, setCvError] = useState('');
+  const [selectedCvId, setSelectedCvId] = useState('');
+  const [applyError, setApplyError] = useState('');
+  const [applying, setApplying] = useState(false);
+  const [applied, setApplied] = useState(false);
+  const [cvReload, setCvReload] = useState(0);
+  const applyDialogRef = useRef(null);
+  const applyTriggerRef = useRef(null);
+  const applyingRef = useRef(false);
+  applyingRef.current = applying;
 
   useEffect(() => {
     let isCurrent = true;
@@ -88,6 +104,81 @@ const JobDetail = () => {
     fetchJobDetail();
     return () => { isCurrent = false; };
   }, [jobId]);
+
+  useEffect(() => {
+    if (!applyOpen) return undefined;
+    const controller = new AbortController();
+    setCvLoading(true);
+    setCvError('');
+    getCandidateCvsApi({ page: cvPage, size: 10, signal: controller.signal })
+      .then((data) => {
+        setCvList(data.content || []);
+        setCvTotalPages(data.totalPages || 0);
+      })
+      .catch((requestError) => {
+        if (!controller.signal.aborted) setCvError(requestError.message || 'Không thể tải CV.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCvLoading(false);
+      });
+    return () => controller.abort();
+  }, [applyOpen, cvPage, cvReload]);
+
+  useEffect(() => {
+    if (!applyOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape' && !applyingRef.current) setApplyOpen(false);
+      if (event.key === 'Tab') {
+        const controls = [...applyDialogRef.current.querySelectorAll('button:not(:disabled), a[href], input:not(:disabled)')];
+        if (!controls.length) return;
+        if (event.shiftKey && document.activeElement === controls[0]) {
+          event.preventDefault();
+          controls.at(-1).focus();
+        } else if (!event.shiftKey && document.activeElement === controls.at(-1)) {
+          event.preventDefault();
+          controls[0].focus();
+        }
+      }
+    };
+    const priorOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = priorOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+      applyTriggerRef.current?.focus();
+    };
+  }, [applyOpen]);
+
+  const openApply = (event) => {
+    applyTriggerRef.current = event.currentTarget;
+    setCvPage(0);
+    setCvList([]);
+    setSelectedCvId('');
+    setApplyError('');
+    setApplyOpen(true);
+  };
+
+  const submitApplication = async () => {
+    if (!selectedCvId || applying) return;
+    setApplying(true);
+    setApplyError('');
+    try {
+      await applyToJobApi(jobId, selectedCvId);
+      setApplied(true);
+      setApplyOpen(false);
+    } catch (requestError) {
+      setApplyError(requestError.message || 'Không thể gửi đơn ứng tuyển.');
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const changeCvPage = (nextPage) => {
+    setSelectedCvId('');
+    setApplyError('');
+    setCvPage(nextPage);
+  };
 
   const requirements = job?.requirements || {};
   const requiredSkills = useMemo(() => getSkillList(requirements, 'requiredSkills'), [requirements]);
@@ -187,9 +278,10 @@ const JobDetail = () => {
 
           <aside className="job-detail-side-column">
             <section className="job-detail-panel job-detail-summary-panel">
-              <Link to="/cv" className="job-detail-button job-detail-button--primary job-detail-apply-button">
-                Ứng tuyển ngay
-              </Link>
+              <button type="button" className="job-detail-button job-detail-button--primary job-detail-apply-button" onClick={openApply} disabled={applied}>
+                {applied ? 'Đã ứng tuyển' : 'Ứng tuyển ngay'}
+              </button>
+              {applied && <p className="job-detail-apply-success" role="status">Đã gửi hồ sơ ứng tuyển thành công. <Link to="/candidate/profile?tab=applications">Xem đơn ứng tuyển</Link></p>}
               <dl className="job-detail-summary-list">
                 <div><dt>Mức lương</dt><dd>{formatSalary(job.salary)}</dd></div>
                 <div><dt>Kinh nghiệm</dt><dd>{formatExperience(job.experience)}</dd></div>
@@ -210,7 +302,37 @@ const JobDetail = () => {
           </aside>
         </div>
       </div>
-      <div className="job-detail-mobile-apply"><Link to="/cv" className="job-detail-button job-detail-button--primary">Ứng tuyển ngay</Link></div>
+      <div className="job-detail-mobile-apply"><button type="button" className="job-detail-button job-detail-button--primary" onClick={openApply} disabled={applied}>{applied ? 'Đã ứng tuyển' : 'Ứng tuyển ngay'}</button></div>
+      {applyOpen && (
+        <div className="job-detail-apply-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget && !applying) setApplyOpen(false); }}>
+          <section ref={applyDialogRef} className="job-detail-apply-dialog" role="dialog" aria-modal="true" aria-labelledby="job-detail-apply-title">
+            <div className="job-detail-apply-header">
+              <div><h2 id="job-detail-apply-title">Chọn CV để ứng tuyển</h2><p>{job.title}</p></div>
+              <button type="button" className="job-detail-apply-close" aria-label="Đóng" onClick={() => setApplyOpen(false)} disabled={applying} autoFocus>×</button>
+            </div>
+            <div className="job-detail-apply-body">
+              {cvLoading && <p role="status">Đang tải CV của bạn...</p>}
+              {!cvLoading && cvError && <div className="job-detail-apply-message" role="alert"><p>{cvError}</p><button type="button" onClick={() => setCvReload((value) => value + 1)}>Thử lại</button></div>}
+              {!cvLoading && !cvError && cvList.length === 0 && <div className="job-detail-apply-message"><p>Bạn chưa có CV để ứng tuyển.</p><Link to="/cv">Tải lên hoặc tạo CV</Link></div>}
+              {!cvLoading && !cvError && cvList.length > 0 && (
+                <>
+                  <div className="job-detail-cv-list" role="radiogroup" aria-label="CV của tôi">
+                    {cvList.map((cv) => (
+                      <label key={cv._id} className={`job-detail-cv-option${selectedCvId === cv._id ? ' is-selected' : ''}${!cv.canViewFile ? ' is-unavailable' : ''}`}>
+                        <input type="radio" name="application-cv" value={cv._id} checked={selectedCvId === cv._id} onChange={() => { setSelectedCvId(cv._id); setApplyError(''); }} disabled={!cv.canViewFile || applying} />
+                        <span className="job-detail-cv-copy"><strong>{cv.title || cv.source?.fileName || 'CV chưa đặt tên'}</strong><small>{cv.source?.fileName || (cv.source?.type === 'template' ? 'CV tạo từ mẫu' : 'CV đã tải lên')} · {formatDate(cv.createdAt)}</small>{!cv.canViewFile && <small>Tệp PDF hiện không khả dụng</small>}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {cvTotalPages > 1 && <div className="job-detail-cv-pages"><button type="button" onClick={() => changeCvPage(cvPage - 1)} disabled={cvPage === 0 || cvLoading}>Trước</button><span>Trang {cvPage + 1}/{cvTotalPages}</span><button type="button" onClick={() => changeCvPage(cvPage + 1)} disabled={cvPage >= cvTotalPages - 1 || cvLoading}>Sau</button></div>}
+                </>
+              )}
+              {applyError && <p className="job-detail-apply-error" role="alert">{applyError}</p>}
+            </div>
+            <div className="job-detail-apply-footer"><button type="button" className="job-detail-button job-detail-button--secondary" onClick={() => setApplyOpen(false)} disabled={applying}>Hủy</button><button type="button" className="job-detail-button job-detail-button--primary" onClick={submitApplication} disabled={!selectedCvId || applying || cvLoading || Boolean(cvError)}>{applying ? 'Đang ứng tuyển...' : 'Ứng tuyển với CV đã chọn'}</button></div>
+          </section>
+        </div>
+      )}
     </main>
   );
 };

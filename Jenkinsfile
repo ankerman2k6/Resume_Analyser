@@ -1,5 +1,4 @@
 def version = "v0.${BUILD_NUMBER}"
-
 pipeline {
     agent any
 
@@ -8,7 +7,6 @@ pipeline {
         maven 'maven3'
         nodejs 'node20'
     }
-
     environment {
         DOCKERHUB_USERNAME = "antony1552006"
         FRONTEND_IMAGE = "${DOCKERHUB_USERNAME}/resume-frontend"
@@ -18,7 +16,6 @@ pipeline {
         GIT_REPO_URL = "https://github.com/ankerman2k6/Resume_Analyser.git"
         GIT_BRANCH = "frontend/candiate"
     }
-
     stages {
         stage("1. Check Code") {
             steps {
@@ -32,7 +29,6 @@ pipeline {
                 }
             }
         }
-
         stage("2. Test Code") {
             parallel {
                 stage("Test Frontend") {
@@ -56,7 +52,6 @@ pipeline {
                 }
             }
         }
-
         stage("3. SonarQube Analysis") {
             steps {
                 echo "=== BƯỚC 3: QUÉT MÃ NGUỒN BẰNG SONARQUBE ==="
@@ -140,13 +135,12 @@ pipeline {
             }
         }
     }
-
     post {
         success {
-            echo "🎉 Pipeline hoàn tất thành công! Đã qua kiểm tra SonarQube Quality Gate và Deploy với tag ${env.VERSION_COMMIT}"
+            echo " Pipeline hoàn tất thành công! Đã qua kiểm tra SonarQube Quality Gate và Deploy với tag ${env.VERSION_COMMIT}"
         }
         failure {
-            echo "❌ Pipeline thất bại! Vui lòng kiểm tra lại log chi tiết."
+            echo " Pipeline thất bại! Vui lòng kiểm tra lại log chi tiết."
         }
     }
 }

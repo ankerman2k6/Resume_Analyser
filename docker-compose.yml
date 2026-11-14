@@ -4,8 +4,6 @@
 # ==========================================================
 
 services:
-
-  # --- Database MongoDB (Đã đóng gói sẵn 100% dữ liệu cv_screening) ---
   mongodb:
     image: ${MONGO_IMAGE:-antony1552006/resume-mongodb}:${VERSION:-latest}
     container_name: resume-mongodb
@@ -17,7 +15,6 @@ services:
     networks:
       - resume-network
     restart: always
-
   # --- Backend (Spring Boot API) ---
   backend:
     image: ${BACKEND_IMAGE:-antony1552006/resume-backend}:${VERSION:-latest}
@@ -34,7 +31,6 @@ services:
     networks:
       - resume-network
     restart: always
-
   # --- Frontend (React + Nginx) ---
   frontend:
     image: ${FRONTEND_IMAGE:-antony1552006/resume-frontend}:${VERSION:-latest}
@@ -48,11 +44,9 @@ services:
     networks:
       - resume-network
     restart: always
-
 # Volume lưu trữ dữ liệu database
 volumes:
   mongo-data:
-
 # Network kết nối 3 container
 networks:
   resume-network:

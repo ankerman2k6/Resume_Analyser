@@ -40,6 +40,9 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import com.resumeanalyser.backend.controller.AuthController;
 import com.resumeanalyser.backend.model.User;
 import com.resumeanalyser.backend.repository.UserRepository;
+import com.resumeanalyser.backend.repository.CandidateProfileRepository;
+import com.resumeanalyser.backend.repository.CompanyRepository;
+import com.resumeanalyser.backend.repository.RecruiterProfileRepository;
 import com.resumeanalyser.backend.service.AuthService;
 import com.resumeanalyser.backend.exception.GlobalExceptionHandler;
 import jakarta.servlet.DispatcherType;
@@ -58,6 +61,21 @@ class JwtAuthenticationTests {
         @Bean
         UserRepository userRepository() {
             return mock(UserRepository.class);
+        }
+
+        @Bean
+        CandidateProfileRepository candidateProfileRepository() {
+            return mock(CandidateProfileRepository.class);
+        }
+
+        @Bean
+        RecruiterProfileRepository recruiterProfileRepository() {
+            return mock(RecruiterProfileRepository.class);
+        }
+
+        @Bean
+        CompanyRepository companyRepository() {
+            return mock(CompanyRepository.class);
         }
 
         @Bean
@@ -210,13 +228,13 @@ class JwtAuthenticationTests {
     void registerWithoutTokenHashesPasswordAndReturnsCreated() throws Exception {
         when(repository.save(org.mockito.ArgumentMatchers.any(User.class))).thenAnswer(invocation -> {
             User saved = invocation.getArgument(0);
-            saved.setId("new-user-id");
+            saved.setId("507f1f77bcf86cd799439011");
             assertTrue(passwordEncoder.matches("test-password", saved.getPasswordHash()));
             assertEquals("candidate", saved.getRole());
             return saved;
         });
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"new@example.com\",\"password\":\"test-password\"}"))
+                        .content("{\"email\":\"new@example.com\",\"password\":\"test-password\",\"fullName\":\"Nguyễn Văn A\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.role").value("candidate"))
                 .andExpect(jsonPath("$.emailVerified").value(false))
@@ -227,12 +245,12 @@ class JwtAuthenticationTests {
     void clientCannotRegisterAsAdmin() throws Exception {
         when(repository.save(org.mockito.ArgumentMatchers.any(User.class))).thenAnswer(invocation -> {
             User saved = invocation.getArgument(0);
-            saved.setId("new-user-id");
+            saved.setId("507f1f77bcf86cd799439012");
             assertEquals("candidate", saved.getRole());
             return saved;
         });
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"new@example.com\",\"password\":\"test-password\",\"role\":\"admin\"}"))
+                        .content("{\"email\":\"new@example.com\",\"password\":\"test-password\",\"role\":\"admin\",\"fullName\":\"Nguyễn Văn A\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.role").value("candidate"));
     }
@@ -265,7 +283,7 @@ class JwtAuthenticationTests {
     void duplicateEmailReturns409AndValidationReturns400() throws Exception {
         when(repository.existsByEmail("user@example.com")).thenReturn(true);
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"user@example.com\",\"password\":\"test-password\"}"))
+                        .content("{\"email\":\"user@example.com\",\"password\":\"test-password\",\"fullName\":\"Nguyễn Văn A\"}"))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.status").value(409));
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"invalid\",\"password\":\"123\"}"))
@@ -319,11 +337,11 @@ class JwtAuthenticationTests {
         when(repository.save(org.mockito.ArgumentMatchers.any(User.class))).thenAnswer(invocation -> {
             User saved = invocation.getArgument(0);
             assertEquals("new@example.com", saved.getEmail());
-            saved.setId("normalized-user-id");
+            saved.setId("507f1f77bcf86cd799439013");
             return saved;
         });
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"  NEW@Example.COM  \",\"password\":\"test-password\"}"))
+                        .content("{\"email\":\"  NEW@Example.COM  \",\"password\":\"test-password\",\"fullName\":\"Nguyễn Văn A\"}"))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.email").value("new@example.com"));
         verify(repository).existsByEmail("new@example.com");
         user.setPasswordHash(passwordEncoder.encode("test-password"));
@@ -339,7 +357,7 @@ class JwtAuthenticationTests {
         when(repository.save(org.mockito.ArgumentMatchers.any(User.class)))
                 .thenThrow(new org.springframework.dao.DuplicateKeyException("internal database details"));
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"new@example.com\",\"password\":\"test-password\"}"))
+                        .content("{\"email\":\"new@example.com\",\"password\":\"test-password\",\"fullName\":\"Nguyễn Văn A\"}"))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.message").value("Email đã tồn tại"));
     }
 

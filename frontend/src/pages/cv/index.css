@@ -10,8 +10,20 @@
 }
 
 .cv-upload-container {
-  max-width: 640px;
+  max-width: 980px;
   margin: 0 auto;
+}
+
+.cv-page-header {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cv-dropzone, .cv-file-list, .cv-empty-text {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .cv-page-header {

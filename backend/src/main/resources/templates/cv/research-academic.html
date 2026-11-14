@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="vi">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <title>{{PAGE_TITLE}}</title>
+  <style type="text/css">
+    @page { size: A4; margin: 20mm 21mm 20mm 21mm; }
+    body { font-family: 'DejaVu Sans', sans-serif; color: #282b36; font-size: 9.5pt; line-height: 1.58; margin: 0; }
+    .cv-header { text-align: center; border-top: 3px double #413b62; border-bottom: 1px solid #aaa5bb; padding: 15px 0 14px 0; margin-bottom: 20px; }
+    .cv-name { color: #302b4b; font-size: 21pt; line-height: 1.2; margin: 0 0 8px 0; font-weight: 700; }
+    .cv-contact { color: #5d5b6a; font-size: 8.5pt; margin: 0 0 4px 0; }
+    .cv-links { color: #62577e; font-size: 8.4pt; margin: 0; word-wrap: break-word; }
+    .cv-section { margin-bottom: 19px; }
+    .cv-section-title { color: #413b62; font-size: 10pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 9px 0; padding: 0 0 5px 0; border-bottom: 1px solid #8f8aa4; }
+    .cv-summary, .cv-entry-desc { color: #3c3d48; margin: 0; }
+    .cv-entry { margin-bottom: 13px; page-break-inside: avoid; }
+    .cv-entry-header { width: 100%; border-collapse: collapse; }
+    .cv-entry-title { font-weight: 700; color: #302b4b; font-size: 9.4pt; }
+    .cv-entry-dates { color: #777280; font-size: 8pt; text-align: right; white-space: nowrap; }
+    .cv-entry-subtitle { color: #62577e; font-size: 8.8pt; font-style: italic; margin-top: 2px; }
+    .cv-entry-desc { margin-top: 5px; }
+    .cv-skills-list { margin: 0; }
+    .cv-skill-item { display: inline-block; color: #413b62; font-size: 8.7pt; padding: 2px 8px; margin: 0 5px 5px 0; border: 1px solid #aaa5bb; }
+  </style>
+</head>
+<body>
+  <div class="cv-header">
+    <h1 class="cv-name">{{FULL_NAME}}</h1>
+    <p class="cv-contact">{{CONTACT_LINE}}</p>
+    {{LINKS_BLOCK}}
+  </div>
+  {{SUMMARY_SECTION}}
+  {{EDUCATION_SECTION}}
+  {{EXPERIENCE_SECTION}}
+  {{SKILLS_SECTION}}
+</body>
+</html>

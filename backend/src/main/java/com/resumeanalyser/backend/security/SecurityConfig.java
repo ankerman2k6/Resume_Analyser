@@ -1,5 +1,7 @@
 package com.resumeanalyser.backend.security;
 
+import java.util.UUID;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Configuration;
@@ -53,7 +55,19 @@ public class SecurityConfig {
                             response.setStatus(401);
                             response.setContentType("application/json");
                             response.setCharacterEncoding("UTF-8");
-                            response.getWriter().write("{\"status\":401,\"message\":\"Unauthorized\"}");
+                            String requestId = UUID.randomUUID().toString();
+                            response.getWriter().write(
+                                    "{\"code\":\"UNAUTHENTICATED\",\"message\":\"Unauthorized\",\"errors\":{},\"requestId\":\""
+                                            + requestId + "\",\"status\":401}");
+                        })
+                        .accessDeniedHandler((request, response, exception) -> {
+                            response.setStatus(403);
+                            response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
+                            String requestId = UUID.randomUUID().toString();
+                            response.getWriter().write(
+                                    "{\"code\":\"FORBIDDEN\",\"message\":\"Forbidden\",\"errors\":{},\"requestId\":\""
+                                            + requestId + "\",\"status\":403}");
                         }))
 
                 .authorizeHttpRequests(auth -> auth
@@ -66,9 +80,12 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/jobs/**",
-                                "/api/companies/**")
+                                "/api/companies/**",
+                                "/api/cv-templates",
+                                "/api/cv-templates/**")
                         .permitAll()
                         .requestMatchers("/api/hr/**").hasRole("RECRUITER")
+                        .requestMatchers(HttpMethod.GET, "/company/**").permitAll()
                         .anyRequest().authenticated())
 
                 // Cho JWT filter chạy trước filter login mặc định

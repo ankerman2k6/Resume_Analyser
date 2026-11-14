@@ -6,6 +6,7 @@ import HrLayout from './layouts/HrLayout';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
+import RecruiterCompanyPage from './pages/auth/RecruiterCompanyPage';
 import HRPage from './pages/hr/index';
 import DashboardPage from './pages/hr/DashboardPage';
 import CandidatesPage from './pages/hr/Candidates';
@@ -15,6 +16,7 @@ import JobDetail from './pages/candiate/JobDetail';
 import CompanyDetail from './pages/candiate/CompanyDetail';
 import CandidateProfile from './pages/candiate/CandidateProfile';
 import CVUploadPage from './pages/cv/index';
+import RecruiterSettings from './pages/hr/RecruiterSettings';
 
 const RequireAuth = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -64,11 +66,13 @@ function App() {
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="candidates" element={<CandidatesPage />} />
             <Route path="jobs" element={<JobsPage />} />
+            <Route path="settings" element={<RecruiterSettings />} />
           </Route>
 
           {/* Các trang xác thực độc lập */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/register/company" element={<RecruiterCompanyPage />} />
 
           <Route path="/auth/login" element={<Navigate to="/login" replace />} />
           <Route path="/auth/register" element={<Navigate to="/register" replace />} />

@@ -24,6 +24,7 @@ public class Application {
     private ObjectId cvId;
 
     private String status;
+    private String coverNote;
 
     private Instant appliedAt;
     private Instant updatedAt;
@@ -77,6 +78,9 @@ public class Application {
     public void setStatus(String status) {
         this.status = status;
     }
+
+    public String getCoverNote() { return coverNote; }
+    public void setCoverNote(String coverNote) { this.coverNote = coverNote; }
 
     public Instant getAppliedAt() {
         return appliedAt;

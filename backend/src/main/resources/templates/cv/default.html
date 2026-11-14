@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="vi">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <title>{{PAGE_TITLE}}</title>
+    <style type="text/css">
+        @page {
+            size: A4;
+            margin: 16mm 18mm;
+        }
+
+        body {
+            font-family: 'DejaVu Sans', sans-serif;
+            font-size: 10pt;
+            line-height: 1.48;
+            color: #1f2937;
+            margin: 0;
+            padding: 0;
+        }
+
+        .cv-header {
+            border-bottom: 2px solid #1d4ed8;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+        }
+
+        .cv-name {
+            font-size: 20pt;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 4px 0;
+        }
+
+        .cv-contact {
+            font-size: 9.5pt;
+            color: #475569;
+            margin: 0 0 4px 0;
+        }
+
+        .cv-links {
+            font-size: 9pt;
+            color: #1d4ed8;
+            margin: 0;
+            word-wrap: break-word;
+        }
+
+        .cv-section {
+            margin-bottom: 14px;
+        }
+
+        .cv-section-title {
+            font-size: 11pt;
+            font-weight: 700;
+            color: #1d4ed8;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            border-bottom: 1px solid #cbd5e1;
+            padding-bottom: 3px;
+            margin: 0 0 8px 0;
+        }
+
+        .cv-summary {
+            margin: 0;
+            color: #334155;
+        }
+
+        .cv-entry {
+            margin-bottom: 10px;
+        }
+
+        .cv-entry-header {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .cv-entry-title {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .cv-entry-dates {
+            text-align: right;
+            font-size: 9pt;
+            color: #64748b;
+            white-space: nowrap;
+        }
+
+        .cv-entry-subtitle {
+            font-size: 9.5pt;
+            color: #475569;
+            font-style: italic;
+            margin-top: 1px;
+        }
+
+        .cv-entry-desc {
+            margin: 4px 0 0 0;
+            color: #334155;
+        }
+
+        .cv-skills-list {
+            margin: 0;
+            color: #1e293b;
+        }
+
+        .cv-skill-item {
+            display: inline-block;
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 3px;
+            padding: 2px 7px;
+            margin: 0 5px 5px 0;
+            font-size: 9pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="cv-header">
+        <h1 class="cv-name">{{FULL_NAME}}</h1>
+        <p class="cv-contact">{{CONTACT_LINE}}</p>
+        {{LINKS_BLOCK}}
+    </div>
+
+    {{SUMMARY_SECTION}}
+    {{EXPERIENCE_SECTION}}
+    {{EDUCATION_SECTION}}
+    {{SKILLS_SECTION}}
+</body>
+</html>

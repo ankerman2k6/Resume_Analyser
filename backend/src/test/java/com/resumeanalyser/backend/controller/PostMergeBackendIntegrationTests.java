@@ -211,7 +211,7 @@ class PostMergeBackendIntegrationTests {
     }
 
     private String jobBody(String title, String requirements) {
-        return new Document("companyId", recruiterProfile.getCompanyId().toHexString()).append("title", title)
+        return new Document("title", title)
                 .append("description", "Job description").append("category", "IT")
                 .append("employmentType", "full_time").append("deadline", Instant.now().plusSeconds(86400).toString())
                 .append("requirements", Document.parse(requirements)).toJson();
@@ -234,7 +234,10 @@ class PostMergeBackendIntegrationTests {
         assertEquals(Instant.parse(created.getString("createdAt")).truncatedTo(ChronoUnit.MILLIS),
                 Instant.parse(updated.getString("createdAt")));
         assertEquals("draft", updated.getString("status"));
-        ok(request("PATCH", "/api/hr/jobs/" + id + "/status", hrToken, "{\"status\":\"published\"}"), 200);
+        Document statusUpdated = ok(request("PATCH", "/api/hr/jobs/" + id + "/status", hrToken,
+                "{\"status\":\"published\"}"), 200);
+        assertEquals("published", statusUpdated.getString("status"));
+        assertEquals("published", jobs.findById(new ObjectId(id)).orElseThrow().getStatus());
         ok(request("GET", "/api/jobs/" + id, null, null), 200);
         assertEquals(404, request("DELETE", "/api/hr/jobs/" + id, otherToken, null).statusCode());
         assertEquals(204, request("DELETE", "/api/hr/jobs/" + id, hrToken, null).statusCode());

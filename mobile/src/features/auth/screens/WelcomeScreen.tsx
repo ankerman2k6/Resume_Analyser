@@ -26,6 +26,13 @@ export function WelcomeScreen({ navigation }: Props) {
           <View style={styles.actions}>
             <Pressable
               accessibilityRole="button"
+              onPress={() => navigation.navigate('CandidateTabs')}
+              style={[styles.loginButton, { backgroundColor: colors.light.brand.secondary }]}
+            >
+              <Text style={styles.loginText}>Khám phá việc làm (Ứng viên)</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
               onPress={() => navigation.navigate('Login')}
               style={styles.loginButton}
             >
@@ -50,13 +57,25 @@ const styles = StyleSheet.create({
   scrim: { bottom: 0, left: 0, position: 'absolute', right: 0, top: 0, backgroundColor: 'rgba(8, 22, 58, 0.16)' },
   safeArea: { flex: 1 },
   content: { flex: 1, justifyContent: 'space-between', padding: spacing.lg },
-  brand: { color: colors.light.text.inverse, fontSize: 13, fontWeight: '800', letterSpacing: 1.5, marginTop: spacing.sm },
-  copy: { alignItems: 'center', paddingHorizontal: spacing.md },
-  title: { color: colors.light.text.inverse, fontSize: 34, fontWeight: '800', textAlign: 'center' },
-  subtitle: { color: 'rgba(255, 255, 255, 0.88)', fontSize: 16, lineHeight: 23, marginTop: spacing.sm, textAlign: 'center' },
-  actions: { alignItems: 'stretch', backgroundColor: colors.light.background.surface, borderRadius: 18, flexDirection: 'row', overflow: 'hidden' },
-  loginButton: { alignItems: 'center', backgroundColor: colors.light.brand.primary, flex: 1, paddingVertical: 16 },
-  registerButton: { alignItems: 'center', backgroundColor: colors.light.background.surface, flex: 1, paddingVertical: 16 },
-  loginText: { color: colors.light.text.inverse, fontWeight: '800' },
-  registerText: { color: colors.light.brand.secondary, fontWeight: '800' },
+  brand: { color: colors.light.text.inverse, fontSize: 13, fontWeight: '700', letterSpacing: 1.2 },
+  copy: { gap: spacing.sm },
+  title: { color: colors.light.text.inverse, fontSize: 32, fontWeight: '800' },
+  subtitle: { color: colors.light.text.inverse, fontSize: 15, lineHeight: 22, opacity: 0.9 },
+  actions: { gap: spacing.md },
+  loginButton: {
+    alignItems: 'center',
+    backgroundColor: colors.light.brand.primary,
+    borderRadius: 8,
+    paddingVertical: spacing.md,
+  },
+  loginText: { color: colors.light.text.inverse, fontSize: 15, fontWeight: '700' },
+  registerButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingVertical: spacing.md,
+  },
+  registerText: { color: colors.light.text.inverse, fontSize: 15, fontWeight: '700' },
 });
