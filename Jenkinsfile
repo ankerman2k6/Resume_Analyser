@@ -14,7 +14,7 @@ pipeline {
         MONGO_IMAGE = "${DOCKERHUB_USERNAME}/resume-mongodb"
         VERSION = "${version}"
         GIT_REPO_URL = "https://github.com/ankerman2k6/Resume_Analyser.git"
-        GIT_BRANCH = "frontend/candiate"
+        GIT_BRANCH = "An-devops"
     }
     stages {
         stage("1. Check Code") {

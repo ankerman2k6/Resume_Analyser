@@ -1,0 +1,70 @@
+{
+  "uid": "resume-local-overview",
+  "title": "Resume Analyser - Local Backend",
+  "description": "Spring Boot Actuator metrics collected by Prometheus on the local Docker network.",
+  "tags": ["resume-analyser", "local", "spring-boot"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Backend status (1 = UP)",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 0 },
+      "datasource": "Prometheus",
+      "targets": [{ "refId": "A", "expr": "up{job=\"resume-backend-local\"}" }],
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }], "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "background", "graphMode": "none", "justifyMode": "center" }
+    },
+    {
+      "id": 2,
+      "title": "Backend uptime",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 0 },
+      "datasource": "Prometheus",
+      "targets": [{ "refId": "A", "expr": "process_uptime_seconds{job=\"resume-backend-local\"}" }],
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 0 }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area" }
+    },
+    {
+      "id": 3,
+      "title": "JVM live threads",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 0 },
+      "datasource": "Prometheus",
+      "targets": [{ "refId": "A", "expr": "jvm_threads_live_threads{job=\"resume-backend-local\"}" }],
+      "fieldConfig": { "defaults": { "decimals": 0 }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area" }
+    },
+    {
+      "id": 4,
+      "title": "JVM heap used",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 5 },
+      "datasource": "Prometheus",
+      "targets": [{ "refId": "A", "expr": "sum(jvm_memory_used_bytes{job=\"resume-backend-local\",area=\"heap\"})", "legendFormat": "Heap used" }],
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] }
+    },
+    {
+      "id": 5,
+      "title": "JVM process CPU",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 5 },
+      "datasource": "Prometheus",
+      "targets": [{ "refId": "A", "expr": "process_cpu_usage{job=\"resume-backend-local\"}", "legendFormat": "Process CPU" }],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] }
+    },
+    {
+      "id": 6,
+      "title": "HTTP requests per second",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 14 },
+      "datasource": "Prometheus",
+      "targets": [{ "refId": "A", "expr": "sum(rate(http_server_requests_seconds_count{job=\"resume-backend-local\"}[1m]))", "legendFormat": "Requests/s" }],
+      "fieldConfig": { "defaults": { "unit": "reqps", "min": 0 }, "overrides": [] }
+    }
+  ]
+}
