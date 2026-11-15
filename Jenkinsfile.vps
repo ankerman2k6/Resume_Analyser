@@ -16,7 +16,7 @@ pipeline {
         MONGO_IMAGE = "mongo:7"
         VERSION = "${version}"
         GIT_REPO_URL = "https://github.com/ankerman2k6/Resume_Analyser.git"
-        GIT_BRANCH = "mobile-full-features"
+        GIT_BRANCH = "An-devops"
         DEPLOY_HOST = "remote.io.vn"
         DEPLOY_PORT = "13852"
         DEPLOY_USER = "deploy"
