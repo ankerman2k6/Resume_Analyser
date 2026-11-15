@@ -59,7 +59,9 @@ class CvTemplatePdfRendererTests {
         try (PDDocument document = Loader.loadPDF(pdfBytes)) {
             assertTrue(document.getNumberOfPages() >= 1);
             String text = new PDFTextStripper().getText(document);
-            assertTrue(text.contains("Nguyễn Văn A <script>alert(1)</script>"));
+            // PDFTextStripper inserts line breaks at visual wraps, even inside a literal tag.
+            String textWithoutLineBreaks = text.replaceAll("\\R", "");
+            assertTrue(textWithoutLineBreaks.contains("Nguyễn Văn A <script>alert(1)</script>"));
             assertTrue(text.contains("Thực tập sinh"));
             assertTrue(text.contains("Đại học A"));
             assertTrue(text.contains("Spring Boot"));
