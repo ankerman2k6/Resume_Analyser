@@ -709,9 +709,9 @@ const CandidateProfile = () => {
           </div>
         </div>
 
-        {/* =========================================================================
+        {/*  
             TAB 1: VIỆC LÀM ĐÃ ỨNG TUYỂN
-           ========================================================================= */}
+             */}
         {activeTab === "applications" && (
           <div className="profile-content-section">
             <div className="section-header-row">
@@ -773,6 +773,7 @@ const CandidateProfile = () => {
                 </button>
               </div>
             ) : (
+              // Chi tieets cac job da ung tuyen tu filteredApplications, co status, salary, location, employmentType, aiAnalysis
               <div className="applications-list">
                 {filteredApplications.map((app) => {
                   const statusConfig = STATUS_LABELS[app.status] || {
@@ -899,13 +900,12 @@ const CandidateProfile = () => {
                         <div className="app-ai-screening-box">
                           <div className="ai-screening-info">
                             <span
-                              className={`ai-score-pill ${
-                                app.aiAnalysis.overallScore >= 80
+                              className={`ai-score-pill ${app.aiAnalysis.overallScore >= 80
                                   ? "ai-score-pill--high"
                                   : app.aiAnalysis.overallScore >= 60
                                     ? "ai-score-pill--med"
                                     : "ai-score-pill--low"
-                              }`}
+                                }`}
                             >
                               AI Match:{" "}
                               {app.aiAnalysis.overallScore != null
@@ -1041,9 +1041,9 @@ const CandidateProfile = () => {
           </div>
         )}
 
-        {/* =========================================================================
+        {/*  
             TAB 2: CV ĐÃ TẢI LÊN
-           ========================================================================= */}
+             */}
         {activeTab === "resumes" && (
           <div className="profile-content-section">
             <div className="section-header-row">
@@ -1222,9 +1222,9 @@ const CandidateProfile = () => {
           </div>
         )}
 
-        {/* =========================================================================
+        {/*  
             TAB 3: CHI TIẾT KINH NGHIỆM & KỸ NĂNG (Trích xuất từ CV)
-           ========================================================================= */}
+             */}
         {activeTab === "career" && (
           <div className="profile-content-section">
             <div className="section-header-row">
@@ -1435,9 +1435,9 @@ const CandidateProfile = () => {
           </div>
         )}
 
-        {/* =========================================================================
+        {/*  
             TAB 4: CÀI ĐẶT TÀI KHOẢN
-           ========================================================================= */}
+             */}
         {activeTab === "settings" && (
           <div className="profile-content-section">
             <div className="section-header-row">
@@ -1625,9 +1625,9 @@ const CandidateProfile = () => {
           </div>
         )}
 
-        {/* =========================================================================
+        {/*  
             MODAL 1: CHỈNH SỬA THÔNG TIN CÁ NHÂN
-           ========================================================================= */}
+             */}
         {/* Settings và modal dùng chung editFormData từ GET /profile; submit PUT chỉ fullName/phone/location. */}
         {isEditModalOpen && (
           <div
@@ -1798,9 +1798,9 @@ const CandidateProfile = () => {
           </div>
         )}
 
-        {/* =========================================================================
+        {/*  
             MODAL 2: CHI TIẾT ĐÁNH GIÁ AI (AI SCREENING INSIGHTS)
-           ========================================================================= */}
+             */}
         {selectedAnalysis && (
           <div
             className="modal-backdrop"
