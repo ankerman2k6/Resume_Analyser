@@ -35,7 +35,7 @@ pipeline {
                     steps {
                         echo "=== KIỂM THỬ FRONTEND ==="
                         dir('frontend') {
-                            sh 'npm install'
+                            sh 'npm ci'
                             sh 'npm test -- --passWithNoTests'
                         }
                     }
