@@ -1,3 +1,7 @@
 *
 !Dockerfile
 !01-init.js
+!cv_screening/
+!cv_screening/**
+!init-db.sh
+!02-candidate-profile-indexes.js
