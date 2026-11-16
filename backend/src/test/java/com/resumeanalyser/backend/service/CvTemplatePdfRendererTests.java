@@ -59,7 +59,11 @@ class CvTemplatePdfRendererTests {
         try (PDDocument document = Loader.loadPDF(pdfBytes)) {
             assertTrue(document.getNumberOfPages() >= 1);
             String text = new PDFTextStripper().getText(document);
-            assertTrue(text.contains("Nguyễn Văn A <script>alert(1)</script>"));
+            // PDF layout can wrap even inside the escaped tag; compare content independently of whitespace.
+            String expectedName = request.content().personalInfo().fullName();
+            assertTrue(text.replaceAll("\\s+", "").contains(expectedName.replaceAll("\\s+", "")),
+                    () -> "Extracted PDF text:\n" + text);
+            assertTrue(text.contains("Hà Nội & Đà Nẵng"));
             assertTrue(text.contains("Thực tập sinh"));
             assertTrue(text.contains("Đại học A"));
             assertTrue(text.contains("Spring Boot"));
