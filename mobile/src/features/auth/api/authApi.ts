@@ -1,3 +1,5 @@
+import { getApiBaseUrl } from '../../../config/api';
+
 export type LoginRequest = {
     email: string;
     password: string;
@@ -53,21 +55,17 @@ function isLoginResponse(
   );
 }
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL
-
 export async function loginApi(payload: LoginRequest,): Promise<LoginResponse> {
-  if(!API_BASE_URL){
-    throw new Error('Chưa cấu hình API')
-  };
   const controller = new AbortController();
   const timeoutID = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const response = await fetch (`${API_BASE_URL}/auth/login`, {
+    const response = await fetch (`${getApiBaseUrl()}/auth/login`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
-        'Content-type': 'application/json'
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
       },
       body: JSON.stringify(payload),
       signal: controller.signal,
@@ -75,13 +73,25 @@ export async function loginApi(payload: LoginRequest,): Promise<LoginResponse> {
 
     const responseText = await response.text();
 
-    const data = responseText ? (JSON.parse(responseText) as LoginResponse | ApiErrorResponse) : null;
+    let data: LoginResponse | ApiErrorResponse | null = null;
+    try {
+      data = responseText ? JSON.parse(responseText) as LoginResponse | ApiErrorResponse : null;
+    } catch {
+      throw new ApiError(
+        response.ok
+          ? 'Máy chủ trả về dữ liệu đăng nhập không hợp lệ. Hãy kiểm tra địa chỉ API.'
+          : 'Máy chủ trả về lỗi không hợp lệ. Hãy kiểm tra địa chỉ API và trạng thái backend.',
+        response.status,
+      );
+    }
 
     if(!response.ok) {
       const errorData = data as ApiErrorResponse | null;
 
       throw new ApiError(
-        errorData?.message || 'Đăng nhập thất bại',
+        errorData?.message || (response.status >= 500
+          ? 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.'
+          : 'Đăng nhập thất bại'),
         response.status,
         errorData?.code
       );
@@ -96,7 +106,7 @@ export async function loginApi(payload: LoginRequest,): Promise<LoginResponse> {
     return data
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('Máy chủ phản hồi quá lâu');
+      throw new Error('Máy chủ phản hồi quá lâu. Hãy kiểm tra backend và MongoDB.');
     }
     if (error instanceof Error) {
       throw error;

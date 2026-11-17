@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -22,6 +23,16 @@ import com.resumeanalyser.backend.service.ai.GeminiRequestException;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(DataAccessResourceFailureException.class)
+    public ResponseEntity<ApiErrorResponse> handleDatabaseUnavailable(DataAccessResourceFailureException ex) {
+        log.error("Database unavailable", ex);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ApiErrorResponse(
+                        "DATABASE_UNAVAILABLE",
+                        "Cơ sở dữ liệu đang không khả dụng. Vui lòng thử lại sau.",
+                        503));
+    }
 
     @ExceptionHandler(GeminiRequestException.class)
     public ResponseEntity<ApiErrorResponse> handleGeminiRequest(GeminiRequestException ex) {
