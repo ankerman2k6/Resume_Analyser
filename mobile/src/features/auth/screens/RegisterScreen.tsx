@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
-  Alert,
+  ActivityIndicator,
   ImageBackground,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fontFamilies } from '../../../theme';
 import type { RootStackParamList } from '../../../types/navigation';
+import { ApiError, registerApi, saveAuthSession } from '../api/authApi';
 import { KonekLogo } from '../components/KonekLogo';
 import { WELCOME_BACKGROUND, WELCOME_COLORS } from '../components/welcome.constants';
 
@@ -41,6 +43,9 @@ export function RegisterScreen({ navigation }: Props) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const inFlight = useRef(false);
 
   const clearError = (field: keyof FieldErrors) => {
     setErrors((current) => ({ ...current, [field]: undefined }));
@@ -82,24 +87,44 @@ export function RegisterScreen({ navigation }: Props) {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleRegister = () => {
-    if (!validateForm()) return;
+  const handleRegister = async () => {
+    if (inFlight.current || !validateForm()) return;
 
-    const registerPayload = {
-      role,
-      fullName: name.trim(),
-      email: email.trim().toLowerCase(),
-      phone: phone.replace(/\s/g, ''),
-      password,
-    };
-
-    console.log('Register payload:', registerPayload);
-
-    Alert.alert(
-      'Tạo tài khoản thành công',
-      'Bạn có thể đăng nhập bằng tài khoản vừa tạo.',
-      [{ text: 'Đăng nhập', onPress: () => navigation.replace('Login') }],
-    );
+    inFlight.current = true;
+    setSubmitting(true);
+    setSubmitError('');
+    Keyboard.dismiss();
+    try {
+      const session = await registerApi({
+        role,
+        fullName: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.replace(/\s/g, ''),
+        password,
+      });
+      if (!navigation.isFocused()) return;
+      try {
+        await saveAuthSession(session);
+      } catch {
+        setSubmitError('Tài khoản đã được tạo. Vui lòng chọn Đăng nhập ngay để tiếp tục.');
+        return;
+      }
+      navigation.reset({
+        index: 0,
+        routes: [{ name: session.role === 'candidate' ? 'CandidateTabs' : 'HrCreateCompany' }],
+      });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        setSubmitError('Email này đã có tài khoản. Bạn có thể đăng nhập hoặc dùng email khác.');
+      } else if (error instanceof TypeError) {
+        setSubmitError('Không thể kết nối tới máy chủ. Hãy kiểm tra mạng rồi thử lại.');
+      } else {
+        setSubmitError(error instanceof Error ? error.message : 'Đăng ký chưa thành công. Vui lòng thử lại.');
+      }
+    } finally {
+      inFlight.current = false;
+      setSubmitting(false);
+    }
   };
 
   const roleName = role === 'candidate' ? 'Ứng viên' : 'Nhà tuyển dụng';
@@ -127,7 +152,7 @@ export function RegisterScreen({ navigation }: Props) {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.content}>
+            <View pointerEvents={submitting ? 'none' : 'auto'} style={styles.content}>
               <Pressable
                 accessibilityLabel="Quay lại màn hình trước"
                 accessibilityRole="button"
@@ -319,6 +344,8 @@ export function RegisterScreen({ navigation }: Props) {
 
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityState={{ busy: submitting, disabled: submitting }}
+                  disabled={submitting}
                   onPress={handleRegister}
                   style={({ pressed }) => [
                     styles.primaryButton,
@@ -326,13 +353,18 @@ export function RegisterScreen({ navigation }: Props) {
                   ]}
                 >
                   <Text style={styles.primaryButtonText}>
-                    Hoàn tất đăng ký {roleName}
+                    {submitting ? 'Đang tạo tài khoản…' : `Hoàn tất đăng ký ${roleName}`}
                   </Text>
-                  <Ionicons color={WELCOME_COLORS.white} name="arrow-forward" size={22} />
+                  {submitting
+                    ? <ActivityIndicator color={WELCOME_COLORS.white} />
+                    : <Ionicons color={WELCOME_COLORS.white} name="arrow-forward" size={22} />}
                 </Pressable>
+                {submitError ? <FieldError message={submitError} /> : null}
 
                 <Text style={styles.actionHint}>
-                  Sau khi đăng ký, bạn có thể cập nhật hồ sơ trong ứng dụng.
+                  {role === 'recruiter'
+                    ? 'Tiếp theo, bạn sẽ tạo hồ sơ công ty.'
+                    : 'Sau khi đăng ký, bạn có thể cập nhật hồ sơ trong ứng dụng.'}
                 </Text>
               </View>
 

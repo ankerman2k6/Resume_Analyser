@@ -1,4 +1,5 @@
-import { API_URL, apiRequest } from "../../../core/apiClient";
+import { apiRequest } from "../../../core/apiClient";
+import { getApiBaseUrl } from "../../../config/api";
 export type Dashboard = {
   totalOpenJobs: number;
   totalApplications: number;
@@ -116,7 +117,7 @@ export const hrApi = {
     apiRequest<void>(`/hr/jobs/${id}`, { method: "DELETE" }),
   applications: (jobId: string) =>
     apiRequest<HrApplication[]>(`/hr/jobs/${jobId}/applications`),
-  cvUrl: (id: string) => `${API_URL}/hr/applications/${id}/cv/file`,
+  cvUrl: (id: string) => `${getApiBaseUrl()}/hr/applications/${id}/cv/file`,
   updateApplicationStatus: (id: string, status: string) =>
     apiRequest<HrApplication>(`/hr/applications/${id}/status`, {
       method: "PATCH",

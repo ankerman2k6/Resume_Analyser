@@ -1,66 +1,39 @@
 import { getApiBaseUrl } from '../../../config/api';
+import type { AuthSession } from '../../../services/storage/authSession';
+export { saveAuthSession } from '../../../services/storage/authSession';
 
 export type LoginRequest = {
-    email: string;
-    password: string;
-}
+  email: string;
+  password: string;
+};
 
-export type LoginResponse = {
-    token: string;
-    userId: string;
-    email: string;
-    role: 'candidate' | 'recruiter';
-}
+export type LoginResponse = AuthSession & {
+  needsCompany?: boolean;
+};
 
-type ApiErrorResponse = {
-  code?: string;
-  message?: string;
-  errors?: Record<string, string>;
-  requestId?: string;
-  status?: number;
+export type RegisterRequest = LoginRequest & {
+  fullName: string;
+  phone: string;
+  role: LoginResponse['role'];
 };
 
 export class ApiError extends Error {
-  status: number;
-  code?: string;
-
-  constructor(message: string, status: number, code?: string) {
+  constructor(message: string, public status: number, public code?: string) {
     super(message);
     this.name = 'ApiError';
-    this.status = status;
-    this.code = code;
   }
 }
 
-function isLoginResponse(
-  data: unknown,
-): data is LoginResponse {
-  if (
-    typeof data !== 'object' ||
-    data === null
-  ) {
-    return false;
-  }
-
-  const response = data as Partial<LoginResponse>;
-
-  return (
-    typeof response.token === 'string' &&
-    typeof response.userId === 'string' &&
-    typeof response.email === 'string' &&
-    (
-      response.role === 'candidate' ||
-      response.role === 'recruiter'
-    )
-  );
-}
-
-export async function loginApi(payload: LoginRequest,): Promise<LoginResponse> {
+async function requestSession(
+  action: 'login' | 'register',
+  payload: LoginRequest | RegisterRequest,
+): Promise<LoginResponse> {
   const controller = new AbortController();
-  const timeoutID = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const actionName = action === 'login' ? 'đăng nhập' : 'đăng ký';
 
   try {
-    const response = await fetch (`${getApiBaseUrl()}/auth/login`, {
+    const response = await fetch(`${getApiBaseUrl()}/auth/${action}`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -72,52 +45,79 @@ export async function loginApi(payload: LoginRequest,): Promise<LoginResponse> {
     });
 
     const responseText = await response.text();
-
-    let data: LoginResponse | ApiErrorResponse | null = null;
+    let data: Record<string, unknown> = {};
     try {
-      data = responseText ? JSON.parse(responseText) as LoginResponse | ApiErrorResponse : null;
+      const parsed: unknown = responseText ? JSON.parse(responseText) : null;
+      if (parsed && typeof parsed === 'object') data = parsed as Record<string, unknown>;
     } catch {
+      throw new ApiError('Máy chủ trả về dữ liệu không hợp lệ. Hãy kiểm tra địa chỉ API.', response.status);
+    }
+
+    if (!response.ok) {
       throw new ApiError(
-        response.ok
-          ? 'Máy chủ trả về dữ liệu đăng nhập không hợp lệ. Hãy kiểm tra địa chỉ API.'
-          : 'Máy chủ trả về lỗi không hợp lệ. Hãy kiểm tra địa chỉ API và trạng thái backend.',
+        typeof data.message === 'string' ? data.message : `Yêu cầu ${actionName} thất bại.`,
         response.status,
+        typeof data.code === 'string' ? data.code : undefined,
       );
     }
 
-    if(!response.ok) {
-      const errorData = data as ApiErrorResponse | null;
-
-      throw new ApiError(
-        errorData?.message || (response.status >= 500
-          ? 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.'
-          : 'Đăng nhập thất bại'),
-        response.status,
-        errorData?.code
-      );
+    // Older backend releases create the account but do not return a session.
+    if (action === 'register' && typeof data.id === 'string' && !data.token) {
+      return requestSession('login', { email: payload.email, password: payload.password });
     }
 
-    if (!isLoginResponse(data)) {
-      throw new Error(
-        'Phản hồi đăng nhập không đầy đủ.',
-      );
+    const userId = action === 'register' ? data.id : data.userId;
+    if (typeof userId !== 'string' || !userId ||
+        typeof data.token !== 'string' || !data.token ||
+        typeof data.email !== 'string' || !data.email ||
+        (data.role !== 'candidate' && data.role !== 'recruiter')) {
+      throw new Error(`Phản hồi ${actionName} không đầy đủ.`);
     }
 
-    return data
+    return {
+      userId,
+      email: data.email,
+      role: data.role,
+      token: data.token,
+      needsCompany: data.role === 'recruiter' && (action === 'register' || data.needsCompany === true),
+    };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('Máy chủ phản hồi quá lâu. Hãy kiểm tra backend và MongoDB.');
+      throw new Error('Máy chủ phản hồi quá lâu. Vui lòng thử lại.');
     }
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Đăng nhập thất bại');
+    throw error;
   } finally {
-    clearTimeout(timeoutID);
+    clearTimeout(timeoutId);
   }
+}
 
+export function loginApi(payload: LoginRequest): Promise<LoginResponse> {
+  return requestSession('login', payload);
+}
 
-  
+export function registerApi(payload: RegisterRequest): Promise<LoginResponse> {
+  return registerAndVerify(payload);
+}
 
-
+async function registerAndVerify(payload: RegisterRequest): Promise<LoginResponse> {
+  const session = await requestSession('register', payload);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/auth/me`, {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${session.token}`,
+        'ngrok-skip-browser-warning': 'true',
+      },
+      signal: controller.signal,
+    });
+    const user = await response.json();
+    if (!response.ok || user.id !== session.userId || user.email !== session.email || user.role !== payload.role) {
+      throw new Error('Chưa xác nhận được tài khoản trên máy chủ. Vui lòng thử đăng nhập bằng email vừa đăng ký.');
+    }
+    return { ...session, needsCompany: session.role === 'recruiter' };
+  } finally {
+    clearTimeout(timeout);
+  }
 }

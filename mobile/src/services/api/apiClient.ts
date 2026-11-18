@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import { getAuthToken } from '../storage/authSession';
 import { getApiBaseUrl } from '../../config/api';
 
 export class ApiError extends Error {
@@ -15,18 +15,10 @@ export class ApiError extends Error {
   }
 }
 
-async function getAuthToken(): Promise<string | null> {
-  try {
-    return await SecureStore.getItemAsync('auth_token');
-  } catch {
-    return null;
-  }
-}
-
 export async function getAuthenticatedHeaders(
   extraHeaders: Record<string, string> = {}
 ): Promise<Record<string, string>> {
-  const token = await getAuthToken();
+  const token = await getAuthToken().catch(() => null);
 
   return {
     'ngrok-skip-browser-warning': 'true',

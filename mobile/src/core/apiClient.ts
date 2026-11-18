@@ -1,6 +1,6 @@
-import * as SecureStore from 'expo-secure-store';
-
-export const API_URL = process.env.EXPO_PUBLIC_API_BASE_URL?.trim().replace(/\/$/, '');
+import { clearSession, getAuthToken } from '../services/storage/authSession';
+import { getApiBaseUrl } from '../config/api';
+export { clearSession } from '../services/storage/authSession';
 
 type ApiErrorBody = { code?: string; message?: string };
 type RequestOptions = { timeoutMs?: number; authenticated?: boolean };
@@ -20,13 +20,6 @@ export class ApiNetworkError extends Error {
   }
 }
 
-export async function clearSession() {
-  await Promise.all([
-    SecureStore.deleteItemAsync('auth_token'),
-    SecureStore.deleteItemAsync('auth_user'),
-  ]);
-}
-
 function normalizeNetworkError(error: unknown, timedOut: boolean): Error {
   const message = error instanceof Error ? error.message.toLowerCase() : '';
   if (timedOut || message.includes('timed out') || message.includes('timeout')) {
@@ -42,13 +35,13 @@ function normalizeNetworkError(error: unknown, timedOut: boolean): Error {
 }
 
 export async function apiRequest<T>(path: string, init: RequestInit = {}, options: RequestOptions = {}): Promise<T> {
-  if (!API_URL) throw new Error('Chưa cấu hình EXPO_PUBLIC_API_BASE_URL.');
-  if (!/^https?:\/\//i.test(API_URL)) throw new Error('EXPO_PUBLIC_API_BASE_URL phải là URL http hoặc https hợp lệ.');
+  const baseUrl = getApiBaseUrl();
+  if (!/^https?:\/\//i.test(baseUrl)) throw new Error('EXPO_PUBLIC_API_BASE_URL phải là URL http hoặc https hợp lệ.');
   if (!path.startsWith('/')) throw new Error('Đường dẫn API phải bắt đầu bằng /.');
 
   const token = options.authenticated === false
     ? null
-    : await SecureStore.getItemAsync('auth_token');
+    : await getAuthToken();
   const timeoutMs = options.timeoutMs ?? 15_000;
   const controller = timeoutMs > 0 ? new AbortController() : undefined;
   let timedOut = false;
@@ -58,11 +51,12 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}, option
   }, timeoutMs) : undefined;
 
   try {
-    const response = await fetch(`${API_URL}${path}`, {
+    const response = await fetch(`${baseUrl}${path}`, {
       ...init,
       ...(controller ? { signal: controller.signal } : {}),
       headers: {
         Accept: 'application/json',
+        'ngrok-skip-browser-warning': 'true',
         ...(init.body ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...init.headers,

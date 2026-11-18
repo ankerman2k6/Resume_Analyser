@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { clearSession } from '../core/apiClient';
 import { HrCreateJobScreen, HrEditJobScreen } from '../features/hr/jobs/screens/HrCreateJobScreen';
+import { HrCreateCompanyScreen } from '../features/hr/company/screens/HrCreateCompanyScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function AppNavigator() {
@@ -48,6 +49,7 @@ export function AppNavigator() {
         options={{ headerShown: false }}
       />
       <Stack.Screen name="HrTabs" component={HrTabs} options={{ headerShown: false }} />
+      <Stack.Screen name="HrCreateCompany" component={HrCreateCompanyScreen} options={{ headerShown: false }} />
       <Stack.Screen
         name="HrCreateJob"
         component={HrCreateJobScreen}

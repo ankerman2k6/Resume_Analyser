@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import * as SecureStore from 'expo-secure-store';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -22,7 +21,7 @@ import type { RootStackParamList } from '../../../types/navigation';
 import { KonekLogo } from '../components/KonekLogo';
 import { LoginIllustration } from '../components/LoginIllustration';
 import { WELCOME_BACKGROUND, WELCOME_COLORS } from '../components/welcome.constants';
-import { ApiError, loginApi } from '../api/authApi';
+import { ApiError, loginApi, saveAuthSession } from '../api/authApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 type Role = 'candidate' | 'recruiter';
@@ -87,19 +86,14 @@ export function LoginScreen({ navigation }: Props) {
         password,
       });
 
-      await SecureStore.setItemAsync('auth_token', data.token);
-      await SecureStore.setItemAsync(
-        'auth_user',
-        JSON.stringify({
-          userId: data.userId,
-          email: data.email,
-          role: data.role,
-        }),
-      );
+      await saveAuthSession(data);
 
+      const destination = data.role === 'candidate'
+        ? 'CandidateTabs'
+        : data.needsCompany ? 'HrCreateCompany' : 'HrTabs';
       navigation.reset({
         index: 0,
-        routes: [{ name: data.role === 'candidate' ? 'CandidateTabs' : 'HrTabs' }],
+        routes: [{ name: destination }],
       });
     } catch (error) {
       if (error instanceof ApiError) {

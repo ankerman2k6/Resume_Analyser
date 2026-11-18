@@ -1,3 +1,4 @@
+import { HrFormField as FormField } from "../../components/HrFormField";
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import {
@@ -5,7 +6,7 @@ import {
   useFocusEffect,
   useNavigation,
 } from "@react-navigation/native";
-import * as SecureStore from "expo-secure-store";
+import { clearSession } from "../../../../services/storage/authSession";
 import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -16,7 +17,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -250,8 +250,7 @@ export function HrSettingsScreen() {
 
   const logout = async () => {
     try {
-      await SecureStore.deleteItemAsync("auth_token");
-      await SecureStore.deleteItemAsync("auth_user");
+      await clearSession();
       rootNavigation?.reset({
         index: 0,
         routes: [{ name: "Welcome" }],
@@ -621,56 +620,6 @@ export function HrSettingsScreen() {
   );
 }
 
-type FormFieldProps = {
-  autoCapitalize?: "none" | "sentences" | "words" | "characters";
-  helperText?: string;
-  keyboardType?: "default" | "email-address" | "phone-pad" | "url";
-  label: string;
-  maxLength: number;
-  multiline?: boolean;
-  onChangeText: (value: string) => void;
-  placeholder: string;
-  required?: boolean;
-  value: string;
-};
-
-function FormField({
-  autoCapitalize = "sentences",
-  keyboardType = "default",
-  helperText,
-  label,
-  maxLength,
-  multiline = false,
-  onChangeText,
-  placeholder,
-  required = false,
-  value,
-}: FormFieldProps) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.label}>
-        {label}
-        {required && <Text style={styles.requiredMarker}> *</Text>}
-      </Text>
-      <TextInput
-        accessibilityLabel={label}
-        autoCapitalize={autoCapitalize}
-        keyboardType={keyboardType}
-        maxLength={maxLength}
-        multiline={multiline}
-        numberOfLines={multiline ? 4 : 1}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.light.text.secondary}
-        style={[styles.input, multiline && styles.multilineInput]}
-        value={value}
-        returnKeyType="next"
-      />
-      {helperText && <Text style={styles.helperText}>{helperText}</Text>}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: colors.light.background.primary,
@@ -735,37 +684,6 @@ const styles = StyleSheet.create({
   },
   fields: {
     gap: spacing.md,
-  },
-  field: {
-    gap: spacing.xs,
-  },
-  label: {
-    color: colors.light.text.primary,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  requiredMarker: {
-    color: colors.light.status.danger,
-  },
-  input: {
-    backgroundColor: colors.light.background.input,
-    borderColor: colors.light.border.subtle,
-    borderRadius: 8,
-    borderWidth: 1,
-    color: colors.light.text.primary,
-    fontSize: 14,
-    minHeight: 46,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  multilineInput: {
-    minHeight: 100,
-    textAlignVertical: "top",
-  },
-  helperText: {
-    color: colors.light.text.secondary,
-    fontSize: 11,
-    lineHeight: 16,
   },
   locationsSection: {
     borderTopColor: colors.light.border.subtle,

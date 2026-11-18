@@ -21,10 +21,20 @@ public class Company {
     private String name;
     private String industry;
     private String logoUrl;
+    // The logo and its public path are committed together in the company document.
+    public record Logo(String contentType, byte[] bytes) {}
+    private Logo uploadedLogo;
+    public Logo getUploadedLogo() { return uploadedLogo; }
+    public void setUploadedLogo(Logo uploadedLogo) { this.uploadedLogo = uploadedLogo; }
+
     private String description;
     private List<Location> locations = new ArrayList<>();
     private String size;
     private String website;
+    private String status;
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
     private Instant createdAt;
     private Instant updatedAt;
 

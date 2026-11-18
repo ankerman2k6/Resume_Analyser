@@ -1,4 +1,5 @@
 import { apiClient } from '../../../../services/api/apiClient';
+import { resolveCompanyLogoUrl } from '../../../../config/api';
 import type {
   JobResponse,
   CompanyResponse,
@@ -36,7 +37,8 @@ export const jobApi = {
    * GET /api/companies/{id}
    */
   async getCompanyById(companyId: string): Promise<CompanyResponse> {
-    return apiClient.get<CompanyResponse>(`/companies/${companyId}`);
+    const company = await apiClient.get<CompanyResponse>(`/companies/${companyId}`);
+    return company.logoUrl ? { ...company, logoUrl: resolveCompanyLogoUrl(company.logoUrl) } : company;
   },
 
   /**
@@ -62,7 +64,7 @@ export const jobApi = {
       const companies = await Promise.all(
         companyIds.map(async (companyId) => {
           try {
-            return await apiClient.get<CompanyResponse>(`/companies/${companyId}`);
+            return await jobApi.getCompanyById(companyId);
           } catch {
             return null;
           }

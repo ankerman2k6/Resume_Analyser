@@ -21,6 +21,7 @@ import { colors, radii, shadows, spacing, typography } from '../../../../theme';
 import { resumeApi } from '../../resumes/api/resumeApi';
 import type { CandidateCv } from '../../resumes/types/resume.types';
 import { useCandidateProfile } from '../hooks/useCandidateProfile';
+import { resolveCompanyLogoUrl } from '../../../../config/api';
 import type { CandidateApplication, CandidateProfile } from '../types/profile.types';
 
 const palette = colors.light;
@@ -433,7 +434,7 @@ export function CandidateProfileScreen() {
           <View key={application._id} style={styles.card}>
             <View style={styles.cardHeader}>
               {application.company?.logoUrl ? (
-                <Image source={{ uri: application.company.logoUrl }} style={styles.companyLogo} />
+                <Image source={{ uri: resolveCompanyLogoUrl(application.company.logoUrl) }} style={styles.companyLogo} />
               ) : (
                 <View style={styles.companyFallback}><Ionicons color={palette.brand.secondary} name="business" size={20} /></View>
               )}

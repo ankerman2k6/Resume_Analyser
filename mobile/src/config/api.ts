@@ -33,3 +33,7 @@ export function getApiBaseUrl(): string {
 }
 
 export const API_BASE_URL = getApiBaseUrl();
+
+export function resolveCompanyLogoUrl(url: string): string {
+  return url.startsWith('/api/companies/') ? new URL(url, getApiBaseUrl()).href : url;
+}
