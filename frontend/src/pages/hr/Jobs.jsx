@@ -24,12 +24,12 @@ import {
 } from '../../services/hrJobsService';
 
 const STATUS_OPTIONS = [
-  { value: 'draft', label: 'Bản nháp' },
+  { value: 'draft', label: 'Chờ duyệt' },
   { value: 'published', label: 'Đang tuyển' },
   { value: 'closed', label: 'Đã đóng' },
 ];
 
-const CREATE_STATUS_OPTIONS = STATUS_OPTIONS.filter((item) => item.value !== 'closed');
+const CREATE_STATUS_OPTIONS = STATUS_OPTIONS.filter((item) => item.value === 'draft');
 
 const EMPLOYMENT_TYPE_OPTIONS = [
   { value: 'full_time', label: 'Toàn thời gian' },
@@ -248,7 +248,7 @@ export const JobsPage = () => {
 
   const handleOpenEdit = (job) => {
     setEditingJobId(job.id);
-    setFormData(jobToForm(job));
+    setFormData({ ...jobToForm(job), status: job.status === 'closed' ? 'closed' : 'draft' });
     setValidationError('');
     setIsDrawerOpen(true);
   };
@@ -289,13 +289,12 @@ export const JobsPage = () => {
 
       if (editingJobId) {
         // GỬI API: PUT cập nhật nội dung Job; PATCH cập nhật status nếu HR thay đổi.
-        const original = jobs.find((job) => job.id === editingJobId);
         savedJob = await updateHrJobApi(editingJobId, payload);
-        if (original?.status !== formData.status) {
+        if (formData.status === 'closed') {
           savedJob = await updateHrJobStatusApi(editingJobId, formData.status);
         }
         setJobs((current) => current.map((job) => (job.id === editingJobId ? savedJob : job)));
-        showToast(`Đã cập nhật bài tuyển dụng “${savedJob.title}”.`);
+        showToast(savedJob.status === 'draft' ? 'Tin tuyển dụng đã được gửi và đang chờ duyệt.' : 'Đã đóng tin tuyển dụng.');
       } else {
         // GỬI API: POST luôn tạo draft; PATCH tiếp nếu HR chọn trạng thái khác.
         savedJob = await createHrJobApi(payload);
@@ -303,7 +302,7 @@ export const JobsPage = () => {
           savedJob = await updateHrJobStatusApi(savedJob.id, formData.status);
         }
         setJobs((current) => [savedJob, ...current]);
-        showToast(`Đã tạo bài tuyển dụng “${savedJob.title}”.`);
+        showToast('Tin tuyển dụng đã được gửi và đang chờ duyệt.');
       }
 
       setIsDrawerOpen(false);
@@ -335,7 +334,7 @@ export const JobsPage = () => {
       {toast && (
         <div
           role={toast.type === 'error' ? 'alert' : 'status'}
-          className={`fixed bottom-6 right-6 z-50 max-w-sm text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-white/10 text-sm font-medium ${toast.type === 'error' ? 'bg-rose-700' : 'bg-[#051A24] dark:bg-[#2563EB]'}`}
+          className={`fixed top-6 right-6 z-50 max-w-sm text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-white/10 text-sm font-medium ${toast.type === 'error' ? 'bg-rose-700' : 'bg-[#051A24] dark:bg-[#2563EB]'}`}
         >
           {toast.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
           <span>{toast.message}</span>
@@ -488,7 +487,7 @@ export const JobsPage = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5"><label htmlFor="job-deadline" className={labelClass}>Hạn nộp <span className="text-rose-500">*</span></label><input id="job-deadline" type="date" value={formData.deadline} onChange={(event) => handleInputChange('deadline', event.target.value)} className={fieldClass} /></div>
-            <div className="space-y-1.5"><label htmlFor="job-status" className={labelClass}>Trạng thái</label><select id="job-status" value={formData.status} onChange={(event) => handleInputChange('status', event.target.value)} className={fieldClass}>{(editingJobId ? STATUS_OPTIONS : CREATE_STATUS_OPTIONS).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
+            <div className="space-y-1.5"><label htmlFor="job-status" className={labelClass}>Trạng thái</label><select id="job-status" value={formData.status} onChange={(event) => handleInputChange('status', event.target.value)} className={fieldClass}>{(editingJobId ? STATUS_OPTIONS.filter(item => item.value !== 'published') : CREATE_STATUS_OPTIONS).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
           </div>
 
           <div className="space-y-1.5"><label htmlFor="job-description" className={labelClass}>Mô tả công việc <span className="text-rose-500">*</span></label><textarea id="job-description" rows={4} value={formData.description} onChange={(event) => handleInputChange('description', event.target.value)} placeholder="Vai trò và trách nhiệm chính..." className={`${fieldClass} resize-y`} /></div>

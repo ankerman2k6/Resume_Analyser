@@ -104,7 +104,7 @@ const CandidatePage = () => {
         profession: criteria.industry,
         location: locationParam,
         page: page,
-        size: 10
+        size: 12
       });
 
       const jobList = data.content || [];

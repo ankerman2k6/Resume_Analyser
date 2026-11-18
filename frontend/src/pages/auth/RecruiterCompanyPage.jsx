@@ -1,6 +1,7 @@
+import { useAuth } from '../../context/AuthContext';
 import React, { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { registerApi } from '../../services/authService';
+import { registerApi, loginApi } from '../../services/authService';
 import Logo from '../../components/common/Logo';
 import './Register.css';
 
@@ -13,6 +14,7 @@ const emptyLocation = {
 const RecruiterCompanyPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { login } = useAuth();
   const registration = location.state?.registration;
 
   const [company, setCompany] = useState({
@@ -71,12 +73,12 @@ const RecruiterCompanyPage = () => {
         },
       });
 
-      navigate('/login', {
-        replace: true,
-        state: {
-          message: 'Đăng ký nhà tuyển dụng thành công. Vui lòng đăng nhập.',
-        },
-      });
+      try {
+        login(await loginApi(registration.email, registration.password, 'recruiter'));
+        navigate('/company-pending', { replace: true });
+      } catch {
+        navigate('/login', { replace: true, state: { from: { pathname: '/company-pending' } } });
+      }
     } catch (error) {
       setErrorMessage(error.message || 'Không thể đăng ký nhà tuyển dụng');
     } finally {

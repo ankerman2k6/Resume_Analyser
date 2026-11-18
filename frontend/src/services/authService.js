@@ -34,7 +34,7 @@ export const registerApi = async (payload) => {
       throw new Error(firstError);
     }
 
-    throw new Error(data.message || 'Đăng ký tài khoản thất bại');
+    throw new Error(data.message || (response.status >= 500 ? `Máy chủ không thể lưu hồ sơ (HTTP ${response.status}). Vui lòng thử lại hoặc liên hệ quản trị viên.` : `Không thể đăng ký (HTTP ${response.status}). Vui lòng kiểm tra thông tin.`));
   }
 
   return data;

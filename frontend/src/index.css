@@ -15,10 +15,12 @@
   --bg-surface: #FFFFFF;
   --bg-subtle: #EDF2F7;
   --bg-input: #FFFFFF;
+  --bg-focus: #0213B0;
   
   --brand-primary: #0F1E36;
   --brand-secondary: #2563EB;
   --brand-accent: #E0F2FE;
+
   
   --role-active-bg: var(--bg-subtle);
   --role-active-border: var(--text-primary);
@@ -28,6 +30,7 @@
   --text-primary: #0F172A;
   --text-secondary: #64748B;
   --text-inverse: #FFFFFF;
+  --text-focus: #fff;
   
   --border-subtle: #E2E8F0;
   --border-focus: #3B82F6;
@@ -58,6 +61,7 @@
   --bg-surface: #121a28;
   --bg-subtle: #162032;
   --bg-input: #162032;
+  --bg-focus: #3B82F6;
   
   --brand-primary: #3B82F6;
   --brand-secondary: #60A5FA;

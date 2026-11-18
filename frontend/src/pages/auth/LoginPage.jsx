@@ -31,7 +31,9 @@ const LoginPage = () => {
       const redirectPath = location.state?.from?.pathname;
 
       // Quay lại trang người dùng định mở trước khi được yêu cầu đăng nhập
-      if (redirectPath) {
+      if (data.role === 'admin') {
+        navigate('/admin/companies', { replace: true });
+      } else if (redirectPath) {
         navigate(redirectPath, { replace: true });
       } else if (data.role === 'candidate') {
         navigate('/candidate/profile');
@@ -64,24 +66,7 @@ const LoginPage = () => {
         <h1 className="login-title">Chào mừng trở lại</h1>
         <p className="login-subtitle">Đăng nhập để truy cập công việc và thông tin sơ yếu lý lịch của bạn.</p>
         
-        <div className="role-selector">
-          <span className="role-label">Đăng nhập với tư cách:</span>
-          <button 
-            type="button"
-            className={`role-btn ${role === 'candidate' ? 'active' : ''}`}
-            onClick={() => setRole('candidate')}
-          >
-            Ứng viên
-          </button>
-          <span className="role-divider">|</span>
-          <button 
-            type="button"
-            className={`role-btn ${role === 'recruiter' ? 'active' : ''}`}
-            onClick={() => setRole('recruiter')}
-          >
-            Nhà tuyển dụng
-          </button>
-        </div>
+        
 
         <div className="auth-tabs">
           <button type="button" className="auth-tab active">Đăng nhập</button>

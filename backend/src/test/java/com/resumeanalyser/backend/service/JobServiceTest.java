@@ -10,7 +10,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
-
+import com.resumeanalyser.backend.exception.ForbiddenException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -128,7 +128,7 @@ class JobServiceTest {
         Job job = new Job();
         job.setId(new ObjectId());
         when(jobRepository.findById(job.getId())).thenReturn(Optional.of(job));
-        for (String status : new String[]{"draft", "closed", "expired", null}) {
+        for (String status : new String[] { "draft", "closed", "expired", null }) {
             job.setStatus(status);
             assertThrows(BadRequestException.class, () -> jobService.getJobById(job.getId().toHexString()));
         }
@@ -170,9 +170,9 @@ class JobServiceTest {
         Map<String, Object> requirements = Map.of("requiredSkills", List.of("Java"),
                 "education", Map.of("minimumDegree", "bachelor"));
         CreateJobRequest request = new CreateJobRequest(
-        "Backend",
-        "Description",
-        "IT",
+                "Backend",
+                "Description",
+                "IT",
                 "full_time", new Job.Location("Address", "City", "Country", false),
                 new Job.Salary(100L, 200L, "USD", true), new Job.Experience(1, 3, "junior"),
                 requirements, List.of("Training"), Instant.now().plusSeconds(86400));
@@ -192,11 +192,21 @@ class JobServiceTest {
         assertEquals(List.of(created), jobService.getMyJobs(recruiter));
         assertEquals(created, jobService.getJobById(created.getId().toHexString(), recruiter));
         Instant createdAt = created.getCreatedAt();
-        jobService.updateJob(created.getId().toHexString(), request, recruiter);
+        created.setStatus("published");
+        Job updated = jobService.updateJob(
+                created.getId().toHexString(), request, recruiter);
+        assertEquals("draft", updated.getStatus());
         assertEquals(createdAt, created.getCreatedAt());
         assertEquals(owner, created.getRecruiterId());
         assertEquals(companyId, created.getCompanyId());
-        assertEquals("published", jobService.updateJobStatus(created.getId().toHexString(), "published", recruiter).getStatus());
+        assertThrows(ForbiddenException.class,
+                () -> jobService.updateJobStatus(
+                        created.getId().toHexString(), "published", recruiter));
+
+        // HR vẫn được đóng tin.
+        assertEquals("closed",
+                jobService.updateJobStatus(
+                        created.getId().toHexString(), "closed", recruiter).getStatus());
         jobService.deleteJob(created.getId().toHexString(), recruiter);
         verify(jobRepository).delete(created);
     }
@@ -214,7 +224,8 @@ class JobServiceTest {
         assertEquals(404, assertThrows(ResponseStatusException.class,
                 () -> jobService.getJobById(jobId.toHexString(), recruiter)).getStatusCode().value());
         assertThrows(ResponseStatusException.class, () -> jobService.updateJob(jobId.toHexString(), null, recruiter));
-        assertThrows(ResponseStatusException.class, () -> jobService.updateJobStatus(jobId.toHexString(), "published", recruiter));
+        assertThrows(ResponseStatusException.class,
+                () -> jobService.updateJobStatus(jobId.toHexString(), "closed", recruiter));
         assertThrows(ResponseStatusException.class, () -> jobService.deleteJob(jobId.toHexString(), recruiter));
         verify(jobRepository, never()).save(any(Job.class));
         verify(jobRepository, never()).delete(any(Job.class));

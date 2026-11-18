@@ -25,6 +25,7 @@ import com.resumeanalyser.backend.repository.CompanyRepository;
 import com.resumeanalyser.backend.repository.RecruiterProfileRepository;
 import com.resumeanalyser.backend.repository.UserRepository;
 import com.resumeanalyser.backend.security.JwtService;
+import com.resumeanalyser.backend.model.CompanyStatus;
 
 @Service
 public class AuthService {
@@ -162,6 +163,7 @@ public class AuthService {
         company.setLocations(companyInput.getLocations());
         company.setCreatedAt(now);
         company.setUpdatedAt(now);
+        company.setStatus(CompanyStatus.incheck);
         return companyRepository.save(company);
     }
 

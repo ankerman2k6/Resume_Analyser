@@ -27,6 +27,7 @@ public class Company {
     private String website;
     private Instant createdAt;
     private Instant updatedAt;
+    private CompanyStatus status;
 
     public Company() {
     }
@@ -88,6 +89,9 @@ public class Company {
 
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+
+    public CompanyStatus getStatus() { return status; }
+    public void setStatus(CompanyStatus status) { this.status = status; }
 
     public static class Location {
         private String address;

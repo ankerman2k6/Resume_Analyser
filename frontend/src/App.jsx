@@ -1,3 +1,5 @@
+import AdminPage from './pages/admin/AdminPage';
+import CompanyGate from './pages/admin/CompanyGate';
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -34,6 +36,9 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+<Route path="/admin" element={<Navigate to="/admin/companies" replace />} />
+<Route path="/admin/:section" element={<AdminPage />} />
+<Route path="/company-pending" element={<CompanyGate />} />
           {/* Layout chung có Navbar: chỉ dành cho phân hệ ứng viên hoặc khi chưa đăng nhập */}
           <Route path="/" element={<MainLayout />}>
             <Route index element={<HomePage />} />
@@ -61,7 +66,7 @@ function App() {
           </Route>
 
           {/* Phân hệ Nhà tuyển dụng: có Sidebar HR Layout */}
-          <Route path="/hr" element={<HrLayout />}>
+          <Route path="/hr" element={<CompanyGate><HrLayout /></CompanyGate>}>
             <Route index element={<HRPage />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="candidates" element={<CandidatesPage />} />

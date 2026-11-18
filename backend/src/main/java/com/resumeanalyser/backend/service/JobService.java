@@ -56,8 +56,6 @@ public class JobService {
         return jobRepository.findByRecruiterId(recruiterId);
     }
 
-
-
     // Tạo job và luôn gắn đúng recruiter profile/company của tài khoản đăng nhập.
     public Job createJob(CreateJobRequest request, User recruiter) {
         RecruiterProfile profile = recruiterIdentity.requireProfile(recruiter);
@@ -66,7 +64,6 @@ public class JobService {
                     "RECRUITER_COMPANY_REQUIRED",
                     "Hồ sơ nhà tuyển dụng chưa được liên kết với công ty.");
         }
-        
 
         if (request.title() == null
                 || request.title().isBlank()) {
@@ -203,147 +200,149 @@ public class JobService {
     // Tìm job theo ID
     public Job getJobById(String jobId, User recruiter) {
 
-    if (!ObjectId.isValid(jobId)) {
-        throw new IllegalArgumentException("Job ID không hợp lệ");
+        if (!ObjectId.isValid(jobId)) {
+            throw new IllegalArgumentException("Job ID không hợp lệ");
+        }
+
+        ObjectId id = new ObjectId(jobId);
+        ObjectId recruiterId = recruiterIdentity.requireProfileId(recruiter);
+
+        return jobRepository
+                .findByIdAndRecruiterId(id, recruiterId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND,
+                        "Không tìm thấy Job"));
     }
 
-    ObjectId id = new ObjectId(jobId);
-    ObjectId recruiterId = recruiterIdentity.requireProfileId(recruiter);
-
-    return jobRepository
-            .findByIdAndRecruiterId(id, recruiterId)
-            .orElseThrow(() ->
-                    new org.springframework.web.server.ResponseStatusException(
-                            org.springframework.http.HttpStatus.NOT_FOUND,
-                            "Không tìm thấy Job"
-                    )
-            );
-    }
-
-
-
-    //Cập nhật thông tin job
+    // Cập nhật thông tin job
     public Job updateJob(
-        String jobId,
-        CreateJobRequest request,
-        User recruiter) {
+            String jobId,
+            CreateJobRequest request,
+            User recruiter) {
 
-    // Kiểm tra Job ID
-    if (!ObjectId.isValid(jobId)) {
-        throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "Invalid Job ID"
-        );
+        // Kiểm tra Job ID
+        if (!ObjectId.isValid(jobId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid Job ID");
+        }
+
+        ObjectId id = new ObjectId(jobId);
+        ObjectId recruiterId = recruiterIdentity.requireProfileId(recruiter);
+
+        // Chỉ tìm Job thuộc HR đang đăng nhập
+        Job job = jobRepository
+                .findByIdAndRecruiterId(id, recruiterId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Job not found"));
+
+        if (request.title() == null || request.title().isBlank()) {
+            throw new BadRequestException("Title không được để trống");
+        }
+
+        if (request.deadline() == null
+                || !request.deadline().isAfter(Instant.now())) {
+            throw new BadRequestException("Deadline phải ở tương lai");
+        }
+
+        validateJobSchema(request);
+
+        // Cập nhật thông tin
+        job.setTitle(request.title());
+        job.setDescription(request.description());
+        job.setCategory(request.category());
+        job.setEmploymentType(request.employmentType());
+
+        job.setLocation(request.location());
+        job.setSalary(request.salary());
+        job.setExperience(request.experience());
+        job.setRequirements(request.requirements());
+        job.setBenefits(request.benefits());
+        job.setDeadline(request.deadline());
+
+        // Không thay đổi recruiterId, companyId, createdAt, status
+        job.setUpdatedAt(Instant.now());
+        job.setStatus("draft");
+
+        return jobRepository.save(job);
     }
 
-    ObjectId id = new ObjectId(jobId);
-    ObjectId recruiterId = recruiterIdentity.requireProfileId(recruiter);
+    // Cập nhật job
+    public Job updateJobStatus(String jobId, String newStatus, User recruiter) {
 
-    // Chỉ tìm Job thuộc HR đang đăng nhập
-    Job job = jobRepository
-            .findByIdAndRecruiterId(id, recruiterId)
-            .orElseThrow(() -> new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Job not found"
-            ));
+        // Kiểm tra ID
+        if (!ObjectId.isValid(jobId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid Job ID");
+        }
 
-    validateJobSchema(request);
+        if ("published".equals(newStatus)) {
+            throw new ForbiddenException("ADMIN_APPROVAL_REQUIRED",
+                    "Chỉ admin mới được duyệt và công khai job tuyển dụng");
+        }
 
-    // Cập nhật thông tin
-    job.setTitle(request.title());
-    job.setDescription(request.description());
-    job.setCategory(request.category());
-    job.setEmploymentType(request.employmentType());
+        // Kiểm tra status hợp lệ
+        if (newStatus == null
+                || !List.of("draft", "closed")
+                        .contains(newStatus)) {
 
-    job.setLocation(request.location());
-    job.setSalary(request.salary());
-    job.setExperience(request.experience());
-    job.setRequirements(request.requirements());
-    job.setBenefits(request.benefits());
-    job.setDeadline(request.deadline());
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid job status");
+        }
 
-    // Không thay đổi recruiterId, companyId, createdAt, status
-    job.setUpdatedAt(Instant.now());
+        ObjectId id = new ObjectId(jobId);
+        ObjectId recruiterId = recruiterIdentity.requireProfileId(recruiter);
 
-    return jobRepository.save(job);
+        // Chỉ tìm Job thuộc HR đang đăng nhập
+        Job job = jobRepository
+                .findByIdAndRecruiterId(id, recruiterId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Job not found"));
+
+        // Cập nhật trạng thái
+        job.setStatus(newStatus);
+        job.setUpdatedAt(Instant.now());
+
+        return jobRepository.save(job);
     }
 
-    //Cập nhật job
-    public Job updateJobStatus(
-        String jobId,
-        String newStatus,
-        User recruiter) {
-
-    // Kiểm tra ID
-    if (!ObjectId.isValid(jobId)) {
-        throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "Invalid Job ID"
-        );
-    }
-
-    // Kiểm tra status hợp lệ
-    if (newStatus == null
-            || !List.of("draft", "published", "closed")
-                    .contains(newStatus)) {
-
-        throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "Invalid job status"
-        );
-    }
-
-    ObjectId id = new ObjectId(jobId);
-    ObjectId recruiterId = recruiterIdentity.requireProfileId(recruiter);
-
-    // Chỉ tìm Job thuộc HR đang đăng nhập
-    Job job = jobRepository
-            .findByIdAndRecruiterId(id, recruiterId)
-            .orElseThrow(() -> new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Job not found"
-            ));
-
-    // Cập nhật trạng thái
-    job.setStatus(newStatus);
-    job.setUpdatedAt(Instant.now());
-
-    return jobRepository.save(job);
-    }
-
-
-    //Xóa job
+    // Xóa job
     public void deleteJob(String jobId, User recruiter) {
 
-    if (!ObjectId.isValid(jobId)) {
-        throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "Invalid Job ID"
-        );
-    }
+        if (!ObjectId.isValid(jobId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid Job ID");
+        }
 
-    ObjectId id = new ObjectId(jobId);
-    ObjectId recruiterId = recruiterIdentity.requireProfileId(recruiter);
+        ObjectId id = new ObjectId(jobId);
+        ObjectId recruiterId = recruiterIdentity.requireProfileId(recruiter);
 
-    // Chỉ tìm Job thuộc HR đang đăng nhập
-    Job job = jobRepository
-            .findByIdAndRecruiterId(id, recruiterId)
-            .orElseThrow(() -> new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Job not found"
-            ));
+        // Chỉ tìm Job thuộc HR đang đăng nhập
+        Job job = jobRepository
+                .findByIdAndRecruiterId(id, recruiterId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Job not found"));
 
-    // Xóa Job khỏi MongoDB
-    jobRepository.delete(job);
+        // Xóa Job khỏi MongoDB
+        jobRepository.delete(job);
     }
 
     /**
      * Query tìm kiếm việc làm từ collection jobs trong MongoDB:
-     * - keyword: tìm trong title, description, category, requiredSkills, preferredSkills
+     * - keyword: tìm trong title, description, category, requiredSkills,
+     * preferredSkills
      * - profession: tìm trong category
-     * - location: tìm trong location.city, location.address, location.country (hoặc remote = true)
+     * - location: tìm trong location.city, location.address, location.country (hoặc
+     * remote = true)
      */
-    public PageResponse<JobResponse> searchJobs(String keyword, String profession, String location, int page, int size) {
+    public PageResponse<JobResponse> searchJobs(String keyword, String profession, String location, int page,
+            int size) {
         if (page < 0) {
             page = 0;
         }
@@ -367,8 +366,7 @@ public class JobService {
                     Criteria.where("description").regex(regex, "i"),
                     Criteria.where("category").regex(regex, "i"),
                     Criteria.where("requirements.requiredSkills").regex(regex, "i"),
-                    Criteria.where("requirements.preferredSkills").regex(regex, "i")
-            ));
+                    Criteria.where("requirements.preferredSkills").regex(regex, "i")));
         }
 
         // 3. Query theo nghề nghiệp / danh mục (profession/category)
@@ -386,8 +384,7 @@ public class JobService {
                 criteriaList.add(new Criteria().orOperator(
                         Criteria.where("location.city").regex(locRegex, "i"),
                         Criteria.where("location.address").regex(locRegex, "i"),
-                        Criteria.where("location.country").regex(locRegex, "i")
-                ));
+                        Criteria.where("location.country").regex(locRegex, "i")));
             }
         }
 
@@ -421,7 +418,8 @@ public class JobService {
     }
 
     private JobResponse mapToResponse(Job job) {
-        // Keep the search DTO's LocalDateTime contract with an explicit, stable UTC conversion.
+        // Keep the search DTO's LocalDateTime contract with an explicit, stable UTC
+        // conversion.
         return new JobResponse(
                 job.getId() == null ? null : job.getId().toHexString(),
                 job.getCompanyId() == null ? null : job.getCompanyId().toHexString(),
@@ -437,7 +435,6 @@ public class JobService {
                 job.getBenefits(),
                 job.getDeadline() == null ? null : LocalDateTime.ofInstant(job.getDeadline(), ZoneOffset.UTC),
                 job.getStatus(),
-                job.getCreatedAt() == null ? null : LocalDateTime.ofInstant(job.getCreatedAt(), ZoneOffset.UTC)
-        );
+                job.getCreatedAt() == null ? null : LocalDateTime.ofInstant(job.getCreatedAt(), ZoneOffset.UTC));
     }
 }
