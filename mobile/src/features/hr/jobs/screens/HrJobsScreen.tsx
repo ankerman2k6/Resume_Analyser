@@ -137,6 +137,10 @@ export function HrJobsScreen({ navigation }: Props) {
     rootNavigation.navigate('HrCreateJob');
   }, [navigation]);
 
+  const openEditJob = (jobId: string) => {
+    navigation.getParent<NativeStackNavigationProp<RootStackParamList>>()?.navigate('HrEditJob', { jobId });
+  };
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
@@ -379,11 +383,15 @@ export function HrJobsScreen({ navigation }: Props) {
               <View style={styles.actions}>
                 <Pressable accessibilityRole="button" onPress={() => void showDetail(item)} style={({ pressed }) => [styles.detailButton, pressed && styles.pressed]}>
                   <Ionicons color={colors.light.text.inverse} name="eye-outline" size={17} />
-                  <Text style={styles.detailButtonText}>Xem chi tiết</Text>
+                  <Text numberOfLines={1} style={styles.detailButtonText}>Xem chi tiết</Text>
+                </Pressable>
+                <Pressable accessibilityLabel={`Sửa tin ${item.title}`} accessibilityRole="button" onPress={() => openEditJob(item.id)} style={({ pressed }) => [styles.editButton, pressed && styles.pressed]}>
+                  <Ionicons color={colors.light.brand.secondary} name="create-outline" size={17} />
+                  <Text numberOfLines={1} style={styles.editButtonText}>Sửa tin</Text>
                 </Pressable>
                 <Pressable accessibilityRole="button" onPress={() => void changeStatus(item)} style={({ pressed }) => [styles.statusButton, pressed && styles.pressed]}>
                   <Ionicons color={colors.light.brand.secondary} name={item.status === 'published' ? 'pause-circle-outline' : 'paper-plane-outline'} size={17} />
-                  <Text style={styles.statusButtonText}>{statusActionLabel}</Text>
+                  <Text numberOfLines={1} style={styles.statusButtonText}>{statusActionLabel}</Text>
                 </Pressable>
                 <Pressable accessibilityLabel={`Xóa tin ${item.title}`} accessibilityRole="button" onPress={() => remove(item)} style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}>
                   <Ionicons color={colors.light.status.danger} name="trash-outline" size={18} />
@@ -463,11 +471,13 @@ const styles = StyleSheet.create({
   deadlineRow: { backgroundColor: colors.light.background.subtle, borderRadius: 10, marginTop: 14, paddingHorizontal: 10, paddingVertical: 9 },
   deadlineLabel: { alignItems: 'center', flexDirection: 'row', gap: 7 },
   deadlineText: { color: colors.light.text.secondary, flex: 1, fontSize: 12 },
-  actions: { alignItems: 'center', borderTopColor: colors.light.border.subtle, borderTopWidth: 1, flexDirection: 'row', gap: 8, marginTop: 14, paddingTop: 12 },
-  detailButton: { alignItems: 'center', backgroundColor: colors.light.brand.secondary, borderRadius: 10, flex: 1.25, flexDirection: 'row', gap: 6, justifyContent: 'center', minHeight: 44, paddingHorizontal: 10 },
-  detailButtonText: { color: colors.light.text.inverse, fontSize: 12, fontWeight: '700' },
+  actions: { borderTopColor: colors.light.border.subtle, borderTopWidth: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14, paddingTop: 12 },
+  detailButton: { alignItems: 'center', backgroundColor: colors.light.brand.secondary, borderRadius: 10, flexBasis: '48%', flexGrow: 1, flexDirection: 'row', gap: 6, justifyContent: 'center', minHeight: 44, paddingHorizontal: 8 },
+  detailButtonText: { color: colors.light.text.inverse, flexShrink: 1, fontSize: 12, fontWeight: '700' },
+  editButton: { alignItems: 'center', borderColor: colors.light.border.subtle, borderRadius: 10, borderWidth: 1, flexBasis: '48%', flexGrow: 1, flexDirection: 'row', gap: 6, justifyContent: 'center', minHeight: 44, paddingHorizontal: 8 },
+  editButtonText: { color: colors.light.brand.secondary, flexShrink: 1, fontSize: 12, fontWeight: '700' },
   statusButton: { alignItems: 'center', borderColor: colors.light.border.subtle, borderRadius: 10, borderWidth: 1, flex: 1, flexDirection: 'row', gap: 5, justifyContent: 'center', minHeight: 44, paddingHorizontal: 8 },
-  statusButtonText: { color: colors.light.brand.secondary, fontSize: 12, fontWeight: '700' },
+  statusButtonText: { color: colors.light.brand.secondary, flexShrink: 1, fontSize: 12, fontWeight: '700' },
   deleteButton: { alignItems: 'center', backgroundColor: '#FEF2F2', borderRadius: 10, height: 44, justifyContent: 'center', width: 44 },
   pressed: { opacity: 0.72 },
 });

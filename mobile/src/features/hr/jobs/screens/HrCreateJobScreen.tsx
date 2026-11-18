@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,9 +20,9 @@ import { ApiError, ApiNetworkError } from '../../../../core/apiClient';
 import { colors } from '../../../../theme';
 import { spacing } from '../../../../theme/spacing';
 import type { RootStackParamList } from '../../../../types/navigation';
-import { hrApi, type JobPayload } from '../../api/hrApi';
+import { hrApi, type HrJob, type JobPayload } from '../../api/hrApi';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'HrCreateJob'>;
+type Props = { navigation: { goBack: () => void }; jobId?: string };
 type SubmitAction = 'draft' | 'publish';
 type ErrorKey = 'title' | 'category' | 'level' | 'employmentType' | 'location' | 'salary' | 'experience' | 'deadline' | 'description' | 'skills';
 type FormErrors = Partial<Record<ErrorKey, string>>;
@@ -87,9 +87,10 @@ function submitErrorMessage(error: unknown) {
     if (error.status === 400) return 'Thông tin tin tuyển dụng chưa hợp lệ. Vui lòng kiểm tra lại.';
     if (error.status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
     if (error.status === 403) return 'Tài khoản chưa có quyền hoặc chưa liên kết với công ty.';
+    if (error.status === 404) return 'Không tìm thấy tin tuyển dụng hoặc tin không thuộc tài khoản của bạn.';
     if (error.status >= 500) return 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.';
   }
-  return 'Không thể tạo tin tuyển dụng. Vui lòng thử lại.';
+  return error instanceof Error ? error.message : 'Không thể lưu tin tuyển dụng. Vui lòng thử lại.';
 }
 
 function FormField({
@@ -162,7 +163,7 @@ function SelectField({
 }) {
   const [open, setOpen] = useState(false);
   const insets = useSafeAreaInsets();
-  const selectedLabel = options.find((option) => option.value === value)?.label ?? 'Chọn';
+  const selectedLabel = options.find((option) => option.value === value)?.label ?? (value || 'Chọn');
 
   return (
     <FormField error={error} label={label} required={required}>
@@ -238,10 +239,21 @@ function SectionTitle({ badge, icon, subtitle, title }: { badge?: string; icon: 
   );
 }
 
-export function HrCreateJobScreen({ navigation }: Props) {
+export function HrEditJobScreen({ navigation, route }: NativeStackScreenProps<RootStackParamList, 'HrEditJob'>) {
+  return <JobForm navigation={navigation} jobId={route.params.jobId} />;
+}
+
+export function HrCreateJobScreen({ navigation }: NativeStackScreenProps<RootStackParamList, 'HrCreateJob'>) {
+  return <JobForm navigation={navigation} />;
+}
+
+function JobForm({ navigation, jobId: editJobId }: Props) {
   const insets = useSafeAreaInsets();
   const submitLock = useRef(false);
   const createdDraftId = useRef<string | undefined>(undefined);
+  const [originalJob, setOriginalJob] = useState<HrJob>();
+  const [loadingJob, setLoadingJob] = useState(Boolean(editJobId));
+  const [loadError, setLoadError] = useState('');
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [level, setLevel] = useState('');
@@ -260,6 +272,44 @@ export function HrCreateJobScreen({ navigation }: Props) {
   const [benefits, setBenefits] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState<SubmitAction>();
+
+  const loadJob = useCallback(async () => {
+    if (!editJobId) return;
+    setLoadingJob(true);
+    setLoadError('');
+    try {
+      const job = await hrApi.job(editJobId);
+      setOriginalJob(job);
+      setTitle(job.title ?? '');
+      setCategory(job.category ?? '');
+      setLevel(job.experience?.level ?? '');
+      setEmploymentType(job.employmentType ?? '');
+      setLocation(job.location?.city || job.location?.address || '');
+      setRemote(Boolean(job.location?.remote));
+      setSalaryMin(job.salary?.min != null ? String(job.salary.min) : '');
+      setSalaryMax(job.salary?.max != null ? String(job.salary.max) : '');
+      setCurrency(job.salary?.currency ?? 'VND');
+      setNegotiable(Boolean(job.salary?.negotiable));
+      const years = job.experience;
+      setExperienceRange(Object.keys(experienceValues).find((key) => {
+        const value = experienceValues[key];
+        return value.minYears === years?.minYears && value.maxYears === years?.maxYears;
+      }) ?? '');
+      const date = job.deadline ? new Date(job.deadline) : undefined;
+      setDeadline(date && !Number.isNaN(date.getTime())
+        ? `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}` : '');
+      setDescription(job.description ?? '');
+      const requiredSkills = job.requirements?.requiredSkills;
+      setSkills(Array.isArray(requiredSkills) ? requiredSkills.filter((skill): skill is string => typeof skill === 'string') : []);
+      setBenefits((job.benefits ?? []).join('\n'));
+    } catch (error) {
+      setLoadError(submitErrorMessage(error));
+    } finally {
+      setLoadingJob(false);
+    }
+  }, [editJobId]);
+
+  useEffect(() => { void loadJob(); }, [loadJob]);
 
   const addSkills = (values: string[]) => {
     setSkills((current) => uniqueTags([...current, ...values]));
@@ -281,27 +331,39 @@ export function HrCreateJobScreen({ navigation }: Props) {
   };
 
   const submit = async (action: SubmitAction) => {
-    if (submitLock.current) return;
+    if (submitLock.current || (editJobId && !originalJob)) return;
 
     const finalSkills = uniqueTags([...skills, skillDraft]);
+    const savedSkills = originalJob?.requirements?.requiredSkills;
+    const skillsUnchanged = Boolean(originalJob && !skillDraft.trim() &&
+      Array.isArray(savedSkills) && skills.length === savedSkills.length &&
+      skills.every((skill, index) => skill === savedSkills[index]));
     const nextErrors: FormErrors = {};
     const parsedDeadline = parseDeadline(deadline);
+    const originalDate = originalJob?.deadline ? new Date(originalJob.deadline) : undefined;
+    const originalDeadlineText = originalDate && !Number.isNaN(originalDate.getTime())
+      ? `${String(originalDate.getDate()).padStart(2, '0')}/${String(originalDate.getMonth() + 1).padStart(2, '0')}/${originalDate.getFullYear()}` : '';
+    const deadlineUnchanged = Boolean(originalJob && deadline === originalDeadlineText);
     const minSalary = salaryMin.trim() ? Number(salaryMin) : undefined;
     const maxSalary = salaryMax.trim() ? Number(salaryMax) : undefined;
     const experience = experienceValues[experienceRange] ?? {};
+    const savedExperienceRange = Object.keys(experienceValues).find((key) => {
+      const value = experienceValues[key];
+      return value.minYears === originalJob?.experience?.minYears && value.maxYears === originalJob?.experience?.maxYears;
+    }) ?? '';
 
     if (!title.trim()) nextErrors.title = 'Vui lòng nhập tiêu đề công việc.';
-    if (!category.trim()) nextErrors.category = 'Vui lòng nhập phân hệ hoặc chuyên môn.';
-    if (!level) nextErrors.level = 'Vui lòng chọn cấp bậc.';
+    if (!editJobId && !category.trim()) nextErrors.category = 'Vui lòng nhập phân hệ hoặc chuyên môn.';
+    if (!editJobId && !level) nextErrors.level = 'Vui lòng chọn cấp bậc.';
     if (!employmentType) nextErrors.employmentType = 'Vui lòng chọn hình thức.';
-    if (!remote && !location.trim()) nextErrors.location = 'Vui lòng nhập địa điểm làm việc.';
-    if (!parsedDeadline || parsedDeadline.getTime() <= Date.now()) {
+    if (!editJobId && !remote && !location.trim()) nextErrors.location = 'Vui lòng nhập địa điểm làm việc.';
+    if ((!editJobId || deadline.trim()) && !deadlineUnchanged && (!parsedDeadline || parsedDeadline.getTime() <= Date.now())) {
       nextErrors.deadline = 'Hạn ứng tuyển phải đúng định dạng và ở tương lai.';
     }
     if (!description.trim()) nextErrors.description = 'Vui lòng nhập mô tả công việc.';
-    if (finalSkills.length === 0) nextErrors.skills = 'Vui lòng thêm ít nhất một kỹ năng.';
-    if (!negotiable && ((minSalary != null && (!Number.isFinite(minSalary) || minSalary < 0))
-      || (maxSalary != null && (!Number.isFinite(maxSalary) || maxSalary < 0))
+    if (!editJobId && finalSkills.length === 0) nextErrors.skills = 'Vui lòng thêm ít nhất một kỹ năng.';
+    if (!negotiable && ((minSalary != null && (!Number.isSafeInteger(minSalary) || minSalary < 0))
+      || (maxSalary != null && (!Number.isSafeInteger(maxSalary) || maxSalary < 0))
       || (minSalary != null && maxSalary != null && minSalary > maxSalary))) {
       nextErrors.salary = 'Khoảng lương chưa hợp lệ.';
     }
@@ -309,39 +371,62 @@ export function HrCreateJobScreen({ navigation }: Props) {
     setErrors(nextErrors);
     setSkills(finalSkills);
     setSkillDraft('');
-    if (Object.keys(nextErrors).length > 0 || !parsedDeadline) {
+    if (Object.keys(nextErrors).length > 0) {
       Alert.alert('Thông tin chưa đầy đủ', 'Vui lòng kiểm tra các trường được đánh dấu bên dưới.');
       return;
     }
 
     const payload: JobPayload = {
-      title: title.trim(),
-      description: description.trim(),
-      category: category.trim(),
+      title: originalJob && title === originalJob.title ? originalJob.title : title.trim(),
+      description: originalJob && description === originalJob.description ? originalJob.description : description.trim(),
+      category: originalJob && category === originalJob.category ? originalJob.category : category.trim(),
       employmentType,
-      location: {
-        city: location.trim() || undefined,
-        country: 'Việt Nam',
-        remote,
-      },
-      salary: {
-        min: negotiable ? undefined : minSalary,
-        max: negotiable ? undefined : maxSalary,
-        currency,
-        negotiable,
-      },
-      experience: {
-        ...experience,
-        level,
-      },
-      requirements: { requiredSkills: finalSkills },
-      benefits: benefits.split(/\r?\n|;/).map((item) => item.replace(/^[-•]\s*/, '').trim()).filter(Boolean),
-      deadline: parsedDeadline.toISOString(),
+      location: originalJob && location.trim() === (originalJob.location?.city || originalJob.location?.address || '') && remote === Boolean(originalJob.location?.remote)
+        ? originalJob.location
+        : {
+          ...originalJob?.location,
+          city: location.trim() || undefined,
+          country: originalJob?.location?.country || 'Việt Nam',
+          remote,
+        },
+      salary: originalJob && salaryMin === (originalJob.salary?.min != null ? String(originalJob.salary.min) : '')
+        && salaryMax === (originalJob.salary?.max != null ? String(originalJob.salary.max) : '')
+        && currency === (originalJob.salary?.currency ?? 'VND') && negotiable === Boolean(originalJob.salary?.negotiable)
+        ? originalJob.salary
+        : {
+          ...originalJob?.salary,
+          min: negotiable ? undefined : minSalary,
+          max: negotiable ? undefined : maxSalary,
+          currency,
+          negotiable,
+        },
+      experience: originalJob && experienceRange === savedExperienceRange && level === (originalJob.experience?.level ?? '')
+        ? originalJob.experience
+        : {
+          ...originalJob?.experience,
+          minYears: originalJob && experienceRange === savedExperienceRange ? originalJob.experience?.minYears : experience.minYears,
+          maxYears: originalJob && experienceRange === savedExperienceRange ? originalJob.experience?.maxYears : experience.maxYears,
+          level,
+        },
+      requirements: skillsUnchanged || (originalJob && !savedSkills && !finalSkills.length)
+        ? originalJob?.requirements
+        : { ...originalJob?.requirements, requiredSkills: finalSkills },
+      benefits: originalJob && benefits === (originalJob.benefits ?? []).join('\n')
+        ? originalJob.benefits
+        : benefits.split(/\r?\n|;/).map((item) => item.replace(/^[-•]\s*/, '').trim()).filter(Boolean),
+      deadline: deadlineUnchanged ? originalJob?.deadline : parsedDeadline?.toISOString(),
     };
 
     submitLock.current = true;
     setSubmitting(action);
     try {
+      if (editJobId) {
+        await hrApi.updateJob(editJobId, payload);
+        Alert.alert('Cập nhật tin tuyển dụng thành công', '', [
+          { text: 'Hoàn tất', onPress: () => navigation.goBack() },
+        ]);
+        return;
+      }
       let jobId = createdDraftId.current;
       if (jobId) {
         await hrApi.updateJob(jobId, payload);
@@ -373,9 +458,21 @@ export function HrCreateJobScreen({ navigation }: Props) {
     } catch (requestError) {
       submitLock.current = false;
       setSubmitting(undefined);
-      Alert.alert('Không thể lưu tin', submitErrorMessage(requestError));
+      Alert.alert(editJobId ? 'Không thể cập nhật tin' : 'Không thể lưu tin', submitErrorMessage(requestError));
     }
   };
+
+  if (loadingJob) {
+    return <View style={[styles.page, styles.loadingContainer]}><ActivityIndicator color={colors.light.brand.secondary} size="large" /><Text style={styles.helperText}>Đang tải tin tuyển dụng…</Text></View>;
+  }
+  if (loadError) {
+    return (
+      <View style={[styles.page, styles.loadingContainer]}>
+        <Text style={styles.fieldError}>{loadError}</Text>
+        <Pressable accessibilityRole="button" onPress={() => void loadJob()} style={styles.draftButton}><Text style={styles.draftButtonText}>Thử lại</Text></Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.page}>
@@ -405,7 +502,7 @@ export function HrCreateJobScreen({ navigation }: Props) {
                 placeholder="VD: Senior Frontend Engineer (React/TypeScript)"
                 value={title}
               />
-              <ScrollView
+              {!editJobId ? <ScrollView
                 contentContainerStyle={styles.atsSuggestions}
                 horizontal
                 keyboardShouldPersistTaps="handled"
@@ -425,7 +522,7 @@ export function HrCreateJobScreen({ navigation }: Props) {
                     <Text style={styles.suggestionText}>{suggestion}</Text>
                   </Pressable>
                 ))}
-              </ScrollView>
+              </ScrollView> : null}
             </FormField>
             <FormField error={errors.category} label="Phân hệ & Chuyên môn" required>
               <FormInput
@@ -587,6 +684,17 @@ export function HrCreateJobScreen({ navigation }: Props) {
         </ScrollView>
 
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+          {editJobId ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={Boolean(submitting)}
+              onPress={() => void submit('draft')}
+              style={({ pressed }) => [styles.publishButton, pressed && styles.pressed, submitting && styles.disabled]}
+            >
+              {submitting ? <ActivityIndicator color={colors.light.text.inverse} size="small" /> : <Ionicons color={colors.light.text.inverse} name="save-outline" size={18} />}
+              <Text style={styles.publishButtonText}>Lưu thay đổi</Text>
+            </Pressable>
+          ) : <>
           <Pressable
             accessibilityRole="button"
             disabled={Boolean(submitting)}
@@ -609,6 +717,7 @@ export function HrCreateJobScreen({ navigation }: Props) {
               : <Ionicons color={colors.light.text.inverse} name="paper-plane" size={17} />}
             <Text style={styles.publishButtonText}>{submitting === 'publish' ? 'Đang đăng…' : 'Đăng tin ngay'}</Text>
           </Pressable>
+          </>}
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -618,6 +727,7 @@ export function HrCreateJobScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   page: { backgroundColor: colors.light.background.primary, flex: 1 },
+  loadingContainer: { alignItems: 'center', gap: 16, justifyContent: 'center', padding: spacing.lg },
   formContent: { gap: 14, padding: spacing.md, paddingBottom: spacing.lg },
   intro: { paddingHorizontal: 2, paddingVertical: 4 },
   introEyebrow: { color: colors.light.brand.secondary, fontSize: 12, fontWeight: '700', letterSpacing: 1 },

@@ -11,7 +11,7 @@ import { HrTabs } from './HrTabs';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { clearSession } from '../core/apiClient';
-import { HrCreateJobScreen } from '../features/hr/jobs/screens/HrCreateJobScreen';
+import { HrCreateJobScreen, HrEditJobScreen } from '../features/hr/jobs/screens/HrCreateJobScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function AppNavigator() {
@@ -69,6 +69,11 @@ export function AppNavigator() {
           headerTitleAlign: 'center',
           title: 'Đăng tin tuyển dụng',
         })}
+      />
+      <Stack.Screen
+        name="HrEditJob"
+        component={HrEditJobScreen}
+        options={{ headerTitleAlign: 'center', title: 'Sửa tin tuyển dụng' }}
       />
     </Stack.Navigator>
   );

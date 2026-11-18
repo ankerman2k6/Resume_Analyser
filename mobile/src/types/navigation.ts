@@ -33,4 +33,5 @@ export type RootStackParamList = {
     | undefined;
 
   HrCreateJob: undefined;
+  HrEditJob: { jobId: string };
 };
