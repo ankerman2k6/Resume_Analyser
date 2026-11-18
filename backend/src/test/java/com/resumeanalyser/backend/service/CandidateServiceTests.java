@@ -343,7 +343,7 @@ class CandidateServiceTests {
 
         ConflictException ex = assertThrows(ConflictException.class, () ->
                 candidateService.deleteCv(activeCandidate, cvId.toHexString()));
-        assertEquals("CV_IN_USE", ex.getCode());
+        assertEquals("CV in use", ex.getCode());
     }
 
     @Test

@@ -743,7 +743,7 @@ public class CandidateService {
         boolean inAnalyses = cvAnalysisRepository.existsByCvId(cvObjectId);
 
         if (inApplications || inAnalyses) {
-            throw new ConflictException("CV_IN_USE", "CV đang được sử dụng trong đơn ứng tuyển hoặc báo cáo phân tích, không thể xóa.");
+            throw new ConflictException("CV in use", "CV đang được sử dụng trong đơn ứng tuyển hoặc báo cáo phân tích, không thể xóa.");
         }
 
         if (cv.getSource() != null && "template".equalsIgnoreCase(cv.getSource().getType())) {
@@ -1065,7 +1065,7 @@ public class CandidateService {
         boolean inApplications = applicationRepository.existsByCvId(cv.getId());
         boolean inAnalyses = cvAnalysisRepository.existsByCvId(cv.getId());
         boolean canDelete = !inApplications && !inAnalyses;
-        String deleteBlockedReason = canDelete ? null : "CV_IN_USE";
+        String deleteBlockedReason = canDelete ? null : "CV in use";
 
         return new CvSummaryDto(
                 cv.getId().toHexString(),

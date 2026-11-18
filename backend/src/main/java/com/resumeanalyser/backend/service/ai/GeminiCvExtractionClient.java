@@ -54,6 +54,7 @@ public class GeminiCvExtractionClient {
         this.httpClient = httpClient;
     }
 
+    // Hàm đọc PDF
     public CvExtractionResult extract(Path pdfPath) {
         if (pdfPath == null || !Files.isRegularFile(pdfPath)) {
             throw new IllegalArgumentException("Không tìm thấy file PDF cần phân tích.");
@@ -63,6 +64,7 @@ public class GeminiCvExtractionClient {
             if (size > MAX_INLINE_PDF_BYTES) {
                 throw new IllegalArgumentException("File PDF không được vượt quá 5 MB.");
             }
+            // đọc file PDF và gửi đến Gemini để phân tích
             return extract(Files.readAllBytes(pdfPath));
         } catch (IOException exception) {
             throw new GeminiRequestException("Không thể đọc file PDF để gửi Gemini.", 0, exception);
@@ -73,6 +75,7 @@ public class GeminiCvExtractionClient {
         validateConfiguration();
         validatePdf(pdfBytes);
 
+        // tạo request gửi đến Gemini
         HttpRequest request = HttpRequest.newBuilder(endpoint())
                 .timeout(properties.getTimeout())
                 .header("Content-Type", "application/json")
@@ -82,12 +85,13 @@ public class GeminiCvExtractionClient {
                         buildRequestBody(pdfBytes), StandardCharsets.UTF_8))
                 .build();
 
+        // send request và nhận response từ Gemini
         HttpResponse<String> response = sendWithRetry(request);
+        //nếu response trả về lỗi thì throw exception
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new GeminiRequestException(
-                    "Gemini trả HTTP " + response.statusCode() + ": " + safeBody(response.body()),
-                    response.statusCode());
+            throw new GeminiRequestException("Gemini trả HTTP " + response.statusCode() + ": " + safeBody(response.body()), response.statusCode());
         }
+        // parse response body và trả về kết quả trích xuất CV
         return parseResponse(response.body());
     }
 
@@ -114,6 +118,7 @@ public class GeminiCvExtractionClient {
         return objectMapper.writeValueAsString(root);
     }
 
+    //hàm phân tích response body từ Gemini và trả về kết quả trích xuất CV
     CvExtractionResult parseResponse(String responseBody) {
         try {
             JsonNode root = objectMapper.readTree(responseBody);
@@ -125,6 +130,7 @@ public class GeminiCvExtractionClient {
             }
 
             StringBuilder json = new StringBuilder();
+            // duyệt qua các phần của candidate và ghép các phần text lại thành một chuỗi JSON
             candidates.path(0).path("content").path("parts")
                     .forEach(part -> {
                         if (part.has("text")) {
@@ -134,7 +140,8 @@ public class GeminiCvExtractionClient {
             if (json.isEmpty()) {
                 throw new GeminiRequestException("Gemini không trả JSON trích xuất CV.", 502);
             }
-
+            
+            // parse chuỗi JSON thành CvExtractionResult và validate các trường bắt buộc
             CvExtractionResult result = objectMapper.readValue(json.toString(), CvExtractionResult.class);
             validateResult(result);
             return result;
@@ -148,8 +155,8 @@ public class GeminiCvExtractionClient {
     private HttpResponse<String> sendWithRetry(HttpRequest request) {
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
-                HttpResponse<String> response = httpClient.send(
-                        request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+                HttpResponse<String> response = httpClient.send(request,HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
                 if (!isRetryable(response.statusCode()) || attempt == MAX_ATTEMPTS) {
                     return response;
                 }
@@ -207,7 +214,9 @@ public class GeminiCvExtractionClient {
         }
     }
 
+    // Ghép URL endpoint của Gemini
     private URI endpoint() {
+        // lấy model từ cấu hình và encode để tránh lỗi URL
         String encodedModel = URLEncoder.encode(properties.getModel(), StandardCharsets.UTF_8);
         return properties.getBaseUrl().resolve("models/" + encodedModel + ":generateContent");
     }

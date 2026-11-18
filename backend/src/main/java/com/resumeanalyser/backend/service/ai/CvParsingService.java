@@ -41,6 +41,8 @@ public class CvParsingService {
         this.mapper = mapper;
     }
 
+
+    //hàm để parse và save CV
     public Cv parseAndSave(ObjectId cvId, ObjectId candidateId) {
         if (cvId == null || candidateId == null) {
             throw new IllegalArgumentException("cvId và candidateId không được null.");
@@ -57,6 +59,7 @@ public class CvParsingService {
                 statusUpdate("processing", Instant.now()),
                 FindAndModifyOptions.options().returnNew(true),
                 Cv.class);
+        //
         if (processing == null) {
             throw new ConflictException(
                     "CV_PARSE_IN_PROGRESS", "CV đang được Gemini phân tích. Vui lòng chờ hoàn tất.");
@@ -67,7 +70,9 @@ public class CvParsingService {
                 .and("parseInfo.status").is("processing"));
 
         try {
+            //nhận path của file PDF từ cv
             Path pdfPath = resolvePdf(cv);
+            //đọc và gửi PDF đến Gemini để phân tích
             CvExtractionResult extraction = geminiClient.extract(pdfPath);
             NormalizedCvData data = mapper.normalize(extraction);
             Instant now = Instant.now();
@@ -99,7 +104,7 @@ public class CvParsingService {
                 || cv.getSource().getFileUrl().isBlank()) {
             throw new FileStorageException("CV không có đường dẫn file PDF để phân tích.");
         }
-        Path path = Path.of(cv.getSource().getFileUrl()).toAbsolutePath().normalize();
+        Path path = Path.of(cv.getSource().getFileUrl()).toAbsolutePath().normalize(); //chuyển thành Path tuyệt đối và chuẩn hóa đường dẫn
         if (!Files.isRegularFile(path)) {
             throw new FileStorageException("Không tìm thấy file PDF của CV để phân tích.");
         }

@@ -349,7 +349,7 @@ class CandidateControllerTests {
                 Instant.now(),
                 true,
                 false,
-                "CV_IN_USE"
+                "CV in use"
         );
 
         PageResponse<CvSummaryDto> pageResponse = new PageResponse<>(List.of(cvSummaryDto), 0, 10, 1, 1, true);
@@ -360,7 +360,7 @@ class CandidateControllerTests {
                 .andExpect(jsonPath("$.content[0]._id").value(cvId))
                 .andExpect(jsonPath("$.content[0].canViewFile").value(true))
                 .andExpect(jsonPath("$.content[0].canDelete").value(false))
-                .andExpect(jsonPath("$.content[0].deleteBlockedReason").value("CV_IN_USE"));
+                .andExpect(jsonPath("$.content[0].deleteBlockedReason").value("CV in use"));
     }
 
     @Test
@@ -394,12 +394,12 @@ class CandidateControllerTests {
     @Test
     void deleteCv_conflictWhenInUse() throws Exception {
         String cvId = new ObjectId().toHexString();
-        doThrow(new ConflictException("CV_IN_USE", "CV đang được sử dụng."))
+        doThrow(new ConflictException("CV in use", "CV đang được sử dụng."))
                 .when(candidateService).deleteCv(any(User.class), eq(cvId));
 
         mvc.perform(delete("/api/candidates/me/cvs/{id}", cvId).header("Authorization", token))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("CV_IN_USE"));
+                .andExpect(jsonPath("$.code").value("CV in use"));
     }
 
     @Test

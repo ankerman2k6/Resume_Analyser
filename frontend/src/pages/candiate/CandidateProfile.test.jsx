@@ -104,7 +104,7 @@ describe('CandidateProfile API integration', () => {
   });
 
   it('respects CV permissions and loads PDF with JWT, then revokes the object URL', async () => {
-    routes.cvs = page([{ ...cv, canDelete: false, deleteBlockedReason: 'CV đã được sử dụng.' }]);
+    routes.cvs = page([{ ...cv, canDelete: false, deleteBlockedReason: 'CV in use.' }]);
     const originalFetch = fetch;
     vi.stubGlobal('fetch', vi.fn((url, options) => url.endsWith('/file')
       ? Promise.resolve({ ok: true, status: 200, blob: async () => new Blob(['PDF'], { type: 'application/pdf' }) })
@@ -118,7 +118,7 @@ describe('CandidateProfile API integration', () => {
     mount('resumes');
     await screen.findByText('An.pdf');
     expect(screen.getByRole('button', { name: 'Xóa' })).toBeDisabled();
-    expect(screen.getByText('CV đã được sử dụng.')).toBeInTheDocument();
+    expect(screen.getByText('CV in use.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Xem' }));
     await screen.findByTitle('Nội dung CV');
     expect(fetch).toHaveBeenCalledWith('/api/candidates/me/cvs/cv1/file',

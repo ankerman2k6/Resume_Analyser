@@ -97,6 +97,9 @@ export const getCandidateCvFileApi = (cvId) =>
 export const deleteCandidateCvApi = (cvId) =>
   request(`${CANDIDATE_API}/cvs/${encodeURIComponent(cvId)}`, { method: 'DELETE' });
 
+export const parseCandidateCvApi = (cvId) => 
+  request(`${CANDIDATE_API}/cvs/${encodeURIComponent(cvId)}/parse`, {method: 'POST'});
+
 /** GET /api/candidates/me/career[?cvId=...] → CareerDto:
  * cv (nguồn + parseInfo), skills[], experience[], education[], certificates[].
  * Bỏ cvId: backend chọn CV mới nhất. Không có CV: cv=null, các mảng rỗng.

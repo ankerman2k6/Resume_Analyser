@@ -12,8 +12,10 @@ import {
   getCandidateCareerApi,
   getCandidateCvFileApi,
   deleteCandidateCvApi,
+  parseCandidateCvApi,
 } from "../../services/candidateService";
 import "./CandidateProfile.css";
+import { Sparkles, CircleCheck, LoaderCircle } from "lucide-react";
 
 const formatSalary = (salary) => {
   if (!salary) return "Chưa cập nhật mức lương";
@@ -52,6 +54,13 @@ const formatDateTime = (value) => {
     hourCycle: "h23",
   }).format(date);
 };
+
+//hàm check cv parse chưa
+const isCvParse = (cv) => {
+  const status = cv.parseInfo?.status.toLowerCase();
+  return status === "completed" || status === "parsed";
+};
+
 
 const FILTERS = {
   all: "Tất cả",
@@ -155,6 +164,7 @@ const CandidateProfile = () => {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [pdfUrl, setPdfUrl] = useState(null);
+  const [parsingCvId, setParsingCvId] = useState(null);
 
   // Modals
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -392,6 +402,43 @@ const CandidateProfile = () => {
       } finally {
         setBusy(false);
       }
+    }
+  };
+
+  //hàm handle parse cv, gọi API
+  const handleParseCv = async (cv) => {
+    //check status
+    const status = cv.parseInfo?.status?.toLowerCase();
+
+    if (busy || parsingCvId || isCvParse(cv) || status === "processing") {
+      return;
+    }
+
+    setParsingCvId(cv._id);
+    setBusy(true);
+    setNotice("");
+
+    try {
+      const parsedCv = await parseCandidateCvApi(cv._id);
+
+      setCvs((current) =>
+        current.map((item) => (item._id === parsedCv._id ? parsedCv : item)),
+      );
+
+      setNotice(
+        parsedCv.skills?.length
+          ? "AI đã phân tích CV và cập nhật kỹ năng."
+          : "AI đã phân tích CV nhưng không tìm thấy kỹ năng được ghi trong tệp.",
+      );
+    } catch (error) {
+      setNotice(error.message || "Không thể phân tích CV. Vui lòng thử lại.");
+
+      // Tải lại dữ liệu để biết backend đã chuyển sang failed
+      // hay vẫn đang processing.
+      setRevision((current) => current + 1);
+    } finally {
+      setParsingCvId(null);
+      setBusy(false);
     }
   };
 
@@ -900,12 +947,13 @@ const CandidateProfile = () => {
                         <div className="app-ai-screening-box">
                           <div className="ai-screening-info">
                             <span
-                              className={`ai-score-pill ${app.aiAnalysis.overallScore >= 80
+                              className={`ai-score-pill ${
+                                app.aiAnalysis.overallScore >= 80
                                   ? "ai-score-pill--high"
                                   : app.aiAnalysis.overallScore >= 60
                                     ? "ai-score-pill--med"
                                     : "ai-score-pill--low"
-                                }`}
+                              }`}
                             >
                               AI Match:{" "}
                               {app.aiAnalysis.overallScore != null
@@ -1127,23 +1175,8 @@ const CandidateProfile = () => {
                     </div>
                   </div>
 
-                  {cv.skills && cv.skills.length > 0 && (
-                    <div className="resume-skills-preview">
-                      {cv.skills.slice(0, 5).map((skill, idx) => (
-                        <span key={idx} className="skill-tag">
-                          {skill.name}
-                        </span>
-                      ))}
-                      {cv.skills.length > 5 && (
-                        <span className="skill-tag" style={{ opacity: 0.7 }}>
-                          +{cv.skills.length - 5}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
                   <div className="resume-card-actions">
-                    <div style={{ display: "flex", gap: "6px" }}>
+                    <div className="resume-action-buttons">
                       <button
                         type="button"
                         className="btn-action btn-action--secondary btn-action--sm"
@@ -1152,6 +1185,7 @@ const CandidateProfile = () => {
                       >
                         Xem
                       </button>
+
                       <button
                         type="button"
                         className="btn-action btn-action--danger btn-action--sm"
@@ -1161,10 +1195,72 @@ const CandidateProfile = () => {
                       >
                         Xóa
                       </button>
+
                       {!cv.canDelete && cv.deleteBlockedReason && (
-                        <small>{cv.deleteBlockedReason}</small>
+                        <small
+                          className="delete-blocked-reason"
+                          title={cv.deleteBlockedReason}
+                        >
+                          {cv.deleteBlockedReason}
+                        </small>
                       )}
+
+                      <button
+                        type="button"
+                        className={`btn-action btn-action--secondary btn-action--sm resume-ai-button ${
+                          isCvParse(cv) ? "resume-ai-button--completed" : ""
+                        }`}
+                        disabled={
+                          busy || isCvParse(cv) || cv.parseInfo?.status?.toLowerCase() === "processing" || cv.source?.type === "template"
+                        }
+                        title={!isCvParse(cv) && cv.source?.type === "template"
+                            ? "Chức năng phân tích hiện hỗ trợ CV PDF tải lên."
+                            : undefined
+                        }
+                        onClick={() => handleParseCv(cv)}
+                      >
+                        {parsingCvId === cv._id ||
+                        cv.parseInfo?.status?.toLowerCase() === "processing" ? (
+                          <>
+                            <LoaderCircle
+                              size={16}
+                              className="resume-ai-spinner"
+                              aria-hidden="true"
+                            />
+                            <span>Đang phân tích…</span>
+                          </>
+                        ) : isCvParse(cv) ? (
+                          <>
+                            <CircleCheck size={16} aria-hidden="true" />
+                            <span>AI đã phân tích</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles size={16} aria-hidden="true" />
+                            <span>Phân tích bằng AI</span>
+                          </>
+                        )}
+                      </button>
                     </div>
+
+                    {cv.skills?.length > 0 && (
+                      <div className="resume-skills-preview">
+                        {cv.skills.map((skill, index) => (
+                          <span
+                            key={`${cv._id}-${skill.name}-${index}`}
+                            className="skill-tag"
+                          >
+                            {skill.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {isCvParse(cv) && !cv.skills?.length && (
+                      <small className="resume-ai-empty">
+                        AI đã phân tích nhưng không tìm thấy kỹ năng trong CV.
+                      </small>
+                    )}
                   </div>
                 </div>
               ))}
