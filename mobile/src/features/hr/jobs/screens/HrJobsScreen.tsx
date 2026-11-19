@@ -216,13 +216,8 @@ export function HrJobsScreen({ navigation }: Props) {
     ]);
   };
 
-  const showDetail = async (item: HrJob) => {
-    try {
-      const detail = await hrApi.job(item.id);
-      Alert.alert(detail.title, detail.description || 'Tin tuyển dụng chưa có mô tả.');
-    } catch (requestError) {
-      Alert.alert('Không tải được chi tiết', requestError instanceof Error ? requestError.message : 'Vui lòng thử lại sau.');
-    }
+  const showDetail = (item: HrJob) => {
+    navigation.getParent<NativeStackNavigationProp<RootStackParamList>>()?.navigate('HrJobDetail', { jobId: item.id });
   };
 
   if (loading && jobs.length === 0) {
