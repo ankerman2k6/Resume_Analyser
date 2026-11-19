@@ -8,7 +8,11 @@ public class RegisterResponse {
     private boolean emailVerified;
     private String status;
 
-    public RegisterResponse(String id, String email, String role, boolean emailVerified, String status) {
+    private final String token;
+    public String getToken() { return token; }
+
+    public RegisterResponse(String id, String email, String role, boolean emailVerified, String status, String token) {
+        this.token = token;
         this.id = id;
         this.email = email;
         this.role = role;

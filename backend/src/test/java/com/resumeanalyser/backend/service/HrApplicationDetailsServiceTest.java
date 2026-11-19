@@ -37,6 +37,14 @@ class HrApplicationDetailsServiceTest {
         User user = new User(); user.setId(profile.getUserId().toHexString()); user.setEmail("contact@example.test");
         Cv cv = new Cv(); cv.setId(app.getCvId()); cv.setCandidateId(app.getCandidateId());
         cv.setSource(new Cv.Source("uploaded", "cv.pdf", root.resolve("cv.pdf").toString(), "application/pdf"));
+        cv.setSkills(List.of(new Cv.Skill(" Java ", "Backend", null, 3),
+                new Cv.Skill("Java", "Backend", null, 3),
+                new Cv.Skill("Spring Boot", "Backend", null, 2)));
+        Cv.Experience first = new Cv.Experience();
+        first.setStartDate("2020-01"); first.setEndDate("2021-12");
+        Cv.Experience overlapping = new Cv.Experience();
+        overlapping.setStartDate("2021-01"); overlapping.setEndDate("2022-12");
+        cv.setExperience(List.of(first, overlapping));
         when(applications.getApplicationsByJob("job", "hr")).thenReturn(List.of(app));
         when(profiles.findAllById(any())).thenReturn(List.of(profile));
         when(users.findAllById(any())).thenReturn(List.of(user));
@@ -49,6 +57,8 @@ class HrApplicationDetailsServiceTest {
         assertEquals("applied", result.status());
         assertEquals("/api/hr/applications/" + app.getId() + "/cv/file", result.cvUrl());
         assertFalse(result.cvUrl().contains(root.toString()));
+        assertEquals(List.of("Java", "Spring Boot"), result.skills());
+        assertEquals(3.0, result.experienceYears());
     }
 
     @Test void unauthorizedJobNeverLoadsContactInformation() {
@@ -66,6 +76,25 @@ class HrApplicationDetailsServiceTest {
         var result = service().getByJob("job", "hr").getFirst();
         assertEquals(app.getId().toHexString(), result.id());
         assertNull(result.fullName()); assertNull(result.cvUrl());
+        assertEquals(List.of(), result.skills());
+        assertNull(result.experienceYears());
+    }
+
+    @Test void mismatchedCvDoesNotExposeSkillsOrExperience() {
+        Application app = new Application(); app.setId(new ObjectId()); app.setCvId(new ObjectId());
+        app.setCandidateId(new ObjectId());
+        Cv cv = new Cv(); cv.setId(app.getCvId()); cv.setCandidateId(new ObjectId());
+        cv.setSkills(List.of(new Cv.Skill("Private skill", "Other", null, null)));
+        Cv.Experience experience = new Cv.Experience();
+        experience.setStartDate("2020"); experience.setEndDate("2023");
+        cv.setExperience(List.of(experience));
+        when(applications.getApplicationsByJob("job", "hr")).thenReturn(List.of(app));
+        when(profiles.findAllById(any())).thenReturn(List.of());
+        when(users.findAllById(any())).thenReturn(List.of());
+        when(cvs.findAllById(any())).thenReturn(List.of(cv));
+        var result = service().getByJob("job", "hr").getFirst();
+        assertEquals(List.of(), result.skills());
+        assertNull(result.experienceYears());
     }
 
     @Test void rejectsCvFilesOutsideStorageRoot() throws Exception {

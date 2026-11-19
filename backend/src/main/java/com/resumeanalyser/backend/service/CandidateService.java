@@ -35,6 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.resumeanalyser.backend.dto.PageResponse;
 import com.resumeanalyser.backend.dto.candidate.CandidateApplicationDto;
+import com.resumeanalyser.backend.dto.candidate.ApplyJobRequest;
 import com.resumeanalyser.backend.dto.candidate.CareerDto;
 import com.resumeanalyser.backend.dto.candidate.CvSummaryDto;
 import com.resumeanalyser.backend.dto.candidate.ProfileDto;
@@ -42,6 +43,7 @@ import com.resumeanalyser.backend.dto.candidate.StatsDto;
 import com.resumeanalyser.backend.dto.candidate.UpdateProfileRequest;
 import com.resumeanalyser.backend.exception.BadRequestException;
 import com.resumeanalyser.backend.exception.ConflictException;
+import com.resumeanalyser.backend.exception.BadRequestException;
 import com.resumeanalyser.backend.exception.FileStorageException;
 import com.resumeanalyser.backend.exception.ForbiddenException;
 import com.resumeanalyser.backend.exception.NotFoundException;
@@ -62,6 +64,7 @@ import com.resumeanalyser.backend.repository.CvRepository;
 import com.resumeanalyser.backend.repository.InterviewRepository;
 import com.resumeanalyser.backend.repository.JobRepository;
 import com.resumeanalyser.backend.repository.UserRepository;
+import com.resumeanalyser.backend.service.ai.CvParsingService;
 
 @Service
 public class CandidateService {
@@ -80,6 +83,7 @@ public class CandidateService {
     private final InterviewRepository interviewRepository;
     private final JobRepository jobRepository;
     private final MongoTemplate mongoTemplate;
+    private final CvParsingService cvParsingService;
     private final Path uploadStorageLocation;
 
     public CandidateService(
@@ -92,6 +96,7 @@ public class CandidateService {
             InterviewRepository interviewRepository,
             JobRepository jobRepository,
             MongoTemplate mongoTemplate,
+            CvParsingService cvParsingService,
             @Value("${app.upload.dir:uploads/resumes}") String uploadDir) {
         this.profileRepository = profileRepository;
         this.userRepository = userRepository;
@@ -102,6 +107,7 @@ public class CandidateService {
         this.interviewRepository = interviewRepository;
         this.jobRepository = jobRepository;
         this.mongoTemplate = mongoTemplate;
+        this.cvParsingService = cvParsingService;
         this.uploadStorageLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
 
         try {
@@ -366,6 +372,36 @@ public class CandidateService {
                 .toList();
 
         return new PageResponse<>(dtoList, page, size, total, totalPages, last);
+    }
+
+    public CandidateApplicationDto applyToJob(User user, String jobId, ApplyJobRequest request) {
+        CandidateProfile profile = requireProfile(user);
+        ObjectId jobObjectId = parseObjectId(jobId, "jobId");
+        ObjectId cvObjectId = parseObjectId(request.cvId(), "cvId");
+        Job job = jobRepository.findById(jobObjectId)
+                .orElseThrow(() -> new NotFoundException("JOB_NOT_FOUND", "Không tìm thấy tin tuyển dụng."));
+        if (!"published".equalsIgnoreCase(job.getStatus())
+                || job.getDeadline() == null || !job.getDeadline().isAfter(Instant.now())) {
+            throw new ConflictException("JOB_NOT_OPEN", "Tin tuyển dụng không còn nhận hồ sơ.");
+        }
+        cvRepository.findByIdAndCandidateId(cvObjectId, profile.getId())
+                .orElseThrow(() -> new BadRequestException("CV_NOT_OWNED", "CV không thuộc tài khoản ứng viên."));
+        if (applicationRepository.findByJobIdAndCandidateId(jobObjectId, profile.getId()).isPresent()) {
+            throw new ConflictException("ALREADY_APPLIED", "Bạn đã ứng tuyển vị trí này rồi.");
+        }
+
+        Instant now = Instant.now();
+        Application application = new Application();
+        application.setJobId(jobObjectId);
+        application.setCandidateId(profile.getId());
+        application.setCvId(cvObjectId);
+        application.setCoverNote(nullIfBlank(request.coverNote()));
+        application.setStatus("applied");
+        application.setAppliedAt(now);
+        application.setUpdatedAt(now);
+        application.setStatusHistory(List.of(new Application.StatusChange(
+                "applied", now, parseObjectId(user.getId(), "userId"), "Ứng viên nộp hồ sơ")));
+        return mapToApplicationDto(applicationRepository.save(application));
     }
 
     public CandidateApplicationDto withdrawApplication(User user, String applicationId) {
@@ -650,6 +686,13 @@ public class CandidateService {
         }
     }
 
+    public CvSummaryDto parseCv(User user, String cvId) {
+        CandidateProfile profile = requireProfile(user);
+        ObjectId cvObjectId = parseObjectId(cvId, "cvId");
+        Cv parsed = cvParsingService.parseAndSave(cvObjectId, profile.getId());
+        return mapToCvSummaryDto(parsed);
+    }
+
     public CvSummaryDto uploadCv(MultipartFile file, User user) {
         CandidateProfile profile = requireProfile(user);
 
@@ -700,9 +743,18 @@ public class CandidateService {
         Cv cv = new Cv();
         cv.setId(new ObjectId());
         cv.setCandidateId(profile.getId());
+        cv.setTemplateId(null);
         cv.setTitle(title);
         cv.setSource(new Cv.Source("uploaded", originalFilename, targetLocation.toString(), "application/pdf"));
-        cv.setParseInfo(new Cv.ParseInfo("pending", null, null));
+        cv.setParseInfo(new Cv.ParseInfo("pending", now, CvParsingService.PARSER_VERSION));
+        String city = profile.getLocation() != null ? Objects.toString(profile.getLocation().getCity(), "") : "";
+        String country = profile.getLocation() != null ? Objects.toString(profile.getLocation().getCountry(), "") : "";
+        cv.setPersonalInfo(Map.of(
+                "fullName", Objects.toString(profile.getFullName(), ""),
+                "email", Objects.toString(user.getEmail(), ""),
+                "phone", Objects.toString(profile.getPhone(), ""),
+                "address", Map.of("city", city, "country", country)
+        ));
         cv.setCreatedAt(now);
         cv.setUpdatedAt(now);
 

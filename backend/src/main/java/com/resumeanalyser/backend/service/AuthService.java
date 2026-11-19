@@ -1,6 +1,7 @@
 package com.resumeanalyser.backend.service;
 
 import java.time.LocalDateTime;
+import org.bson.types.ObjectId;
 
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,84 +25,60 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
-    public AuthService(
-        UserRepository userRepository,
-        PasswordEncoder passwordEncoder,
-        JwtService jwtService) {
+    private final RegistrationService registration;
 
-    this.userRepository = userRepository;
-    this.passwordEncoder = passwordEncoder;
-    this.jwtService = jwtService;
-}
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
+            JwtService jwtService, RegistrationService registration) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+        this.registration = registration;
+    }
 
-    // Kiểm tra tài khoản , mật khẩu và trạng thái tài khoản, trả về token id email role
     public LoginResponse login(LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new UnauthorizedException("Sai email hoặc mật khẩu"));
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            throw new UnauthorizedException("Sai email hoặc mật khẩu");
+        }
+        if (!"active".equalsIgnoreCase(user.getStatus())) {
+            throw new ForbiddenException("Tài khoản đã bị khóa");
+        }
 
-    User user = userRepository
-            .findByEmail(request.getEmail())
-            .orElseThrow(() ->
-                    new UnauthorizedException("Sai email hoặc mật khẩu")
-            );
-
-    boolean passwordMatches = passwordEncoder.matches(
-            request.getPassword(),
-            user.getPasswordHash()
-    );
-
-    if (!passwordMatches) {
-        throw new UnauthorizedException("Sai email hoặc mật khẩu");
-    }
-
-    if (!"active".equalsIgnoreCase(user.getStatus())) {
-        throw new ForbiddenException("Tài khoản đã bị khóa");
-    }
-
-    String token = jwtService.generateToken(user);
-
-    return new LoginResponse(
-            token,
-            user.getId(),
-            user.getEmail(),
-            user.getRole()
-    );
+        registration.completeCandidateProfile(user);
+        boolean needsCompany = "recruiter".equalsIgnoreCase(user.getRole()) && !registration.hasCompany(user);
+        return new LoginResponse(jwtService.generateToken(user), user.getId(), user.getEmail(),
+                user.getRole(), needsCompany);
     }
 
     public RegisterResponse register(RegisterRequest request) {
-
-    if (userRepository.existsByEmail(request.getEmail())) {
-        throw new ConflictException("Email đã tồn tại");
-    }
-
-    User user = new User();
-
-    user.setEmail(request.getEmail());
-    user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-    user.setRole("candidate");
-     String requestedRole = request.getRole();
-        if ("recruiter".equalsIgnoreCase(requestedRole) || "hr".equalsIgnoreCase(requestedRole)) {
-            user.setRole("recruiter");
-        } else {
-            user.setRole("candidate");
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new ConflictException("Email đã tồn tại");
         }
-    user.setEmailVerified(false);
-    user.setStatus("active");
-
-    user.setCreatedAt(LocalDateTime.now());
-    user.setUpdatedAt(LocalDateTime.now()); 
-    User savedUser;
-    try {
-        savedUser = userRepository.save(user);
-    } catch (DuplicateKeyException ex) {
-        // Unique index bảo vệ cả hai request đăng ký đồng thời cùng email.
-        throw new ConflictException("Email đã tồn tại");
+        boolean recruiter = "recruiter".equalsIgnoreCase(request.getRole()) || "hr".equalsIgnoreCase(request.getRole());
+        User user = new User();
+        user.setEmail(request.getEmail());
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setRole(recruiter ? "recruiter" : "candidate");
+        user.setEmailVerified(false);
+        user.setStatus("active");
+        LocalDateTime now = LocalDateTime.now();
+        user.setCreatedAt(now);
+        user.setUpdatedAt(now);
+        if (recruiter || request.getFullName() != null || request.getPhone() != null) {
+            user.setPendingRegistration(new User.RegistrationDetails(
+                    request.getFullName() == null ? "" : request.getFullName(),
+                    request.getPhone() == null ? "" : request.getPhone(),
+                    new ObjectId(), recruiter ? new ObjectId() : null));
+        }
+        User saved;
+        try {
+            saved = userRepository.save(user);
+        } catch (DuplicateKeyException ex) {
+            throw new ConflictException("Email đã tồn tại");
+        }
+        registration.completeCandidateProfile(saved);
+        return new RegisterResponse(saved.getId(), saved.getEmail(), saved.getRole(),
+                saved.isEmailVerified(), saved.getStatus(), jwtService.generateToken(saved));
     }
-
-    return new RegisterResponse(
-            savedUser.getId(),
-            savedUser.getEmail(),
-            savedUser.getRole(),
-            savedUser.isEmailVerified(),
-            savedUser.getStatus()
-    );
-}
 }

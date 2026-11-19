@@ -8,6 +8,7 @@ import java.util.Map;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import com.resumeanalyser.backend.config.ObjectIdStringSerializer;
 import tools.jackson.databind.annotation.JsonSerialize;
@@ -21,6 +22,9 @@ public class Cv {
 
     @JsonSerialize(using = ObjectIdStringSerializer.class)
     private ObjectId candidateId;
+
+    @Field(write = Field.Write.ALWAYS)
+    private ObjectId templateId;
 
     private String title;
     private Source source;
@@ -52,6 +56,14 @@ public class Cv {
 
     public void setCandidateId(ObjectId candidateId) {
         this.candidateId = candidateId;
+    }
+
+    public ObjectId getTemplateId() {
+        return templateId;
+    }
+
+    public void setTemplateId(ObjectId templateId) {
+        this.templateId = templateId;
     }
 
     public String getTitle() {

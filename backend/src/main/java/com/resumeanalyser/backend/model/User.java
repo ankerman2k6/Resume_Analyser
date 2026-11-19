@@ -1,6 +1,7 @@
 package com.resumeanalyser.backend.model;
 
 import java.time.LocalDateTime;
+import org.bson.types.ObjectId;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -10,6 +11,12 @@ public class User {
     
     @Id 
     private String id;
+
+    // Stored with the account so interrupted onboarding can be completed after login.
+    public record RegistrationDetails(String fullName, String phone, ObjectId profileId, ObjectId companyId) {}
+    private RegistrationDetails pendingRegistration;
+    public RegistrationDetails getPendingRegistration() { return pendingRegistration; }
+    public void setPendingRegistration(RegistrationDetails details) { this.pendingRegistration = details; }
 
     private String email;
     private String passwordHash;

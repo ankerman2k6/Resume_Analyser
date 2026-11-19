@@ -41,6 +41,7 @@ import com.resumeanalyser.backend.controller.AuthController;
 import com.resumeanalyser.backend.model.User;
 import com.resumeanalyser.backend.repository.UserRepository;
 import com.resumeanalyser.backend.service.AuthService;
+import com.resumeanalyser.backend.service.RegistrationService;
 import com.resumeanalyser.backend.exception.GlobalExceptionHandler;
 import jakarta.servlet.DispatcherType;
 
@@ -59,6 +60,9 @@ class JwtAuthenticationTests {
         UserRepository userRepository() {
             return mock(UserRepository.class);
         }
+
+        @Bean
+        RegistrationService registrationService() { return mock(RegistrationService.class); }
 
         @Bean
         JwtService jwtService() {

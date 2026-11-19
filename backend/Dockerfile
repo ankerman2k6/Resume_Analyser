@@ -34,7 +34,7 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
 # Mở cổng API của backend
-EXPOSE 8081
+EXPOSE 8080
 
 # Lệnh khởi chạy ứng dụng, câu lệnh khi mà load xong môi trường thì sẽ chạy câu lệnh này
 ENTRYPOINT ["java", "-jar", "app.jar"] 

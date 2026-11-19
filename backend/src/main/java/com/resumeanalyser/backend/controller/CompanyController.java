@@ -1,6 +1,8 @@
 package com.resumeanalyser.backend.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
+import com.resumeanalyser.backend.model.Company;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,6 +19,12 @@ public class CompanyController {
 
     public CompanyController(CompanyService companyService) {
         this.companyService = companyService;
+    }
+
+    @GetMapping("/{id}/logo")
+    public ResponseEntity<byte[]> getLogo(@PathVariable String id) {
+        Company.Logo logo = companyService.getLogo(id);
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(logo.contentType())).body(logo.bytes());
     }
 
     /** API công khai để xem thông tin công ty gắn với một job. */

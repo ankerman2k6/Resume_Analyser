@@ -6,7 +6,11 @@ public class LoginResponse {
     private String email;
     private String role;
 
-    public LoginResponse(String token, String userId, String email, String role) {
+    private final boolean needsCompany;
+    public boolean isNeedsCompany() { return needsCompany; }
+
+    public LoginResponse(String token, String userId, String email, String role, boolean needsCompany) {
+        this.needsCompany = needsCompany;
         this.token = token;
         this.userId = userId;
         this.email = email;
