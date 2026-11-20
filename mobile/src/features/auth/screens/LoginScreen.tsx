@@ -165,25 +165,10 @@ export function LoginScreen({ navigation }: Props) {
                 </Text>
               </View>
 
-              <View accessibilityRole="radiogroup" style={styles.roleTabs}>
-                <RoleTab
-                  icon="person-outline"
-                  label="Ứng viên"
-                  onLongPress={__DEV__ ? handleDevLoginCandidate : undefined}
-                  onPress={() => setRole('candidate')}
-                  selected={role === 'candidate'}
-                />
-                <RoleTab
-                  icon="briefcase-outline"
-                  label="Nhà tuyển dụng"
-                  onLongPress={__DEV__ ? handleDevLoginHr : undefined}
-                  onPress={() => setRole('recruiter')}
-                  selected={role === 'recruiter'}
-                />
-              </View>
 
               <View style={styles.form}>
                 <View style={[styles.inputShell, errors.identifier && styles.inputShellError]}>
+                  <View pointerEvents="none" style={styles.glassHighlight} />
                   <Ionicons color={stylesVars.icon} name="mail-outline" size={23} />
                   <TextInput
                     accessibilityLabel="Email hoặc số điện thoại"
@@ -294,18 +279,6 @@ export function LoginScreen({ navigation }: Props) {
                     <Text style={styles.primaryButtonText}>Đăng nhập</Text>
                   )}
                 </Pressable>
-
-                <View style={styles.dividerRow}>
-                  <View style={styles.divider} />
-                  <Text style={styles.dividerText}>Hoặc</Text>
-                  <View style={styles.divider} />
-                </View>
-
-                <View style={styles.socialRow}>
-                  <DisabledSocialButton color="#FFFFFF" icon="logo-google" label="Google" />
-                  <DisabledSocialButton color="#38BDF8" icon="logo-linkedin" label="LinkedIn" />
-                  <DisabledSocialButton color="#FFFFFF" icon="logo-apple" label="Apple" />
-                </View>
 
                 <Pressable
                   accessibilityRole="button"
@@ -563,19 +536,47 @@ const styles = StyleSheet.create({
   roleTabTextSelected: { color: WELCOME_COLORS.white },
   form: { marginTop: 18 },
   inputShell: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(31, 75, 141, 0.44)',
-    borderColor: 'rgba(147, 207, 255, 0.28)',
-    borderRadius: 18,
-    borderWidth: 1,
-    flexDirection: 'row',
-    minHeight: 58,
-    paddingHorizontal: 16,
-    shadowColor: '#051431',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
-  },
+  alignItems: 'center',
+  flexDirection: 'row',
+
+  // Fill trắng 2% giống Figma
+  backgroundColor: 'rgba(255, 255, 255, 0.02)',
+
+  // Viền kính mảnh
+  borderWidth: 1,
+  borderColor: 'rgba(255, 255, 255, 0.18)',
+  borderTopColor: 'rgba(255, 255, 255, 0.38)',
+  borderBottomColor: 'rgba(143, 180, 255, 0.14)',
+
+  // Figma radius 999
+  borderRadius: 999,
+
+  minHeight: 58,
+  paddingHorizontal: 18,
+  overflow: 'hidden',
+
+  // Độ sâu nhẹ, không làm kính bị đục
+  shadowColor: '#06132F',
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 0.22,
+  shadowRadius: 16,
+
+  elevation: 3,
+},
+glassHighlight: {
+  position: 'absolute',
+  top: 0,
+  left: 24,
+  right: 24,
+  height: 1,
+
+  backgroundColor: 'rgba(255, 255, 255, 0.7)',
+
+  shadowColor: '#FFFFFF',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.35,
+  shadowRadius: 5,
+},
   inputShellError: {
     borderColor: 'rgba(248, 113, 113, 0.9)',
   },
