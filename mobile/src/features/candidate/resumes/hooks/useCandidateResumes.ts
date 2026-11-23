@@ -87,6 +87,7 @@ export function useCandidateResumes() {
     setFeedback(null);
 
     try {
+      //chọn pdf
       const result = await DocumentPicker.getDocumentAsync({
         type: 'application/pdf',
         copyToCacheDirectory: false,
@@ -103,7 +104,8 @@ export function useCandidateResumes() {
       }
 
       setUploading(true);
-      const uploadedCv = await resumeApi.uploadResume(asset);
+      //Upload resume and update the list of resumes
+      const uploadedCv = await resumeApi.uploadResume(asset); //nhận asset của tệp
       setResumes((current) => [uploadedCv, ...current.filter((item) => item._id !== uploadedCv._id)]);
       setTotalElements((current) => current + 1);
       setUploading(false);

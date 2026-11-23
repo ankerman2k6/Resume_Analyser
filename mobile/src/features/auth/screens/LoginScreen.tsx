@@ -165,23 +165,6 @@ export function LoginScreen({ navigation }: Props) {
                 </Text>
               </View>
 
-              <View accessibilityRole="radiogroup" style={styles.roleTabs}>
-                <RoleTab
-                  icon="person-outline"
-                  label="Ứng viên"
-                  onLongPress={__DEV__ ? handleDevLoginCandidate : undefined}
-                  onPress={() => setRole('candidate')}
-                  selected={role === 'candidate'}
-                />
-                <RoleTab
-                  icon="briefcase-outline"
-                  label="Nhà tuyển dụng"
-                  onLongPress={__DEV__ ? handleDevLoginHr : undefined}
-                  onPress={() => setRole('recruiter')}
-                  selected={role === 'recruiter'}
-                />
-              </View>
-
               <View style={styles.form}>
                 <View style={[styles.inputShell, errors.identifier && styles.inputShellError]}>
                   <Ionicons color={stylesVars.icon} name="mail-outline" size={23} />
@@ -294,18 +277,6 @@ export function LoginScreen({ navigation }: Props) {
                     <Text style={styles.primaryButtonText}>Đăng nhập</Text>
                   )}
                 </Pressable>
-
-                <View style={styles.dividerRow}>
-                  <View style={styles.divider} />
-                  <Text style={styles.dividerText}>Hoặc</Text>
-                  <View style={styles.divider} />
-                </View>
-
-                <View style={styles.socialRow}>
-                  <DisabledSocialButton color="#FFFFFF" icon="logo-google" label="Google" />
-                  <DisabledSocialButton color="#38BDF8" icon="logo-linkedin" label="LinkedIn" />
-                  <DisabledSocialButton color="#FFFFFF" icon="logo-apple" label="Apple" />
-                </View>
 
                 <Pressable
                   accessibilityRole="button"

@@ -393,7 +393,10 @@ export function CandidateProfileScreen() {
                 ]}>{parseLabel}</Text>
               </View>
             </View>
-            {cv.skills?.length ? <View style={styles.chipRow}>{cv.skills.slice(0, 4).map((skill) => <Text key={`${cv._id}-${skill.name}`} style={styles.chip}>{skill.name}</Text>)}</View> : null}
+            {cv.skills?.length ? 
+            <View style={styles.chipRow}>
+              {cv.skills.slice(0, 4).map((skill) => 
+            <Text key={`${cv._id}-${skill.name}`} style={styles.chip}>{skill.name}</Text>)}</View> : null}
             {parseFailed ? <Text accessibilityRole="alert" style={styles.cvParseError}>AI chưa thể đọc CV này. Bạn có thể thử lại.</Text> : null}
             <View style={styles.actionRow}>
               {cv.canViewFile ? (
