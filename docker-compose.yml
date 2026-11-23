@@ -32,7 +32,7 @@ services:
     depends_on:
       - mongodb
     networks:
-      - resume-network
+      - resume-network: 
           external: true
     restart: always
   # --- Frontend (React + Nginx) ---
