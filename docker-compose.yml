@@ -3,16 +3,18 @@
 # Tích hợp trọn gói MongoDB (có sẵn dữ liệu) + Backend + Frontend
 # ==========================================================
 
-services:
-  mongodb:
-    image: 
-    container_name: resume-mongodb
-    volumes:
-      # Lưu trữ các dữ liệu mới tạo thêm sau này
-      - mongo-data:/data/db
-    networks:
-      - resume-network
-    restart: always
+# services:
+#   mongodb:
+#     image: 
+#     container_name: resume-mongodb
+#     # ports:
+#     #   - "27017:27017"
+#     volumes:
+#       # Lưu trữ các dữ liệu mới tạo thêm sau này
+#       - mongo-data:/data/db
+#     networks:
+#       - resume-network
+#     restart: always
   # --- Backend (Spring Boot API) ---
   backend:
     image: ${BACKEND_IMAGE:-antony1552006/resume-backend}:${VERSION:-latest}
