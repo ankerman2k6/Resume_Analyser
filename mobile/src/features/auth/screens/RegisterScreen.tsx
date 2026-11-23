@@ -20,10 +20,13 @@ import { fontFamilies } from '../../../theme';
 import type { RootStackParamList } from '../../../types/navigation';
 import { ApiError, registerApi, saveAuthSession } from '../api/authApi';
 import { KonekLogo } from '../components/KonekLogo';
+import {
+  RoleSegmentedControl,
+  type RegistrationRole,
+} from '../components/RoleSegmentedControl';
 import { WELCOME_BACKGROUND, WELCOME_COLORS } from '../components/welcome.constants';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
-type Role = 'candidate' | 'recruiter';
 
 type FieldErrors = Partial<
   Record<
@@ -33,7 +36,7 @@ type FieldErrors = Partial<
 >;
 
 export function RegisterScreen({ navigation }: Props) {
-  const [role, setRole] = useState<Role>('candidate');
+  const [role, setRole] = useState<RegistrationRole>('candidate');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -171,20 +174,7 @@ export function RegisterScreen({ navigation }: Props) {
               </View>
 
               <Text style={styles.groupLabel}>Bạn tham gia với vai trò</Text>
-              <View accessibilityRole="radiogroup" style={styles.roleSelector}>
-                <RoleTab
-                  icon="person-outline"
-                  label="Ứng viên"
-                  onPress={() => setRole('candidate')}
-                  selected={role === 'candidate'}
-                />
-                <RoleTab
-                  icon="briefcase-outline"
-                  label="Nhà tuyển dụng"
-                  onPress={() => setRole('recruiter')}
-                  selected={role === 'recruiter'}
-                />
-              </View>
+              <RoleSegmentedControl onChange={setRole} value={role} />
 
               <View style={styles.form}>
                 <FieldLabel label="Họ và tên đầy đủ" required />
@@ -386,34 +376,6 @@ export function RegisterScreen({ navigation }: Props) {
   );
 }
 
-type RoleTabProps = {
-  icon: 'person-outline' | 'briefcase-outline';
-  label: string;
-  onPress: () => void;
-  selected: boolean;
-};
-
-function RoleTab({ icon, label, onPress, selected }: RoleTabProps) {
-  return (
-    <Pressable
-      accessibilityLabel={`Đăng ký với vai trò ${label}`}
-      accessibilityRole="radio"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.roleTab,
-        selected && styles.roleTabSelected,
-        pressed && styles.pressed,
-      ]}
-    >
-      <Ionicons color={selected ? '#8FD9FF' : glassColors.icon} name={icon} size={22} />
-      <Text style={[styles.roleTabText, selected && styles.roleTabTextSelected]}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
 function FieldLabel({ label, required = false }: { label: string; required?: boolean }) {
   return (
     <Text style={styles.fieldLabel}>
@@ -549,41 +511,6 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     marginTop: 24,
   },
-  roleSelector: {
-    backgroundColor: glassColors.fill,
-    borderColor: glassColors.border,
-    borderRadius: 28,
-    borderTopColor: glassColors.borderHighlight,
-    borderWidth: 1,
-    flexDirection: 'row',
-    marginTop: 9,
-    padding: 5,
-    shadowColor: '#020A20',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.16,
-    shadowRadius: 14,
-  },
-  roleTab: {
-    alignItems: 'center',
-    borderRadius: 23,
-    flex: 1,
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'center',
-    minHeight: 50,
-    paddingHorizontal: 8,
-  },
-  roleTabSelected: {
-    backgroundColor: 'rgba(37, 99, 235, 0.2)',
-    borderColor: 'rgba(102, 196, 255, 0.62)',
-    borderWidth: 1,
-  },
-  roleTabText: {
-    color: 'rgba(220, 233, 252, 0.62)',
-    fontFamily: fontFamilies.semibold,
-    fontSize: 14,
-  },
-  roleTabTextSelected: { color: WELCOME_COLORS.white },
   form: { marginTop: 12 },
   fieldLabel: {
     color: 'rgba(242, 247, 255, 0.9)',
@@ -595,23 +522,32 @@ const styles = StyleSheet.create({
   },
   required: { color: '#FCA5A5' },
   inputShell: {
-    alignItems: 'center',
-    backgroundColor: glassColors.fill,
-    borderColor: glassColors.border,
-    borderRadius: 17,
-    borderTopColor: glassColors.borderHighlight,
-    borderWidth: 1,
-    flexDirection: 'row',
-    minHeight: 56,
-    paddingHorizontal: 15,
-    shadowColor: '#020A20',
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.14,
-    shadowRadius: 12,
-  },
+  alignItems: 'center',
+  flexDirection: 'row',
+
+  // Liquid Glass giống bên Login
+  backgroundColor: 'rgba(255, 255, 255, 0.02)',
+
+  borderWidth: 1,
+  borderColor: 'rgba(255, 255, 255, 0.18)',
+  borderTopColor: 'rgba(255, 255, 255, 0.38)',
+  borderBottomColor: 'rgba(143, 180, 255, 0.14)',
+
+  borderRadius: 999,
+  minHeight: 58,
+  paddingHorizontal: 18,
+  overflow: 'hidden',
+
+  shadowColor: '#06132F',
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 0.22,
+  shadowRadius: 16,
+
+  elevation: 3,
+},
   inputShellError: {
-    borderColor: 'rgba(248, 113, 113, 0.9)',
-    borderTopColor: 'rgba(252, 165, 165, 0.9)',
+  borderColor: 'rgba(248, 113, 113, 0.9)',
+  borderTopColor: 'rgba(254, 202, 202, 0.95)',
   },
   input: {
     color: WELCOME_COLORS.white,
