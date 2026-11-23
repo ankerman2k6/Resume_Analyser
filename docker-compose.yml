@@ -5,10 +5,8 @@
 
 services:
   mongodb:
-    image: ${MONGO_IMAGE:-antony1552006/resume-mongodb}:${VERSION:-latest}
+    image: 
     container_name: resume-mongodb
-    ports:
-      - "27017:27017"
     volumes:
       # Lưu trữ các dữ liệu mới tạo thêm sau này
       - mongo-data:/data/db
@@ -25,12 +23,10 @@ services:
       - "127.0.0.1:8081:8081"
     environment:
       # Kết nối trực tiếp tới container mongodb bên trên
-      - SPRING_MONGODB_URI=mongodb://mongodb:27017/cv_screening
+      - SPRING_MONGODB_URI=mongodb://local-mongo:27017/cv_screening
       - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in the local .env file}
       # Chỉ Compose local mở endpoint để Prometheus thu thập metrics.
       - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,prometheus
-    depends_on:
-      - mongodb
     networks:
       - resume-network
     restart: always
@@ -53,5 +49,4 @@ volumes:
 # Network kết nối 3 container
 networks:
   resume-network:
-    name: resume-network
     external: true
