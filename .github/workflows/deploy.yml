@@ -2,7 +2,7 @@ name: Deploy to Home Server
 
 on:
   push:
-    branches: [ web-v01 ]
+    branches: [ web-ver01 ]
 
 jobs:
   deploy:
