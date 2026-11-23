@@ -29,11 +29,8 @@ services:
       - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in the local .env file}
       # Chỉ Compose local mở endpoint để Prometheus thu thập metrics.
       - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,prometheus
-    depends_on:
-      - mongodb
     networks:
-      - resume-network: 
-          external: true
+      - resume-network
     restart: always
   # --- Frontend (React + Nginx) ---
   frontend:
@@ -54,5 +51,4 @@ volumes:
 # Network kết nối 3 container
 networks:
   resume-network:
-    name: resume-network
     external: true
