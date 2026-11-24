@@ -5,6 +5,10 @@ import { CandidateJobsScreen } from '../features/candidate/jobs/screens/Candidat
 import { CandidateResumesScreen } from '../features/candidate/resumes/screens/CandidateResumesScreen';
 import { CandidateProfileScreen } from '../features/candidate/profile/screens/CandidateProfileScreen';
 import { colors } from '../theme';
+import {
+  FloatingIslandTabBar,
+  FloatingTabBarProvider,
+} from './components/FloatingIslandTabBar';
 
 const Tab = createBottomTabNavigator<CandidateTabParamList>();
 
@@ -16,32 +20,24 @@ const tabIcons = {
 
 export function CandidateTabs() {
   return (
-    <Tab.Navigator
-      initialRouteName="CandidateJobs"
-      screenOptions={({ route }) => ({
-        headerTitleAlign: 'center',
-        tabBarActiveTintColor: colors.light.brand.secondary,
-        tabBarInactiveTintColor: colors.light.text.secondary,
-        tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: colors.light.border.subtle,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 6,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-        },
-        tabBarIcon: ({ color, size }) => (
-          <Ionicons
-            color={color}
-            name={tabIcons[route.name]}
-            size={size}
-          />
-        ),
-      })}
-    >
+    <FloatingTabBarProvider>
+      <Tab.Navigator
+        initialRouteName="CandidateJobs"
+        tabBar={(props) => <FloatingIslandTabBar {...props} />}
+        screenOptions={({ route }) => ({
+          headerTitleAlign: 'center',
+          tabBarHideOnKeyboard: true,
+          tabBarActiveTintColor: colors.light.brand.secondary,
+          tabBarInactiveTintColor: colors.light.text.secondary,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              color={color}
+              name={tabIcons[route.name]}
+              size={size}
+            />
+          ),
+        })}
+      >
       <Tab.Screen
         name="CandidateJobs"
         component={CandidateJobsScreen}
@@ -71,6 +67,7 @@ export function CandidateTabs() {
           tabBarLabel: 'Cá nhân',
         }}
       />
-    </Tab.Navigator>
+      </Tab.Navigator>
+    </FloatingTabBarProvider>
   );
 }

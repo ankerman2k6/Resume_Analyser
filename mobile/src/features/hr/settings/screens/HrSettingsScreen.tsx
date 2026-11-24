@@ -27,6 +27,7 @@ import type {
   RootStackParamList,
 } from "../../../../types/navigation";
 import { hrSettingsApi, type HrSettingsData } from "../api/hrSettingsApi";
+import { useFloatingTabBarScrollHandler } from "../../../../navigation/components/FloatingIslandTabBar";
 
 type Profile = {
   fullName: string;
@@ -86,6 +87,7 @@ const getRequiredFieldMessage = (profile: Profile, company: Company) => {
 
 export function HrSettingsScreen() {
   const navigation = useNavigation<BottomTabNavigationProp<HrTabParamList>>();
+  const tabBarScrollProps = useFloatingTabBarScrollHandler();
   const rootNavigation =
     navigation.getParent<NavigationProp<RootStackParamList>>();
   const [profile, setProfile] = useState(initialProfile);
@@ -289,8 +291,10 @@ export function HrSettingsScreen() {
         style={styles.keyboardAvoiding}
       >
         <ScrollView
+          {...tabBarScrollProps}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.intro}>

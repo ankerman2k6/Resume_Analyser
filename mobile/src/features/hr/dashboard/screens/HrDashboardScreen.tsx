@@ -8,6 +8,7 @@ import { hrApi, type Overview, type StatusStats } from '../../api/hrApi';
 import { colors } from '../../../../theme';
 import { spacing } from '../../../../theme/spacing';
 import type { HrTabParamList } from '../../../../types/navigation';
+import { useFloatingTabBarScrollHandler } from '../../../../navigation/components/FloatingIslandTabBar';
 
 type DashboardData = { overview: Overview; applications: StatusStats; interviews: StatusStats };
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -27,6 +28,7 @@ function formatStatus(status: string) {
 
 export function HrDashboardScreen() {
   const navigation = useNavigation<BottomTabNavigationProp<HrTabParamList>>();
+  const tabBarScrollProps = useFloatingTabBarScrollHandler();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -68,8 +70,10 @@ export function HrDashboardScreen() {
         <Text style={styles.roleBadge}>NHÀ TUYỂN DỤNG</Text>
       </View>
       <ScrollView
+        {...tabBarScrollProps}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { void load(true); }} tintColor={colors.light.brand.secondary} />}
+        scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heading}>

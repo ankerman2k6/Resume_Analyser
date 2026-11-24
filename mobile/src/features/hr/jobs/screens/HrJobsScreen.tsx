@@ -19,6 +19,7 @@ import { colors } from '../../../../theme';
 import { spacing } from '../../../../theme/spacing';
 import type { HrTabParamList, RootStackParamList } from '../../../../types/navigation';
 import { hrApi, type HrJob } from '../../api/hrApi';
+import { useFloatingTabBarScrollHandler } from '../../../../navigation/components/FloatingIslandTabBar';
 
 type Props = BottomTabScreenProps<HrTabParamList, 'HrJobs'>;
 type JobFilter = 'all' | 'published' | 'draft' | 'closed';
@@ -107,6 +108,7 @@ function EmptyJobs({ filtered, onCreate }: { filtered: boolean; onCreate: () => 
 }
 
 export function HrJobsScreen({ navigation }: Props) {
+  const tabBarScrollProps = useFloatingTabBarScrollHandler();
   const openingCreateJob = useRef(false);
   const [jobs, setJobs] = useState<HrJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -326,6 +328,7 @@ export function HrJobsScreen({ navigation }: Props) {
   return (
     <View style={styles.page}>
       <FlatList
+        {...tabBarScrollProps}
         contentContainerStyle={styles.content}
         data={visibleJobs}
         keyExtractor={(item) => item.id}
@@ -395,6 +398,7 @@ export function HrJobsScreen({ navigation }: Props) {
             </View>
           );
         }}
+        scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       />
     </View>

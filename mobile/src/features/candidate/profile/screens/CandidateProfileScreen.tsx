@@ -1,5 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, type NavigationProp } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -23,6 +24,9 @@ import type { CandidateCv } from '../../resumes/types/resume.types';
 import { useCandidateProfile } from '../hooks/useCandidateProfile';
 import { resolveCompanyLogoUrl } from '../../../../config/api';
 import type { CandidateApplication, CandidateProfile } from '../types/profile.types';
+import { useFloatingTabBarScrollHandler } from '../../../../navigation/components/FloatingIslandTabBar';
+import { clearSession } from '../../../../services/storage/authSession';
+import type { CandidateTabParamList, RootStackParamList } from '../../../../types/navigation';
 
 const palette = colors.light;
 
@@ -182,6 +186,8 @@ function ProfileEditor({
 }
 
 export function CandidateProfileScreen() {
+  const navigation = useNavigation<BottomTabNavigationProp<CandidateTabParamList>>();
+  const tabBarScrollProps = useFloatingTabBarScrollHandler();
   const {
     data,
     loading,
@@ -199,6 +205,7 @@ export function CandidateProfileScreen() {
     setFeedback,
   } = useCandidateProfile();
   const [editing, setEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'cv' | 'applications' | 'skills'>('cv');
   const [openingCvId, setOpeningCvId] = useState<string | null>(null);
   const hasFocused = useRef(false);
   const profile = data.profile;
@@ -247,6 +254,26 @@ export function CandidateProfileScreen() {
     ]);
   };
 
+  const confirmLogout = () => {
+    Alert.alert('Đăng xuất tài khoản', 'Bạn có chắc chắn muốn đăng xuất khỏi phiên làm việc trên thiết bị này?', [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Đăng xuất',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            try {
+              await clearSession();
+              navigation.getParent<NavigationProp<RootStackParamList>>()?.reset({ index: 0, routes: [{ name: 'Welcome' }] });
+            } catch (error) {
+              Alert.alert('Không thể đăng xuất', error instanceof Error ? error.message : 'Đã xảy ra lỗi khi xóa thông tin phiên.');
+            }
+          })();
+        },
+      },
+    ]);
+  };
+
   if (loading) {
     return (
       <SafeAreaView edges={['top']} style={styles.safeArea}>
@@ -273,8 +300,10 @@ export function CandidateProfileScreen() {
       </View>
 
       <ScrollView
+        {...tabBarScrollProps}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl onRefresh={refresh} refreshing={refreshing} tintColor={palette.brand.secondary} />}
+        scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       >
         {errors.length ? (
@@ -354,14 +383,19 @@ export function CandidateProfileScreen() {
           </View>
         ) : null}
 
-        {stats ? (
-          <View style={styles.segmentBar}>
-            <View style={[styles.segment, styles.segmentActive]}><Text style={styles.segmentActiveText}>CV ({stats.cvCount})</Text></View>
-            <View style={styles.segment}><Text style={styles.segmentText}>Ứng tuyển ({stats.applicationCount})</Text></View>
-            <View style={styles.segment}><Text style={styles.segmentText}>Kỹ năng ({career?.skills.length ?? 0})</Text></View>
-          </View>
-        ) : null}
+        <View accessibilityRole="tablist" style={styles.segmentBar}>
+          {([
+            { id: 'cv', label: `CV (${stats?.cvCount ?? data.cvs?.totalElements ?? 0})` },
+            { id: 'applications', label: `Ứng tuyển (${stats?.applicationCount ?? data.applications?.totalElements ?? 0})` },
+            { id: 'skills', label: `Kỹ năng (${career?.skills.length ?? 0})` },
+          ] as const).map((tab) => (
+            <Pressable accessibilityRole="tab" accessibilityState={{ selected: activeTab === tab.id }} key={tab.id} onPress={() => setActiveTab(tab.id)} style={[styles.segment, activeTab === tab.id && styles.segmentActive]}>
+              <Text style={activeTab === tab.id ? styles.segmentActiveText : styles.segmentText}>{tab.label}</Text>
+            </Pressable>
+          ))}
+        </View>
 
+        {activeTab === 'cv' ? <>
         <SectionTitle icon="folder-open-outline" meta={`${data.cvs?.totalElements ?? 0} bản ghi`} title="CV đã lưu & Đánh giá ATS" />
         {cvs.length ? cvs.map((cv) => {
           const parseStatus = cv.parseInfo?.status?.toLowerCase();
@@ -432,6 +466,8 @@ export function CandidateProfileScreen() {
           </View>
         ) : null}
 
+        </> : null}
+        {activeTab === 'applications' ? <>
         <SectionTitle icon="checkbox-outline" meta={`${data.applications?.totalElements ?? 0} vị trí`} title="Công ty & Vị trí đã ứng tuyển" />
         {applications.length ? applications.map((application) => (
           <View key={application._id} style={styles.card}>
@@ -471,6 +507,8 @@ export function CandidateProfileScreen() {
           </View>
         )) : <EmptyBlock text="Bạn chưa ứng tuyển vị trí nào." />}
 
+        </> : null}
+        {activeTab === 'skills' ? <>
         <SectionTitle icon="ribbon-outline" title="Kinh nghiệm & Kỹ năng từ CV" />
         <View style={styles.card}>
           {career?.cv ? <Text style={styles.cardMeta}>Nguồn: {career.cv.title} · {career.cv.fileName}</Text> : null}
@@ -488,6 +526,7 @@ export function CandidateProfileScreen() {
           ))}
         </View>
 
+        </> : null}
         <SectionTitle icon="settings-outline" title="Thông tin tài khoản" />
         <View style={styles.card}>
           <Pressable onPress={() => setEditing(true)} style={styles.settingsRow}>
@@ -503,6 +542,12 @@ export function CandidateProfileScreen() {
               <View style={styles.settingsRow}><SettingsIcon icon="time-outline" /><View style={styles.flexOne}><Text style={styles.settingsTitle}>Ngày tạo hồ sơ</Text><Text style={styles.cardMeta}>{formatDate(profile.createdAt) || '—'}</Text></View></View>
             </>
           ) : null}
+          <View style={styles.divider} />
+          <Pressable accessibilityRole="button" onPress={confirmLogout} style={styles.settingsRow}>
+            <View style={styles.settingsIcon}><Ionicons color={palette.status.danger} name="log-out-outline" size={18} /></View>
+            <Text style={styles.logoutText}>Đăng xuất</Text>
+            <Ionicons color={palette.text.secondary} name="chevron-forward" size={18} />
+          </Pressable>
         </View>
       </ScrollView>
 
@@ -621,6 +666,7 @@ const styles = StyleSheet.create({
   settingsRow: { alignItems: 'center', flexDirection: 'row', gap: 10, minHeight: 54 },
   settingsIcon: { alignItems: 'center', backgroundColor: palette.surface.containerLow, borderRadius: radii.md, height: 36, justifyContent: 'center', width: 36 },
   settingsTitle: { ...typography.labelMedium, color: palette.text.primary },
+  logoutText: { ...typography.labelMedium, color: palette.status.danger, flex: 1 },
   divider: { backgroundColor: palette.border.subtle, height: 1 },
   modalBackdrop: { backgroundColor: 'rgba(15, 23, 42, 0.34)', flex: 1, justifyContent: 'flex-end' },
   modalCard: { backgroundColor: palette.background.surface, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, gap: 12, padding: spacing.md, paddingBottom: spacing.xl },

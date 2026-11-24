@@ -16,6 +16,10 @@ import {
 } from '../features/hr/settings/screens/HrSettingsScreen';
 import { colors } from '../theme';
 import { HrJobsScreen } from '../features/hr/jobs/screens/HrJobsScreen';
+import {
+    FloatingIslandTabBar,
+    FloatingTabBarProvider,
+} from './components/FloatingIslandTabBar';
 
 const Tab =
     createBottomTabNavigator<HrTabParamList>();
@@ -29,24 +33,27 @@ const tabIcons = {
 
 export function HrTabs() {
     return (
-        <Tab.Navigator
-            initialRouteName="HrDashboard"
-            screenOptions={({ route }) => ({
-                headerTitleAlign: 'center',
-                headerShown: route.name !== 'HrDashboard',
-                tabBarActiveTintColor:
-                    colors.light.brand.secondary,
-                tabBarInactiveTintColor:
-                    colors.light.text.secondary,
-                tabBarIcon: ({ color, size }) => (
-                    <Ionicons
-                        color={color}
-                        name={tabIcons[route.name]}
-                        size={size}
-                    />
-                ),
-            })}
-        >
+        <FloatingTabBarProvider>
+            <Tab.Navigator
+                initialRouteName="HrDashboard"
+                tabBar={(props) => <FloatingIslandTabBar {...props} />}
+                screenOptions={({ route }) => ({
+                    headerTitleAlign: 'center',
+                    headerShown: route.name !== 'HrDashboard',
+                    tabBarHideOnKeyboard: true,
+                    tabBarActiveTintColor:
+                        colors.light.brand.secondary,
+                    tabBarInactiveTintColor:
+                        colors.light.text.secondary,
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons
+                            color={color}
+                            name={tabIcons[route.name]}
+                            size={size}
+                        />
+                    ),
+                })}
+            >
             <Tab.Screen
                 name="HrJobs"
                 component={HrJobsScreen}
@@ -82,6 +89,7 @@ export function HrTabs() {
                     tabBarLabel: 'Cài đặt',
                 }}
             />
-        </Tab.Navigator>
+            </Tab.Navigator>
+        </FloatingTabBarProvider>
     );
 }

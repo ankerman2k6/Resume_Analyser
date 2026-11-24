@@ -24,11 +24,13 @@ import { JobCard } from '../components/JobCard';
 import { CompanyCard } from '../components/CompanyCard';
 import { JobFilterModal } from '../components/JobFilterModal';
 import type { JobUiItem, CompanyResponse } from '../types/job.types';
+import { useFloatingTabBarScrollHandler } from '../../../../navigation/components/FloatingIslandTabBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function CandidateJobsScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const tabBarScrollProps = useFloatingTabBarScrollHandler();
 
   const {
     activeTab,
@@ -223,6 +225,7 @@ export function CandidateJobsScreen() {
       {/* Feed List */}
       {activeTab === 'jobs' ? (
         <FlatList
+          {...tabBarScrollProps}
           data={displayedJobs}
           keyExtractor={(item, index) => `${item.id}-${index}`}
           keyboardShouldPersistTaps="handled"
@@ -246,10 +249,12 @@ export function CandidateJobsScreen() {
           onEndReached={onLoadMore}
           onEndReachedThreshold={0.4}
           contentContainerStyle={styles.listContent}
+          scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
         />
       ) : (
         <FlatList
+          {...tabBarScrollProps}
           data={companies}
           keyExtractor={(item, index) => `${item.id}-${index}`}
           keyboardShouldPersistTaps="handled"
@@ -271,6 +276,7 @@ export function CandidateJobsScreen() {
             />
           }
           contentContainerStyle={styles.listContent}
+          scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
         />
       )}

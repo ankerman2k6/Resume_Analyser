@@ -29,4 +29,7 @@ check cái dòng `› Using development build (Press s to switch to Expo Go)`, n
 
 8. nếu lỗi fetch, hãy kiểm tra port trong terminal nó chạy, nếu nó hiện 8081 `› Metro: exp://192.168.1.16:8081` thì ông vào `.env` và sửa port thành 8081 nhé!
 
-9. k chạy được thì hỏi AI, hỏi AI khong được thì hỏi tôi hoặc bạn An nhé
+9. à cái file `\mobile\.env` trong đó chỉ chứa đúng 1 dòng `EXPO_PUBLIC_API_BASE_URL=http://YOUR_PC_LAN_IP:8080/api` thôi nhé, còn cụm JWT SECRET thì ông tạo 1 file `.env` mới (cùng cấp với docker-compose.yml) và paster đoạn JWT vào (tôi gửi trong discord nhé vì nó có Key public được)
+
+
+10. k chạy được thì hỏi AI, hỏi AI khong được thì hỏi tôi hoặc bạn An nhé

@@ -26,6 +26,7 @@ import {
   type InterviewPayload,
 } from "../../api/hrApi";
 import { openApplicationCv } from "../api/hrApplicationFile";
+import { useFloatingTabBarScrollHandler } from "../../../../navigation/components/FloatingIslandTabBar";
 
 type ApplicationRow = HrApplication & { jobTitle: string };
 type StatusFilter =
@@ -89,6 +90,7 @@ function errorMessage(error: unknown) {
 }
 
 export function HrApplicationsScreen() {
+  const tabBarScrollProps = useFloatingTabBarScrollHandler();
   const [jobs, setJobs] = useState<HrJob[]>([]);
   const [applications, setApplications] = useState<ApplicationRow[]>([]);
   const [interviews, setInterviews] = useState<Interview[]>([]);
@@ -227,6 +229,7 @@ export function HrApplicationsScreen() {
         <Text style={styles.roleBadge}>NHÀ TUYỂN DỤNG</Text>
       </View>
       <ScrollView
+        {...tabBarScrollProps}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         refreshControl={
@@ -238,6 +241,7 @@ export function HrApplicationsScreen() {
             tintColor={colors.light.brand.secondary}
           />
         }
+        scrollEventThrottle={16}
       >
         <View style={styles.heading}>
           <Text style={styles.title}>Hồ sơ ứng tuyển</Text>

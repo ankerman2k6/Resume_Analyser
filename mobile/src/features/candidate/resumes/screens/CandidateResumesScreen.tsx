@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, radii, shadows, spacing, typography } from "../../../../theme";
 import { useCandidateResumes } from "../hooks/useCandidateResumes";
 import type { CandidateCv } from "../types/resume.types";
+import { useFloatingTabBarScrollHandler } from "../../../../navigation/components/FloatingIslandTabBar";
 
 const parseStatusLabels: Record<string, string> = {
   pending: "Chờ phân tích",
@@ -50,6 +51,7 @@ function ResumeSkeleton() {
 }
 
 export function CandidateResumesScreen() {
+  const tabBarScrollProps = useFloatingTabBarScrollHandler();
   const {
     resumes,
     totalElements,
@@ -389,8 +391,10 @@ export function CandidateResumesScreen() {
       </View>
 
       <FlatList
+        {...tabBarScrollProps}
         contentContainerStyle={styles.listContent}
         data={resumes}
+        scrollEventThrottle={16}
         keyExtractor={(item) => item._id}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={
