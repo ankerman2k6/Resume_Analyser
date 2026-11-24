@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -76,6 +77,12 @@ const editableStatuses: EditableStatus[] = [
   "accepted",
   "rejected",
 ];
+const interviewRounds = [
+  { value: "screening", title: "Vòng 1: Phỏng vấn sơ bộ", detail: "Trao đổi phù hợp ban đầu" },
+  { value: "technical", title: "Vòng 2: Chuyên môn", detail: "Năng lực và kinh nghiệm" },
+  { value: "final", title: "Vòng 3: Văn hóa / Ban giám đốc", detail: "Định hướng phát triển" },
+] as const;
+const interviewTimeSlots = ["09:00", "10:30", "14:30", "16:00"] as const;
 
 function formatDate(value?: string) {
   if (!value) return "Chưa cập nhật";
@@ -83,6 +90,29 @@ function formatDate(value?: string) {
   return Number.isNaN(date.getTime())
     ? "Chưa cập nhật"
     : date.toLocaleDateString("vi-VN");
+}
+
+function isSameLocalDay(left: Date, right: Date) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+function formatInterviewTime(interview: Interview) {
+  const start = new Date(interview.scheduledAt);
+  const end = new Date(start.getTime() + interview.durationMinutes * 60_000);
+  const format = (value: Date) =>
+    value.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+  return `${format(start)} – ${format(end)}`;
+}
+
+function formatDateInput(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function errorMessage(error: unknown) {
@@ -171,6 +201,27 @@ export function HrApplicationsScreen() {
     );
   }, [applications, query, selectedJobId, statusFilter]);
 
+  const todayInterviews = useMemo(() => {
+    const today = new Date();
+    return interviews
+      .filter(
+        (interview) =>
+          interview.status === "scheduled" &&
+          isSameLocalDay(new Date(interview.scheduledAt), today),
+      )
+      .sort(
+        (left, right) =>
+          new Date(left.scheduledAt).getTime() -
+          new Date(right.scheduledAt).getTime(),
+      )
+      .map((interview) => ({
+        interview,
+        application: applications.find(
+          (application) => application.id === interview.applicationId,
+        ),
+      }));
+  }, [applications, interviews]);
+
   const changeStatus = async (
     application: ApplicationRow,
     status: EditableStatus,
@@ -243,12 +294,8 @@ export function HrApplicationsScreen() {
         }
         scrollEventThrottle={16}
       >
-        <View style={styles.heading}>
-          <Text style={styles.title}>Hồ sơ ứng tuyển</Text>
-          <Text style={styles.subtitle}>
-            Các hồ sơ ứng tuyển vào tin của bạn
-          </Text>
-        </View>
+        <TodayInterviewPanel rows={todayInterviews} />
+        <Text style={styles.sectionLabel}>Vị trí đang tuyển</Text>
         <Pressable
           accessibilityRole="button"
           onPress={() => setJobPickerOpen(true)}
@@ -357,6 +404,11 @@ export function HrApplicationsScreen() {
         onRequestClose={() => setJobPickerOpen(false)}
       >
         <View style={styles.overlay}>
+          <Pressable
+            accessibilityLabel="Đóng cửa sổ chọn vị trí"
+            onPress={() => setJobPickerOpen(false)}
+            style={styles.modalBackdropPress}
+          />
           <View style={styles.pickerCard}>
             <Text style={styles.modalTitle}>Chọn vị trí tuyển dụng</Text>
             <ScrollView style={styles.pickerList}>
@@ -390,6 +442,95 @@ export function HrApplicationsScreen() {
         />
       ) : null}
     </SafeAreaView>
+  );
+}
+
+function TodayInterviewPanel({
+  rows,
+}: {
+  rows: { interview: Interview; application?: ApplicationRow }[];
+}) {
+  const openInterview = async (interview: Interview) => {
+    if (interview.mode === "online" && interview.meetingLink) {
+      try {
+        await Linking.openURL(interview.meetingLink);
+      } catch {
+        Alert.alert("Không mở được cuộc họp", "Đường dẫn cuộc họp chưa hợp lệ.");
+      }
+      return;
+    }
+    Alert.alert(
+      "Địa điểm phỏng vấn",
+      interview.location || "Chưa cập nhật địa điểm.",
+    );
+  };
+
+  return (
+    <View style={styles.todayPanel}>
+      <View style={styles.todayHeader}>
+        <View style={styles.todayTitleGroup}>
+          <Ionicons color="#FFFFFF" name="calendar-outline" size={18} />
+          <Text style={styles.todayTitle}>Lịch phỏng vấn hôm nay</Text>
+          {rows.length ? (
+            <View style={styles.todayCount}>
+              <Text style={styles.todayCountText}>{rows.length}</Text>
+            </View>
+          ) : null}
+        </View>
+        <View style={styles.upcomingBadge}>
+          <Text style={styles.upcomingText}>Sắp diễn ra</Text>
+        </View>
+      </View>
+
+      {rows.length === 0 ? (
+        <View style={styles.todayEmpty}>
+          <Ionicons color="rgba(255,255,255,0.62)" name="time-outline" size={18} />
+          <Text style={styles.todayEmptyText}>
+            Hôm nay chưa có lịch phỏng vấn.
+          </Text>
+        </View>
+      ) : (
+        rows.slice(0, 3).map(({ interview, application }) => (
+          <View key={interview.id} style={styles.interviewRow}>
+            <View style={styles.interviewAvatar}>
+              <Text style={styles.interviewAvatarText}>
+                {(application?.fullName || "Ứng viên").trim().charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.interviewInfo}>
+              <Text numberOfLines={1} style={styles.interviewName}>
+                {application?.fullName || "Ứng viên"}
+              </Text>
+              <Text numberOfLines={1} style={styles.interviewMeta}>
+                {formatInterviewTime(interview)} ·{" "}
+                {interview.mode === "online"
+                  ? "Trực tuyến"
+                  : interview.location || "Trực tiếp"}
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                void openInterview(interview);
+              }}
+              style={({ pressed }) => [
+                styles.interviewAction,
+                pressed && styles.interviewActionPressed,
+              ]}
+            >
+              <Ionicons
+                color={interview.mode === "online" ? "#FFFFFF" : "#D7E3FA"}
+                name={interview.mode === "online" ? "videocam" : "location"}
+                size={14}
+              />
+              <Text style={styles.interviewActionText}>
+                {interview.mode === "online" ? "Vào Meet" : "Xem lịch"}
+              </Text>
+            </Pressable>
+          </View>
+        ))
+      )}
+    </View>
   );
 }
 
@@ -519,12 +660,28 @@ function InterviewScheduleModal({
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [duration, setDuration] = useState("60");
+  const [round, setRound] = useState<(typeof interviewRounds)[number]["value"]>(
+    "technical",
+  );
   const [mode, setMode] = useState<"online" | "offline">("online");
   const [meetingLink, setMeetingLink] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const dateOptions = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat("vi-VN", { weekday: "short" });
+    return Array.from({ length: 5 }, (_, index) => {
+      const value = new Date();
+      value.setDate(value.getDate() + index + 1);
+      return {
+        value: formatDateInput(value),
+        weekday: formatter.format(value).replace("Th ", "T"),
+        day: String(value.getDate()).padStart(2, "0"),
+      };
+    });
+  }, []);
 
   const submit = async () => {
     const dateParts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date.trim());
@@ -569,7 +726,11 @@ function InterviewScheduleModal({
       mode,
       meetingLink: mode === "online" ? meetingLink.trim() : undefined,
       location: mode === "offline" ? location.trim() : undefined,
-      notes: notes.trim() || undefined,
+      notes:
+        [`Vòng phỏng vấn: ${interviewRounds.find((item) => item.value === round)?.title}`,
+          notes.trim()]
+          .filter(Boolean)
+          .join("\n") || undefined,
     };
     setSaving(true);
     setError("");
@@ -590,12 +751,17 @@ function InterviewScheduleModal({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.overlay}
       >
+        <Pressable
+          accessibilityLabel="Đóng cửa sổ lên lịch"
+          onPress={onClose}
+          style={styles.modalBackdropPress}
+        />
         <View style={styles.scheduleCard}>
           <View style={styles.modalHeader}>
             <View style={styles.modalHeading}>
               <Text style={styles.modalTitle}>Lên lịch phỏng vấn</Text>
               <Text style={styles.subtitle}>
-                {application.fullName || "Ứng viên"} · {application.jobTitle}
+                Xếp lịch trao đổi trực tiếp hoặc trực tuyến với ứng viên
               </Text>
             </View>
             <Pressable accessibilityLabel="Đóng" onPress={onClose}>
@@ -610,31 +776,57 @@ function InterviewScheduleModal({
             contentContainerStyle={styles.formContent}
             keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.fieldLabel}>Ngày phỏng vấn</Text>
-            <TextInput
-              accessibilityLabel="Ngày phỏng vấn"
-              placeholder="YYYY-MM-DD"
-              value={date}
-              onChangeText={setDate}
-              style={styles.input}
-            />
-            <Text style={styles.fieldLabel}>Giờ bắt đầu</Text>
-            <TextInput
-              accessibilityLabel="Giờ bắt đầu"
-              placeholder="HH:mm"
-              value={time}
-              onChangeText={setTime}
-              style={styles.input}
-            />
-            <Text style={styles.fieldLabel}>Thời lượng (phút)</Text>
-            <TextInput
-              accessibilityLabel="Thời lượng"
-              keyboardType="number-pad"
-              value={duration}
-              onChangeText={setDuration}
-              style={styles.input}
-            />
-            <Text style={styles.fieldLabel}>Hình thức</Text>
+            <View style={styles.candidateSummary}>
+              <View style={styles.scheduleAvatar}>
+                <Text style={styles.scheduleAvatarText}>
+                  {(application.fullName || "Ứng viên").trim().charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.candidateInfo}>
+                <Text style={styles.candidateName}>
+                  {application.fullName || "Ứng viên"}
+                </Text>
+                <Text style={styles.candidateRole}>{application.jobTitle}</Text>
+                {application.email ? (
+                  <Text numberOfLines={1} style={styles.candidateContact}>
+                    {application.email}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+
+            <ScheduleSectionTitle icon="git-branch-outline" label="Vòng phỏng vấn" />
+            <View style={styles.roundList}>
+              {interviewRounds.map((item, index) => {
+                const selected = round === item.value;
+                return (
+                  <Pressable
+                    key={item.value}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    onPress={() => setRound(item.value)}
+                    style={[styles.roundOption, selected && styles.roundOptionSelected]}
+                  >
+                    <View style={[styles.roundNumber, selected && styles.roundNumberSelected]}>
+                      <Text style={[styles.roundNumberText, selected && styles.roundNumberTextSelected]}>
+                        {index + 1}
+                      </Text>
+                    </View>
+                    <View style={styles.roundInfo}>
+                      <Text style={[styles.roundTitle, selected && styles.roundTitleSelected]}>
+                        {item.title}
+                      </Text>
+                      <Text style={styles.roundDetail}>{item.detail}</Text>
+                    </View>
+                    {selected ? (
+                      <Ionicons color={colors.light.brand.secondary} name="checkmark-circle" size={18} />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <ScheduleSectionTitle icon="videocam-outline" label="Hình thức phỏng vấn" />
             <View style={styles.modeRow}>
               {(["online", "offline"] as const).map((value) => (
                 <Pressable
@@ -647,6 +839,11 @@ function InterviewScheduleModal({
                     mode === value && styles.modeSelected,
                   ]}
                 >
+                  <Ionicons
+                    color={mode === value ? colors.light.brand.secondary : colors.light.text.secondary}
+                    name={value === "online" ? "videocam-outline" : "business-outline"}
+                    size={16}
+                  />
                   <Text
                     style={[
                       styles.modeText,
@@ -658,9 +855,6 @@ function InterviewScheduleModal({
                 </Pressable>
               ))}
             </View>
-            <Text style={styles.fieldLabel}>
-              {mode === "online" ? "Đường dẫn họp" : "Địa điểm"}
-            </Text>
             <TextInput
               accessibilityLabel={
                 mode === "online" ? "Đường dẫn họp" : "Địa điểm"
@@ -675,12 +869,102 @@ function InterviewScheduleModal({
               style={styles.input}
               value={mode === "online" ? meetingLink : location}
             />
-            <Text style={styles.fieldLabel}>Ghi chú</Text>
+
+            <ScheduleSectionTitle icon="calendar-outline" label="Chọn ngày phỏng vấn" />
+            <View style={styles.dateOptions}>
+              {dateOptions.map((option) => {
+                const selected = date === option.value;
+                return (
+                  <Pressable
+                    key={option.value}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    onPress={() => setDate(option.value)}
+                    style={[styles.dateOption, selected && styles.dateOptionSelected]}
+                  >
+                    <Text style={[styles.dateWeekday, selected && styles.dateTextSelected]}>
+                      {option.weekday}
+                    </Text>
+                    <Text style={[styles.dateDay, selected && styles.dateTextSelected]}>
+                      {option.day}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
             <TextInput
-              accessibilityLabel="Ghi chú"
+              accessibilityLabel="Ngày phỏng vấn khác"
+              onChangeText={setDate}
+              placeholder="Ngày khác: YYYY-MM-DD"
+              placeholderTextColor={colors.light.text.secondary}
+              style={styles.input}
+              value={date}
+            />
+
+            <View style={styles.sectionTitleWithMeta}>
+              <ScheduleSectionTitle icon="time-outline" label="Khung giờ phỏng vấn" />
+              <Text style={styles.durationText}>Thời lượng: {duration} phút</Text>
+            </View>
+            <View style={styles.timeGrid}>
+              {interviewTimeSlots.map((slot) => {
+                const selected = time === slot;
+                return (
+                  <Pressable
+                    key={slot}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    onPress={() => {
+                      setTime(slot);
+                      setDuration("60");
+                    }}
+                    style={[styles.timeOption, selected && styles.timeOptionSelected]}
+                  >
+                    <Text style={[styles.timeText, selected && styles.timeTextSelected]}>
+                      {slot} – {`${String(Number(slot.slice(0, 2)) + 1).padStart(2, "0")}${slot.slice(2)}`}
+                    </Text>
+                    <Text style={[styles.availableText, selected && styles.availableTextSelected]}>
+                      Trống
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <View style={styles.customTimeRow}>
+              <View style={styles.customTimeField}>
+                <Text style={styles.compactFieldLabel}>Giờ bắt đầu</Text>
+                <TextInput
+                  accessibilityLabel="Giờ bắt đầu khác"
+                  onChangeText={setTime}
+                  placeholder="HH:mm"
+                  placeholderTextColor={colors.light.text.secondary}
+                  style={styles.input}
+                  value={time}
+                />
+              </View>
+              <View style={styles.durationField}>
+                <Text style={styles.compactFieldLabel}>Thời lượng</Text>
+                <View style={styles.durationInputShell}>
+                  <TextInput
+                    accessibilityLabel="Thời lượng tính bằng phút"
+                    keyboardType="number-pad"
+                    onChangeText={setDuration}
+                    placeholder="60"
+                    placeholderTextColor={colors.light.text.secondary}
+                    style={styles.durationTextInput}
+                    value={duration}
+                  />
+                  <Text style={styles.durationSuffix}>phút</Text>
+                </View>
+              </View>
+            </View>
+
+            <ScheduleSectionTitle icon="mail-outline" label="Nội dung gửi ứng viên" />
+            <TextInput
+              accessibilityLabel="Nội dung gửi ứng viên"
               multiline
               onChangeText={setNotes}
-              placeholder="Ghi chú cho buổi phỏng vấn"
+              placeholder="Nhập lời nhắn hoặc yêu cầu chuẩn bị trước buổi phỏng vấn"
+              placeholderTextColor={colors.light.text.secondary}
               style={[styles.input, styles.notesInput]}
               value={notes}
             />
@@ -697,14 +981,33 @@ function InterviewScheduleModal({
                 saving && styles.disabled,
               ]}
             >
+              <Ionicons color={colors.light.text.inverse} name="send-outline" size={16} />
               <Text style={styles.primaryText}>
-                {saving ? "Đang lưu..." : "Xác nhận lên lịch"}
+                {saving ? "Đang lưu..." : "Xác nhận & Lên lịch"}
               </Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={onClose} style={styles.cancelScheduleButton}>
+              <Text style={styles.cancelScheduleText}>Hủy bỏ</Text>
             </Pressable>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>
+  );
+}
+
+function ScheduleSectionTitle({
+  icon,
+  label,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  label: string;
+}) {
+  return (
+    <View style={styles.scheduleSectionTitle}>
+      <Ionicons color={colors.light.text.primary} name={icon} size={15} />
+      <Text style={styles.fieldLabel}>{label}</Text>
+    </View>
   );
 }
 
@@ -731,9 +1034,110 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   content: { padding: spacing.md, paddingBottom: spacing.xl, gap: spacing.sm },
-  heading: { gap: 3, marginBottom: spacing.sm },
-  title: { color: colors.light.text.primary, fontSize: 22, fontWeight: "700" },
   subtitle: { color: colors.light.text.secondary, fontSize: 13 },
+  sectionLabel: {
+    color: colors.light.text.secondary,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.45,
+    marginTop: spacing.xs,
+    textTransform: "uppercase",
+  },
+  todayPanel: {
+    backgroundColor: colors.light.brand.primary,
+    borderRadius: 14,
+    padding: 10,
+    gap: 6,
+  },
+  todayHeader: {
+    minHeight: 32,
+    paddingHorizontal: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  todayTitleGroup: {
+    minWidth: 0,
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  todayTitle: {
+    flexShrink: 1,
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  todayCount: {
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 5,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.light.brand.secondary,
+  },
+  todayCountText: { color: "#FFFFFF", fontSize: 10, fontWeight: "800" },
+  upcomingBadge: {
+    minHeight: 26,
+    paddingHorizontal: 9,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.09)",
+  },
+  upcomingText: { color: "#AFC7EF", fontSize: 10, fontWeight: "600" },
+  todayEmpty: {
+    minHeight: 54,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  todayEmptyText: { color: "#D7E3FA", fontSize: 12 },
+  interviewRow: {
+    minHeight: 62,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 7,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+  interviewAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E0F2FE",
+  },
+  interviewAvatarText: {
+    color: colors.light.brand.secondary,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  interviewInfo: { minWidth: 0, flex: 1, gap: 3 },
+  interviewName: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
+  interviewMeta: { color: "#B9C9E5", fontSize: 10, lineHeight: 14 },
+  interviewAction: {
+    minHeight: 34,
+    paddingHorizontal: 9,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    backgroundColor: colors.light.brand.secondary,
+  },
+  interviewActionPressed: { opacity: 0.76 },
+  interviewActionText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700" },
   selector: {
     minHeight: 48,
     paddingHorizontal: spacing.md,
@@ -890,6 +1294,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     backgroundColor: "rgba(0,0,0,0.45)",
   },
+  modalBackdropPress: { ...StyleSheet.absoluteFill },
   pickerCard: {
     backgroundColor: colors.light.background.surface,
     borderRadius: 16,
@@ -906,10 +1311,18 @@ const styles = StyleSheet.create({
   },
   pickerText: { color: colors.light.text.primary, fontSize: 14 },
   scheduleCard: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 480,
     backgroundColor: colors.light.background.surface,
     borderRadius: 16,
-    maxHeight: "85%",
+    maxHeight: "92%",
     overflow: "hidden",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 12,
   },
   modalHeader: {
     flexDirection: "row",
@@ -924,12 +1337,44 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "700",
   },
-  formContent: { padding: spacing.md, gap: spacing.sm },
+  formContent: { padding: spacing.md, paddingBottom: spacing.lg, gap: spacing.sm },
+  candidateSummary: {
+    minHeight: 82,
+    padding: spacing.sm,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.light.surface.containerLow,
+  },
+  scheduleAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.light.brand.accent,
+  },
+  scheduleAvatarText: {
+    color: colors.light.brand.secondary,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  candidateInfo: { minWidth: 0, flex: 1, gap: 2 },
+  candidateName: { color: colors.light.text.primary, fontSize: 14, fontWeight: "700" },
+  candidateRole: { color: colors.light.brand.secondary, fontSize: 11, fontWeight: "600" },
+  candidateContact: { color: colors.light.text.secondary, fontSize: 10 },
+  scheduleSectionTitle: {
+    minHeight: 24,
+    marginTop: spacing.xs,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   fieldLabel: {
     color: colors.light.text.primary,
     fontSize: 12,
     fontWeight: "700",
-    marginTop: spacing.xs,
   },
   input: {
     minHeight: 44,
@@ -940,8 +1385,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     fontSize: 14,
   },
+  roundList: { gap: 6 },
+  roundOption: {
+    minHeight: 52,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "transparent",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.light.background.subtle,
+  },
+  roundOptionSelected: {
+    borderColor: colors.light.brand.secondary,
+    backgroundColor: colors.light.surface.containerLow,
+  },
+  roundNumber: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.light.background.surface,
+  },
+  roundNumberSelected: { backgroundColor: colors.light.brand.secondary },
+  roundNumberText: { color: colors.light.text.secondary, fontSize: 11, fontWeight: "700" },
+  roundNumberTextSelected: { color: colors.light.text.inverse },
+  roundInfo: { minWidth: 0, flex: 1, gap: 2 },
+  roundTitle: { color: colors.light.text.primary, fontSize: 11, fontWeight: "600" },
+  roundTitleSelected: { color: colors.light.brand.secondary, fontWeight: "700" },
+  roundDetail: { color: colors.light.text.secondary, fontSize: 9 },
   notesInput: {
-    minHeight: 80,
+    minHeight: 96,
     paddingTop: spacing.sm,
     textAlignVertical: "top",
   },
@@ -951,6 +1428,8 @@ const styles = StyleSheet.create({
     minHeight: 42,
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.light.border.subtle,
@@ -961,6 +1440,80 @@ const styles = StyleSheet.create({
   },
   modeText: { color: colors.light.text.secondary, fontSize: 13 },
   modeTextSelected: { color: colors.light.brand.secondary, fontWeight: "700" },
-  submitButton: { marginTop: spacing.sm, flex: 0 },
+  dateOptions: { flexDirection: "row", gap: 6 },
+  dateOption: {
+    minWidth: 0,
+    flex: 1,
+    minHeight: 58,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    backgroundColor: colors.light.background.subtle,
+  },
+  dateOptionSelected: { backgroundColor: colors.light.brand.secondary },
+  dateWeekday: { color: colors.light.text.secondary, fontSize: 9, textTransform: "uppercase" },
+  dateDay: { color: colors.light.text.primary, fontSize: 14, fontWeight: "700" },
+  dateTextSelected: { color: colors.light.text.inverse },
+  sectionTitleWithMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  durationText: { color: colors.light.text.secondary, fontSize: 9 },
+  timeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  timeOption: {
+    width: "49%",
+    minHeight: 42,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: colors.light.border.subtle,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 4,
+    backgroundColor: colors.light.background.surface,
+  },
+  timeOptionSelected: {
+    borderColor: colors.light.brand.secondary,
+    backgroundColor: colors.light.brand.secondary,
+  },
+  timeText: { color: colors.light.text.primary, fontSize: 10, fontWeight: "600" },
+  timeTextSelected: { color: colors.light.text.inverse },
+  availableText: { color: colors.light.status.success, fontSize: 8, fontWeight: "600" },
+  availableTextSelected: { color: "#D7FBE8" },
+  customTimeRow: { flexDirection: "row", alignItems: "flex-end", gap: spacing.sm },
+  customTimeField: { minWidth: 0, flex: 1, gap: 5 },
+  durationField: { width: 128, gap: 5 },
+  compactFieldLabel: { color: colors.light.text.secondary, fontSize: 10, fontWeight: "600" },
+  durationInputShell: {
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.light.border.subtle,
+    paddingLeft: spacing.sm,
+    paddingRight: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  durationTextInput: {
+    minWidth: 0,
+    flex: 1,
+    minHeight: 42,
+    color: colors.light.text.primary,
+    fontSize: 14,
+    paddingVertical: 0,
+  },
+  durationSuffix: { color: colors.light.text.secondary, fontSize: 11 },
+  submitButton: { marginTop: spacing.sm, flex: 0, minHeight: 48 },
+  cancelScheduleButton: {
+    minHeight: 42,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelScheduleText: { color: colors.light.text.secondary, fontSize: 12, fontWeight: "600" },
   disabled: { opacity: 0.6 },
 });

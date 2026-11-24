@@ -7,8 +7,10 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -143,8 +145,12 @@ function ProfileEditor({
   ];
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} transparent visible={visible}>
-      <View style={styles.modalBackdrop}>
+    <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.modalBackdrop}
+      >
+        <Pressable accessibilityLabel="Đóng cửa sổ chỉnh sửa" onPress={onClose} style={styles.modalDismissArea} />
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Chỉnh sửa thông tin cá nhân</Text>
@@ -152,35 +158,41 @@ function ProfileEditor({
               <Ionicons color={palette.text.primary} name="close" size={24} />
             </Pressable>
           </View>
-          {fields.map((field) => (
-            <View key={field.label} style={styles.field}>
-              <Text style={styles.fieldLabel}>{field.label}</Text>
-              <TextInput
-                autoCapitalize={field.phone ? 'none' : 'words'}
-                keyboardType={field.phone ? 'phone-pad' : 'default'}
-                onChangeText={field.setValue}
-                placeholder={`Nhập ${field.label.toLowerCase()}`}
-                placeholderTextColor={palette.text.secondary}
-                style={styles.input}
-                value={field.value}
-              />
+          <ScrollView
+            contentContainerStyle={styles.modalContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {fields.map((field) => (
+              <View key={field.label} style={styles.field}>
+                <Text style={styles.fieldLabel}>{field.label}</Text>
+                <TextInput
+                  autoCapitalize={field.phone ? 'none' : 'words'}
+                  keyboardType={field.phone ? 'phone-pad' : 'default'}
+                  onChangeText={field.setValue}
+                  placeholder={`Nhập ${field.label.toLowerCase()}`}
+                  placeholderTextColor={palette.text.secondary}
+                  style={styles.input}
+                  value={field.value}
+                />
+              </View>
+            ))}
+            {error ? <Text style={styles.formError}>{error}</Text> : null}
+            <View style={styles.modalActions}>
+              <Pressable disabled={saving} onPress={onClose} style={styles.outlineButton}>
+                <Text style={styles.outlineButtonText}>Huỷ</Text>
+              </Pressable>
+              <Pressable disabled={saving} onPress={submit} style={styles.primaryButton}>
+                {saving ? (
+                  <ActivityIndicator color={palette.text.inverse} />
+                ) : (
+                  <Text style={styles.primaryButtonText}>Lưu thay đổi</Text>
+                )}
+              </Pressable>
             </View>
-          ))}
-          {error ? <Text style={styles.formError}>{error}</Text> : null}
-          <View style={styles.modalActions}>
-            <Pressable disabled={saving} onPress={onClose} style={styles.outlineButton}>
-              <Text style={styles.outlineButtonText}>Huỷ</Text>
-            </Pressable>
-            <Pressable disabled={saving} onPress={submit} style={styles.primaryButton}>
-              {saving ? (
-                <ActivityIndicator color={palette.text.inverse} />
-              ) : (
-                <Text style={styles.primaryButtonText}>Lưu thay đổi</Text>
-              )}
-            </Pressable>
-          </View>
+          </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -668,10 +680,12 @@ const styles = StyleSheet.create({
   settingsTitle: { ...typography.labelMedium, color: palette.text.primary },
   logoutText: { ...typography.labelMedium, color: palette.status.danger, flex: 1 },
   divider: { backgroundColor: palette.border.subtle, height: 1 },
-  modalBackdrop: { backgroundColor: 'rgba(15, 23, 42, 0.34)', flex: 1, justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: palette.background.surface, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, gap: 12, padding: spacing.md, paddingBottom: spacing.xl },
-  modalHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  modalBackdrop: { alignItems: 'center', backgroundColor: 'rgba(15, 23, 42, 0.38)', flex: 1, justifyContent: 'center', padding: spacing.md },
+  modalDismissArea: { ...StyleSheet.absoluteFill },
+  modalCard: { backgroundColor: palette.background.surface, borderRadius: radii.xl, maxHeight: '86%', maxWidth: 520, overflow: 'hidden', shadowColor: '#0F172A', shadowOffset: { height: 12, width: 0 }, shadowOpacity: 0.18, shadowRadius: 24, elevation: 12, width: '100%' },
+  modalHeader: { alignItems: 'center', borderBottomColor: palette.border.subtle, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', padding: spacing.md },
   modalTitle: { ...typography.titleMedium, color: palette.text.primary },
+  modalContent: { gap: 12, padding: spacing.md },
   field: { gap: 5 },
   fieldLabel: { ...typography.labelSmall, color: palette.text.primary },
   input: { ...typography.bodyMedium, backgroundColor: palette.background.input, borderColor: palette.border.subtle, borderRadius: radii.lg, borderWidth: 1, color: palette.text.primary, minHeight: 44, paddingHorizontal: 12, paddingVertical: 10 },

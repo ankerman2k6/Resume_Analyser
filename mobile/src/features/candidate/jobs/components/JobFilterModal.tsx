@@ -81,7 +81,7 @@ export const JobFilterModal: React.FC<JobFilterModalProps> = ({
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="fade"
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
@@ -223,21 +223,25 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 4, 18, 0.45)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    padding: spacing.md,
   },
   backdrop: {
-    flex: 1,
+    ...StyleSheet.absoluteFill,
   },
   sheetContainer: {
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 520,
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    maxHeight: '85%',
+    borderRadius: 20,
+    maxHeight: '82%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 12,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
@@ -268,7 +272,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scrollBody: {
-    maxHeight: 460,
+    flexShrink: 1,
   },
   scrollContent: {
     paddingHorizontal: spacing.md,

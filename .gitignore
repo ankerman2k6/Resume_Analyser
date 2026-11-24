@@ -25,6 +25,3 @@ AGENTS.md
 .codex/*
 anti-slop/*
 docs/*
-!mongo-init/
-mongo-init/*
-!mongo-init/03-registration-schema.js
