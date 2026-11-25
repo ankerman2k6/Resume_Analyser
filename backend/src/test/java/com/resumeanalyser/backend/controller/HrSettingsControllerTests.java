@@ -23,6 +23,7 @@ import com.resumeanalyser.backend.repository.UserRepository;
 import com.resumeanalyser.backend.security.JwtAuthenticationFilter;
 import com.resumeanalyser.backend.security.JwtService;
 import com.resumeanalyser.backend.security.SecurityConfig;
+import com.resumeanalyser.backend.service.CompanyAccessService;
 import com.resumeanalyser.backend.service.HrSettingsService;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -46,6 +47,7 @@ class HrSettingsControllerTests {
     @Autowired JwtService jwt;
     @MockitoBean HrSettingsService service;
     @MockitoBean UserRepository users;
+    @MockitoBean CompanyAccessService companyAccessService;
     User recruiter;
     String token;
 
