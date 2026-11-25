@@ -8,7 +8,7 @@ import './Navbar.css';
  * Top Navbar component for KONEK Platform
  * Features:
  * - Official KONEK SVG Logo with responsive sizing and dark/light mode support
- * - Landing section anchor links with smooth scroll (#features, #case-studies, #pricing)
+ * - Landing section anchor links with smooth scroll (#features, #case-studies)
  * - Navigation links to HR and Candidate portals (/hr, /candidate)
  * - "Yêu cầu Demo" CTA button that triggers the Calibration Booking Modal
  * - Authentication action buttons (Đăng nhập & Đăng ký)
@@ -120,14 +120,6 @@ const Navbar = () => {
           >
             Chứng thực
           </button>
-          <button
-            type="button"
-            className="navbar-link"
-            onClick={() => handleNavClick('pricing')}
-          >
-            Bảng giá
-          </button>
-
           <span className="navbar-divider" aria-hidden="true" />
 
           {/* Quick links to role spaces */}
@@ -209,14 +201,6 @@ const Navbar = () => {
             >
               Chứng thực Thực tế
             </button>
-            <button
-              type="button"
-              className="navbar-mobile-link"
-              onClick={() => handleNavClick('pricing')}
-            >
-              Bảng giá & Gói dịch vụ
-            </button>
-
             <div className="navbar-mobile-divider" />
 
             <Link
