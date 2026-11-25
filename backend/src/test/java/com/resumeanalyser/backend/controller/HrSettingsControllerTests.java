@@ -58,6 +58,7 @@ class HrSettingsControllerTests {
         recruiter.setRole("recruiter");
         recruiter.setStatus("active");
         when(users.findById(recruiter.getId())).thenReturn(Optional.of(recruiter));
+        when(companyAccessService.isApproved(any())).thenReturn(true);
         token = "Bearer " + jwt.generateToken(recruiter);
     }
 

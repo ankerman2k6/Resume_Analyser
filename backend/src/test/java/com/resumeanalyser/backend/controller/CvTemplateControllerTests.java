@@ -28,6 +28,7 @@ import com.resumeanalyser.backend.repository.UserRepository;
 import com.resumeanalyser.backend.security.JwtAuthenticationFilter;
 import com.resumeanalyser.backend.security.JwtService;
 import com.resumeanalyser.backend.security.SecurityConfig;
+import com.resumeanalyser.backend.service.CompanyAccessService;
 import com.resumeanalyser.backend.service.CvTemplateService;
 
 @WebMvcTest(CvTemplateController.class)
@@ -51,6 +52,9 @@ class CvTemplateControllerTests {
 
     @MockitoBean
     UserRepository userRepository;
+
+    @MockitoBean
+    CompanyAccessService companyAccessService;
 
     @Test
     void listTemplates_isPublicAndDefaultsPageZeroSizeTwelve() throws Exception {
