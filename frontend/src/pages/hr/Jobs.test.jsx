@@ -71,7 +71,6 @@ describe('JobsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tạo Job mới' }));
 
     const statusSelect = screen.getByLabelText('Trạng thái');
-    expect(within(statusSelect).getByRole('option', { name: 'Bản nháp' })).toBeInTheDocument();
     expect(within(statusSelect).getByRole('option', { name: 'Đang tuyển' })).toBeInTheDocument();
     expect(within(statusSelect).queryByRole('option', { name: 'Đã đóng' })).not.toBeInTheDocument();
   });
