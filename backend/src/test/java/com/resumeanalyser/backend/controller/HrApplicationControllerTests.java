@@ -6,6 +6,7 @@ import com.resumeanalyser.backend.model.User;
 import com.resumeanalyser.backend.repository.UserRepository;
 import com.resumeanalyser.backend.security.*;
 import com.resumeanalyser.backend.service.ApplicationService;
+import com.resumeanalyser.backend.service.CompanyAccessService;
 import com.resumeanalyser.backend.service.HrApplicationDetailsService;
 import com.resumeanalyser.backend.dto.HrApplicationResponse;
 import java.time.Instant;
@@ -43,6 +44,7 @@ class HrApplicationControllerTests {
     @MockitoBean ApplicationService service;
     @MockitoBean HrApplicationDetailsService details;
     @MockitoBean UserRepository users;
+    @MockitoBean CompanyAccessService companyAccessService;
     User recruiter;
     String token;
     String jobId = new ObjectId().toHexString();
@@ -55,6 +57,7 @@ class HrApplicationControllerTests {
         recruiter.setStatus("active");
         recruiter.setRole("recruiter");
         when(users.findById(recruiter.getId())).thenReturn(Optional.of(recruiter));
+        when(companyAccessService.isApproved(any())).thenReturn(true);
         token = "Bearer " + jwt.generateToken(recruiter);
     }
 

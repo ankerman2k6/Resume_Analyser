@@ -44,6 +44,7 @@ import com.resumeanalyser.backend.repository.CandidateProfileRepository;
 import com.resumeanalyser.backend.repository.CompanyRepository;
 import com.resumeanalyser.backend.repository.RecruiterProfileRepository;
 import com.resumeanalyser.backend.service.AuthService;
+import com.resumeanalyser.backend.service.CompanyAccessService;
 import com.resumeanalyser.backend.exception.GlobalExceptionHandler;
 import jakarta.servlet.DispatcherType;
 
@@ -76,6 +77,13 @@ class JwtAuthenticationTests {
         @Bean
         CompanyRepository companyRepository() {
             return mock(CompanyRepository.class);
+        }
+
+        @Bean
+        CompanyAccessService companyAccessService() {
+            CompanyAccessService svc = mock(CompanyAccessService.class);
+            when(svc.isApproved(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+            return svc;
         }
 
         @Bean
