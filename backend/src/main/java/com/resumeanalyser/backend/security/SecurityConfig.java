@@ -73,7 +73,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Không để security che lỗi gốc của controller thành 401/403.
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                        .requestMatchers(
+                                "/actuator/health",
+                                "/actuator/prometheus")
+                        .permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/login",
                                 "/api/auth/register")
