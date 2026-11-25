@@ -65,7 +65,7 @@ function formatDate(value?: string | null, withTime = false): string | null {
 
 function initials(name?: string | null): string {
   const value = name?.trim();
-  return value ? value.split(/\s+/).slice(-2).map((part) => part[0]).join('').toUpperCase() : '?';
+  return value ? Array.from(value)[0].toUpperCase() : '?';
 }
 
 function SectionTitle({
@@ -349,13 +349,9 @@ export function CandidateProfileScreen() {
 
         <View style={styles.profileCard}>
           <View style={styles.profileHero}>
-            {profile?.avatarUrl ? (
-              <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarFallbackText}>{initials(profile?.fullName)}</Text>
-              </View>
-            )}
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarFallbackText}>{initials(profile?.fullName)}</Text>
+            </View>
             <View style={styles.profileMain}>
               <View style={styles.nameRow}>
                 <Text numberOfLines={2} style={styles.profileName}>
@@ -603,8 +599,7 @@ const styles = StyleSheet.create({
   feedbackTextError: { color: palette.feedback.dangerText },
   profileCard: { backgroundColor: palette.background.surface, borderColor: palette.border.subtle, borderRadius: radii.xl, borderWidth: 1, padding: spacing.md, ...shadows.card },
   profileHero: { alignItems: 'center', flexDirection: 'row', gap: 12 },
-  avatar: { borderRadius: radii.lg, height: 58, width: 58 },
-  avatarFallback: { alignItems: 'center', backgroundColor: palette.brand.accent, borderRadius: radii.lg, height: 58, justifyContent: 'center', width: 58 },
+  avatarFallback: { alignItems: 'center', backgroundColor: palette.brand.accent, borderRadius: radii.full, height: 58, justifyContent: 'center', width: 58 },
   avatarFallbackText: { ...typography.titleMedium, color: palette.brand.secondary },
   profileMain: { flex: 1, gap: 6 },
   nameRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 6 },

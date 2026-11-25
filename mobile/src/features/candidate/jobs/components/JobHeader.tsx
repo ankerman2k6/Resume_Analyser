@@ -55,25 +55,7 @@ export const JobHeader: React.FC<JobHeaderProps> = ({
               color={isBookmarked ? colors.light.brand.secondary : colors.light.text.secondary}
             />
           </Pressable>
-        ) : (
-          <Pressable
-            accessibilityLabel="Thông báo"
-            style={styles.iconButton}
-          >
-            <MaterialIcons name="notifications-none" size={24} color={colors.light.text.secondary} />
-            <View style={styles.notificationDot} />
-          </Pressable>
-        )}
-
-        {/* Profile Avatar */}
-        <View style={styles.avatarContainer}>
-          <Image
-            source={{
-              uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-            }}
-            style={styles.avatarImage}
-          />
-        </View>
+        ) : null }
       </View>
     </View>
   );
