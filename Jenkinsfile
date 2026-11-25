@@ -118,21 +118,23 @@ pipeline {
         stage("6. Deploy Containers") {
             steps {
                 echo "=== BƯỚC 6: TRIỂN KHAI CONTAINERS VỚI PHIÊN BẢN MỚI ==="
-                sh """
-                    # Ghi tag phiên bản mới nhất vào file .env cho docker-compose
-                    echo "FRONTEND_IMAGE=${FRONTEND_IMAGE}" > .env
-                    echo "BACKEND_IMAGE=${BACKEND_IMAGE}" >> .env
-                    echo "MONGO_IMAGE=${MONGO_IMAGE}" >> .env
-                    echo "VERSION=${VERSION_COMMIT}" >> .env
-                    echo "JWT_SECRET=\${jwt-secret}" >> .env
+                withCredentials([string(credentialsId: 'jwt-secret', variable: 'JWT_SECRET')]) {
+                    sh """
+                        # Ghi tag phiên bản mới nhất vào file .env cho docker-compose
+                        echo "FRONTEND_IMAGE=${FRONTEND_IMAGE}" > .env
+                        echo "BACKEND_IMAGE=${BACKEND_IMAGE}" >> .env
+                        echo "MONGO_IMAGE=${MONGO_IMAGE}" >> .env
+                        echo "VERSION=${VERSION_COMMIT}" >> .env
+                        echo "JWT_SECRET=\${JWT_SECRET}" >> .env
 
-                    echo "Dừng và dọn dẹp container cũ (nếu có)..."
-                    docker compose down --remove-orphans || true
-                    docker rm -f resume-backend resume-frontend resume-mongodb 2>/dev/null || true
+                        echo "Dừng và dọn dẹp container cũ (nếu có)..."
+                        docker compose down --remove-orphans || true
+                        docker rm -f resume-backend resume-frontend resume-mongodb 2>/dev/null || true
 
-                    echo "Khởi chạy container mới bằng images vừa build..."
-                    docker compose up -d --force-recreate
-                """
+                        echo "Khởi chạy container mới bằng images vừa build..."
+                        docker compose up -d --force-recreate
+                    """
+                }
             }
         }
     }
