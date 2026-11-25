@@ -124,7 +124,7 @@ pipeline {
                     echo "BACKEND_IMAGE=${BACKEND_IMAGE}" >> .env
                     echo "MONGO_IMAGE=${MONGO_IMAGE}" >> .env
                     echo "VERSION=${VERSION_COMMIT}" >> .env
-                    echo "JWT_SECRET=\${JWT_SECRET}" >> .env
+                    echo "JWT_SECRET=\${jwt-secret}" >> .env
 
                     echo "Dừng và dọn dẹp container cũ (nếu có)..."
                     docker compose down --remove-orphans || true
