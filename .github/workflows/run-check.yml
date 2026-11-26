@@ -1,0 +1,30 @@
+
+name: Self-hosted Runner Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  runner-test:
+    name: Test HVL Runner
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check runner information
+        run: |
+          echo "===== RUNNER INFORMATION ====="
+          echo "Hostname: $(hostname)"
+          echo "User: $(whoami)"
+          echo "OS: $(uname -a)"
+          echo "Working directory: $(pwd)"
+          echo "Date: $(date)"
+
+      - name: Check workspace
+        run: |
+          echo "===== WORKSPACE CHECK ====="
+          ls -la
+          echo "Runner is working successfully!"
