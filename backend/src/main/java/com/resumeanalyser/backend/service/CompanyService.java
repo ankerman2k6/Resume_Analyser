@@ -21,17 +21,26 @@ public class CompanyService {
     }
 
     public CompanyResponse getCompanyById(String id) {
+        return mapToResponse(findCompany(id));
+    }
+
+    public Company.Logo getLogo(String id) {
+        Company.Logo logo = findCompany(id).getUploadedLogo();
+        if (logo == null) throw new NotFoundException("Công ty chưa có logo đã tải lên.");
+        return logo;
+    }
+
+    private Company findCompany(String id) {
         if (id == null || !ObjectId.isValid(id)) {
             throw new BadRequestException("Company ID không hợp lệ");
         }
 
-        Company company = companyRepository.findById(new ObjectId(id))
+        return companyRepository.findById(new ObjectId(id))
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy công ty với ID: " + id));
 
-        return mapToResponse(company);
     }
 
-    private CompanyResponse mapToResponse(Company company) {
+    static CompanyResponse mapToResponse(Company company) {
         List<CompanyResponse.LocationResponse> locations = company.getLocations() == null
                 ? List.of()
                 : company.getLocations().stream()
@@ -49,7 +58,8 @@ public class CompanyService {
                 company.getSize(),
                 company.getWebsite(),
                 company.getCreatedAt(),
-                company.getUpdatedAt()
+                company.getUpdatedAt(),
+                company.getStatus()
         );
     }
 }

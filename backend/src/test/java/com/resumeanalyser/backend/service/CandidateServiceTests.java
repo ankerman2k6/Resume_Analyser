@@ -59,6 +59,7 @@ import com.resumeanalyser.backend.repository.CvRepository;
 import com.resumeanalyser.backend.repository.InterviewRepository;
 import com.resumeanalyser.backend.repository.JobRepository;
 import com.resumeanalyser.backend.repository.UserRepository;
+import com.resumeanalyser.backend.service.ai.CvParsingService;
 
 @ExtendWith(MockitoExtension.class)
 class CandidateServiceTests {
@@ -90,6 +91,9 @@ class CandidateServiceTests {
     @Mock
     MongoTemplate mongoTemplate;
 
+    @Mock
+    CvParsingService cvParsingService;
+
     @TempDir
     Path tempUploadDir;
 
@@ -112,6 +116,7 @@ class CandidateServiceTests {
                 interviewRepository,
                 jobRepository,
                 mongoTemplate,
+                cvParsingService,
                 tempUploadDir.toString()
         );
 
@@ -361,6 +366,8 @@ class CandidateServiceTests {
         assertTrue(summary.title().contains("my_frontend_cv"));
         assertEquals("uploaded", summary.source().type());
         assertEquals("pending", summary.parseInfo().status());
+        assertNotNull(summary.parseInfo().parsedAt());
+        assertEquals("gemini-cv-v1", summary.parseInfo().parserVersion());
         assertTrue(summary.canViewFile());
         assertTrue(summary.canDelete());
         assertNull(summary.deleteBlockedReason());
@@ -377,6 +384,26 @@ class CandidateServiceTests {
 
         assertThrows(UnsupportedFileTypeException.class, () ->
                 candidateService.uploadCv(file, activeCandidate));
+    }
+
+    @Test
+    void parseCv_verifiesOwnershipAndReturnsCompletedSummary() {
+        when(profileRepository.findByUserId(userObjectId)).thenReturn(Optional.of(existingProfile));
+        ObjectId cvId = new ObjectId();
+        Cv parsed = new Cv();
+        parsed.setId(cvId);
+        parsed.setCandidateId(candidateProfileId);
+        parsed.setTitle("Parsed CV");
+        parsed.setSource(new Cv.Source("uploaded", "cv.pdf", "/tmp/cv.pdf", "application/pdf"));
+        parsed.setParseInfo(new Cv.ParseInfo("completed", Instant.now(), "gemini-cv-v1"));
+        parsed.setCreatedAt(Instant.now());
+        parsed.setUpdatedAt(Instant.now());
+        when(cvParsingService.parseAndSave(cvId, candidateProfileId)).thenReturn(parsed);
+
+        CvSummaryDto result = candidateService.parseCv(activeCandidate, cvId.toHexString());
+
+        assertEquals("completed", result.parseInfo().status());
+        verify(cvParsingService).parseAndSave(cvId, candidateProfileId);
     }
 
     @Test

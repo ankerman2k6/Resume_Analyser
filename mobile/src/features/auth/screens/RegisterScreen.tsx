@@ -1,70 +1,64 @@
-import { useState } from 'react';
-import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { StatusBar } from 'expo-status-bar';
+import { useRef, useState } from 'react';
 import {
-  Alert,
+  ActivityIndicator,
   ImageBackground,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { fontFamilies } from '../../../theme';
 import type { RootStackParamList } from '../../../types/navigation';
-import { colors } from '../../../theme';
-import { spacing } from '../../../theme/spacing';
+import { ApiError, registerApi, saveAuthSession } from '../api/authApi';
+import { KonekLogo } from '../components/KonekLogo';
+import {
+  RoleSegmentedControl,
+  type RegistrationRole,
+} from '../components/RoleSegmentedControl';
+import { WELCOME_BACKGROUND, WELCOME_COLORS } from '../components/welcome.constants';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
-type Role = 'candidate' | 'recruiter';
-
 type FieldErrors = Partial<
   Record<
-    | 'name'
-    | 'email'
-    | 'phone'
-    | 'password'
-    | 'confirmPassword'
-    | 'accepted',
+    'name' | 'email' | 'phone' | 'password' | 'confirmPassword' | 'accepted',
     string
   >
 >;
 
 export function RegisterScreen({ navigation }: Props) {
-  const [role, setRole] = useState<Role>('candidate');
-
+  const [role, setRole] = useState<RegistrationRole>('candidate');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   const [accepted, setAccepted] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const inFlight = useRef(false);
 
   const clearError = (field: keyof FieldErrors) => {
-    setErrors((current) => ({
-      ...current,
-      [field]: undefined,
-    }));
+    setErrors((current) => ({ ...current, [field]: undefined }));
   };
 
   const validateForm = () => {
     const nextErrors: FieldErrors = {};
     const normalizedPhone = phone.replace(/\s/g, '');
 
-    if (!name.trim()) {
-      nextErrors.name = 'Vui lòng nhập họ và tên.';
-    }
+    if (!name.trim()) nextErrors.name = 'Vui lòng nhập họ và tên.';
 
     if (!email.trim()) {
       nextErrors.email = 'Vui lòng nhập địa chỉ email.';
@@ -90,53 +84,70 @@ export function RegisterScreen({ navigation }: Props) {
       nextErrors.confirmPassword = 'Mật khẩu xác nhận không khớp.';
     }
 
-    if (!accepted) {
-      nextErrors.accepted = 'Bạn cần đồng ý với điều khoản dịch vụ.';
-    }
+    if (!accepted) nextErrors.accepted = 'Bạn cần đồng ý với điều khoản dịch vụ.';
 
     setErrors(nextErrors);
-
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleRegister = () => {
-    if (!validateForm()) {
-      return;
+  const handleRegister = async () => {
+    if (inFlight.current || !validateForm()) return;
+
+    inFlight.current = true;
+    setSubmitting(true);
+    setSubmitError('');
+    Keyboard.dismiss();
+    try {
+      const session = await registerApi({
+        role,
+        fullName: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.replace(/\s/g, ''),
+        password,
+      });
+      if (!navigation.isFocused()) return;
+      try {
+        await saveAuthSession(session);
+      } catch {
+        setSubmitError('Tài khoản đã được tạo. Vui lòng chọn Đăng nhập ngay để tiếp tục.');
+        return;
+      }
+      navigation.reset({
+        index: 0,
+        routes: [{ name: session.role === 'candidate' ? 'CandidateTabs' : 'HrCreateCompany' }],
+      });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        setSubmitError('Email này đã có tài khoản. Bạn có thể đăng nhập hoặc dùng email khác.');
+      } else if (error instanceof TypeError) {
+        setSubmitError('Không thể kết nối tới máy chủ. Hãy kiểm tra mạng rồi thử lại.');
+      } else {
+        setSubmitError(error instanceof Error ? error.message : 'Đăng ký chưa thành công. Vui lòng thử lại.');
+      }
+    } finally {
+      inFlight.current = false;
+      setSubmitting(false);
     }
-
-    const registerPayload = {
-      role,
-      fullName: name.trim(),
-      email: email.trim().toLowerCase(),
-      phone: phone.replace(/\s/g, ''),
-      password,
-    };
-
-    console.log('Register payload:', registerPayload);
-
-    Alert.alert(
-      'Tạo tài khoản thành công',
-      'Bạn có thể đăng nhập bằng tài khoản vừa tạo.',
-      [
-        {
-          text: 'Đăng nhập',
-          onPress: () => navigation.replace('Login'),
-        },
-      ],
-    );
   };
 
-  const roleName =
-    role === 'candidate' ? 'Ứng viên' : 'Nhà tuyển dụng';
+  const roleName = role === 'candidate' ? 'Ứng viên' : 'Nhà tuyển dụng';
 
   return (
-    <ImageBackground source={require('../../../assets/images/auth-background.jpg')} resizeMode="cover" style={styles.background}
+    <ImageBackground
+      imageStyle={styles.backgroundImage}
+      resizeMode="cover"
+      source={require('../../../assets/images/welcome/welcome-background.jpg')}
+      style={styles.background}
     >
       <StatusBar style="light" />
+      <View pointerEvents="none" style={styles.backgroundTint} />
+      <View pointerEvents="none" style={styles.topRightGlow} />
+      <View pointerEvents="none" style={styles.bottomShapeWash} />
 
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
           style={styles.keyboardView}
         >
           <ScrollView
@@ -144,66 +155,30 @@ export function RegisterScreen({ navigation }: Props) {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.hero}>
+            <View pointerEvents={submitting ? 'none' : 'auto'} style={styles.content}>
               <Pressable
                 accessibilityLabel="Quay lại màn hình trước"
                 accessibilityRole="button"
                 hitSlop={8}
                 onPress={() => navigation.goBack()}
-                style={({ pressed }) => [
-                  styles.backButton,
-                  pressed && styles.pressed,
-                ]}
+                style={({ pressed }) => [styles.logoButton, pressed && styles.pressed]}
               >
-                <Ionicons color={colors.light.text.inverse} name="chevron-back" size={22}
-                />
-                <Text style={styles.backText}>Quay lại</Text>
+                <KonekLogo inverse />
               </Pressable>
-            </View>
 
-            <View style={styles.formPanel}>
-              <Text style={styles.title}>Tạo tài khoản</Text>
-
-              <Text style={styles.subtitle}>
-                Chọn vai trò của bạn để bắt đầu trải nghiệm tuyển dụng phù hợp.
-              </Text>
-
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>
-                  Chọn vai trò tham gia
-                  <Text style={styles.required}> *</Text>
-                </Text>
-
-                <Text style={styles.sectionHint}>
-                  Có thể chuyển đổi sau
+              <View style={styles.headingBlock}>
+                <Text style={styles.title}>Tạo tài khoản</Text>
+                <Text style={styles.subtitle}>
+                  Bắt đầu hành trình kết nối cùng KONEK.
                 </Text>
               </View>
 
-              <RoleCard
-                description="Tìm kiếm cơ hội nghề nghiệp, quản lý hồ sơ và tối ưu CV."
-                icon="briefcase-outline"
-                label="Ứng viên tìm việc"
-                onPress={() => setRole('candidate')}
-                selected={role === 'candidate'}
-                tag="Cá nhân"
-              />
-
-              <RoleCard
-                description="Đăng tin tuyển dụng, quản lý ứng viên và lịch phỏng vấn."
-                icon="business-outline"
-                label="Nhà tuyển dụng"
-                onPress={() => setRole('recruiter')}
-                selected={role === 'recruiter'}
-                tag="Doanh nghiệp"
-              />
+              <Text style={styles.groupLabel}>Bạn tham gia với vai trò</Text>
+              <RoleSegmentedControl onChange={setRole} value={role} />
 
               <View style={styles.form}>
                 <FieldLabel label="Họ và tên đầy đủ" required />
-
-                <InputShell
-                  error={errors.name}
-                  icon="person-outline"
-                >
+                <InputShell error={errors.name} icon="person-outline">
                   <TextInput
                     accessibilityLabel="Họ và tên đầy đủ"
                     autoCapitalize="words"
@@ -212,19 +187,18 @@ export function RegisterScreen({ navigation }: Props) {
                       setName(value);
                       clearError('name');
                     }}
-                    placeholder="Nguyễn Văn A"
-                    placeholderTextColor={colors.light.text.secondary}
+                    placeholder="Nhập họ và tên"
+                    placeholderTextColor={glassColors.placeholder}
                     returnKeyType="next"
+                    selectionColor={WELCOME_COLORS.blue}
                     style={styles.input}
                     textContentType="name"
                     value={name}
                   />
                 </InputShell>
-
                 <FieldError message={errors.name} />
 
                 <FieldLabel label="Địa chỉ email cá nhân" required />
-
                 <InputShell error={errors.email} icon="mail-outline">
                   <TextInput
                     accessibilityLabel="Địa chỉ email cá nhân"
@@ -235,27 +209,22 @@ export function RegisterScreen({ navigation }: Props) {
                       setEmail(value);
                       clearError('email');
                     }}
-                    placeholder="name@example.com"
-                    placeholderTextColor={colors.light.text.secondary}
+                    placeholder="Nhập email"
+                    placeholderTextColor={glassColors.placeholder}
                     returnKeyType="next"
+                    selectionColor={WELCOME_COLORS.blue}
                     style={styles.input}
                     textContentType="emailAddress"
                     value={email}
                   />
                 </InputShell>
-
                 <FieldError message={errors.email} />
-
                 <Text style={styles.helperText}>
                   Dùng email cá nhân để nhận thông báo tuyển dụng và phỏng vấn.
                 </Text>
 
                 <FieldLabel label="Số điện thoại liên hệ" required />
-
-                <InputShell
-                  error={errors.phone}
-                  icon="call-outline"
-                >
+                <InputShell error={errors.phone} icon="call-outline">
                   <TextInput
                     accessibilityLabel="Số điện thoại liên hệ"
                     autoComplete="tel"
@@ -265,22 +234,18 @@ export function RegisterScreen({ navigation }: Props) {
                       clearError('phone');
                     }}
                     placeholder="0912 345 678"
-                    placeholderTextColor={colors.light.text.secondary}
+                    placeholderTextColor={glassColors.placeholder}
                     returnKeyType="next"
+                    selectionColor={WELCOME_COLORS.blue}
                     style={styles.input}
                     textContentType="telephoneNumber"
                     value={phone}
                   />
                 </InputShell>
-
                 <FieldError message={errors.phone} />
 
                 <FieldLabel label="Mật khẩu" required />
-
-                <InputShell
-                  error={errors.password}
-                  icon="lock-closed-outline"
-                >
+                <InputShell error={errors.password} icon="lock-closed-outline">
                   <TextInput
                     accessibilityLabel="Mật khẩu"
                     autoCapitalize="none"
@@ -290,29 +255,26 @@ export function RegisterScreen({ navigation }: Props) {
                       clearError('password');
                     }}
                     placeholder="Tối thiểu 8 ký tự"
-                    placeholderTextColor={colors.light.text.secondary}
+                    placeholderTextColor={glassColors.placeholder}
                     secureTextEntry={!showPassword}
+                    selectionColor={WELCOME_COLORS.blue}
                     style={styles.input}
                     textContentType="newPassword"
                     value={password}
                   />
-
                   <PasswordToggle
-                    visible={showPassword}
                     onPress={() => setShowPassword((current) => !current)}
+                    visible={showPassword}
                   />
                 </InputShell>
-
                 <FieldError message={errors.password} />
 
                 <View style={styles.passwordStrengthHeader}>
                   <Text style={styles.helperText}>Độ an toàn mật khẩu</Text>
-
                   <Text style={styles.helperText}>
                     {password.length >= 8 ? 'Đạt yêu cầu' : 'Chưa đạt'}
                   </Text>
                 </View>
-
                 <View style={styles.strengthTrack}>
                   <View
                     style={[
@@ -323,11 +285,7 @@ export function RegisterScreen({ navigation }: Props) {
                 </View>
 
                 <FieldLabel label="Xác nhận mật khẩu" required />
-
-                <InputShell
-                  error={errors.confirmPassword}
-                  icon="refresh-circle-outline"
-                >
+                <InputShell error={errors.confirmPassword} icon="shield-checkmark-outline">
                   <TextInput
                     accessibilityLabel="Xác nhận mật khẩu"
                     autoCapitalize="none"
@@ -338,22 +296,19 @@ export function RegisterScreen({ navigation }: Props) {
                     }}
                     onSubmitEditing={handleRegister}
                     placeholder="Nhập lại mật khẩu"
-                    placeholderTextColor={colors.light.text.secondary}
+                    placeholderTextColor={glassColors.placeholder}
                     returnKeyType="done"
                     secureTextEntry={!showConfirmPassword}
+                    selectionColor={WELCOME_COLORS.blue}
                     style={styles.input}
                     textContentType="newPassword"
                     value={confirmPassword}
                   />
-
                   <PasswordToggle
+                    onPress={() => setShowConfirmPassword((current) => !current)}
                     visible={showConfirmPassword}
-                    onPress={() =>
-                      setShowConfirmPassword((current) => !current)
-                    }
                   />
                 </InputShell>
-
                 <FieldError message={errors.confirmPassword} />
 
                 <Pressable
@@ -364,35 +319,23 @@ export function RegisterScreen({ navigation }: Props) {
                     setAccepted((current) => !current);
                     clearError('accepted');
                   }}
-                  style={({ pressed }) => [
-                    styles.consentRow,
-                    pressed && styles.pressed,
-                  ]}
+                  style={({ pressed }) => [styles.consentRow, pressed && styles.pressed]}
                 >
-                  <View
-                    style={[
-                      styles.checkbox,
-                      accepted && styles.checkboxChecked,
-                    ]}
-                  >
+                  <View style={[styles.checkbox, accepted && styles.checkboxChecked]}>
                     {accepted ? (
-                      <Ionicons
-                        color={colors.light.text.inverse}
-                        name="checkmark"
-                        size={18}
-                      />
+                      <Ionicons color={WELCOME_COLORS.white} name="checkmark" size={18} />
                     ) : null}
                   </View>
-
                   <Text style={styles.consentText}>
                     Tôi đồng ý với Điều khoản dịch vụ và Chính sách quyền riêng tư.
                   </Text>
                 </Pressable>
-
                 <FieldError message={errors.accepted} />
 
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityState={{ busy: submitting, disabled: submitting }}
+                  disabled={submitting}
                   onPress={handleRegister}
                   style={({ pressed }) => [
                     styles.primaryButton,
@@ -400,28 +343,25 @@ export function RegisterScreen({ navigation }: Props) {
                   ]}
                 >
                   <Text style={styles.primaryButtonText}>
-                    Hoàn tất đăng ký {roleName}
+                    {submitting ? 'Đang tạo tài khoản…' : `Hoàn tất đăng ký ${roleName}`}
                   </Text>
-
-                  <Ionicons
-                    color={colors.light.text.inverse}
-                    name="arrow-forward"
-                    size={22}
-                  />
+                  {submitting
+                    ? <ActivityIndicator color={WELCOME_COLORS.white} />
+                    : <Ionicons color={WELCOME_COLORS.white} name="arrow-forward" size={22} />}
                 </Pressable>
+                {submitError ? <FieldError message={submitError} /> : null}
 
                 <Text style={styles.actionHint}>
-                  Sau khi đăng ký, bạn có thể cập nhật hồ sơ trong ứng dụng.
+                  {role === 'recruiter'
+                    ? 'Tiếp theo, bạn sẽ tạo hồ sơ công ty.'
+                    : 'Sau khi đăng ký, bạn có thể cập nhật hồ sơ trong ứng dụng.'}
                 </Text>
               </View>
 
               <Pressable
                 accessibilityRole="button"
                 onPress={() => navigation.navigate('Login')}
-                style={({ pressed }) => [
-                  styles.loginButton,
-                  pressed && styles.pressed,
-                ]}
+                style={({ pressed }) => [styles.loginButton, pressed && styles.pressed]}
               >
                 <Text style={styles.loginHint}>
                   Đã có tài khoản?
@@ -436,78 +376,7 @@ export function RegisterScreen({ navigation }: Props) {
   );
 }
 
-type RoleCardProps = {
-  description: string;
-  icon: 'briefcase-outline' | 'business-outline';
-  label: string;
-  onPress: () => void;
-  selected: boolean;
-  tag: string;
-};
-
-function RoleCard({description,  icon, label, onPress, selected,tag,}: RoleCardProps) {
-  return (
-    <Pressable
-      accessibilityLabel={`${label}. ${description}`}
-      accessibilityRole="radio"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.roleCard,
-        selected && styles.roleCardSelected,
-        pressed && styles.pressed,
-      ]}
-    >
-      <View
-        style={[
-          styles.roleIconContainer,
-          selected && styles.roleIconContainerSelected,
-        ]}
-      >
-        <Ionicons
-          color={selected ? colors.light.brand.secondary : colors.light.text.secondary}
-          name={icon}
-          size={28}
-        />
-      </View>
-
-      <View style={styles.roleContent}>
-        <View style={styles.roleTitleRow}>
-          <Text style={styles.roleTitle}>{label}</Text>
-
-          <View style={styles.roleTag}>
-            <Text style={styles.roleTagText}>{tag}</Text>
-          </View>
-        </View>
-
-        <Text style={styles.roleDescription}>{description}</Text>
-      </View>
-
-      <View
-        style={[
-          styles.radio,
-          selected && styles.radioSelected,
-        ]}
-      >
-        {selected ? (
-          <Ionicons
-            color={colors.light.text.inverse}
-            name="checkmark"
-            size={18}
-          />
-        ) : null}
-      </View>
-    </Pressable>
-  );
-}
-
-function FieldLabel({
-  label,
-  required = false,
-}: {
-  label: string;
-  required?: boolean;
-}) {
+function FieldLabel({ label, required = false }: { label: string; required?: boolean }) {
   return (
     <Text style={styles.fieldLabel}>
       {label}
@@ -526,40 +395,24 @@ function InputShell({
   icon: React.ComponentProps<typeof Ionicons>['name'];
 }) {
   return (
-    <View
-      style={[
-        styles.inputShell,
-        error ? styles.inputShellError : null,
-      ]}
-    >
-      <Ionicons
-        color={colors.light.text.secondary}
-        name={icon}
-        size={22}
-      />
-
+    <View style={[styles.inputShell, error && styles.inputShellError]}>
+      <Ionicons color={glassColors.icon} name={icon} size={22} />
       {children}
     </View>
   );
 }
 
-function PasswordToggle({
-  onPress,
-  visible,
-}: {
-  onPress: () => void;
-  visible: boolean;
-}) {
+function PasswordToggle({ onPress, visible }: { onPress: () => void; visible: boolean }) {
   return (
     <Pressable
       accessibilityLabel={visible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
       accessibilityRole="button"
       hitSlop={8}
       onPress={onPress}
-      style={styles.passwordToggle}
+      style={({ pressed }) => [styles.passwordToggle, pressed && styles.pressed]}
     >
       <Ionicons
-        color={colors.light.text.secondary}
+        color={glassColors.icon}
         name={visible ? 'eye-off-outline' : 'eye-outline'}
         size={23}
       />
@@ -568,193 +421,141 @@ function PasswordToggle({
 }
 
 function FieldError({ message }: { message?: string }) {
-  if (!message) {
-    return null;
-  }
-
   return (
-    <Text accessibilityLiveRegion="polite" style={styles.errorText}>
-      {message}
-    </Text>
+    <View style={styles.errorSlot}>
+      {message ? (
+        <Text accessibilityLiveRegion="polite" style={styles.errorText}>
+          {message}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
+const glassColors = {
+  fill: 'rgba(255, 255, 255, 0.05)',
+  border: 'rgba(255, 255, 255, 0.2)',
+  borderHighlight: 'rgba(255, 255, 255, 0.32)',
+  icon: 'rgba(200, 222, 255, 0.78)',
+  placeholder: 'rgba(220, 233, 252, 0.52)',
+} as const;
+
 const styles = StyleSheet.create({
   background: {
+    backgroundColor: WELCOME_BACKGROUND.base,
     flex: 1,
   },
-  safeArea: {
-    flex: 1,
+  backgroundImage: { opacity: 0.72 },
+  backgroundTint: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(1, 10, 34, 0.3)',
   },
-  keyboardView: {
-    flex: 1,
+  topRightGlow: {
+    backgroundColor: 'rgba(143, 180, 255, 0.08)',
+    borderBottomLeftRadius: 240,
+    height: 190,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    width: 240,
   },
+  bottomShapeWash: {
+    backgroundColor: 'rgba(23, 62, 138, 0.08)',
+    borderTopRightRadius: 240,
+    bottom: 0,
+    height: 180,
+    left: 0,
+    position: 'absolute',
+    width: '72%',
+  },
+  safeArea: { flex: 1 },
+  keyboardView: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
   },
-  hero: {
-    minHeight: 185,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
+  content: {
+    alignSelf: 'center',
+    maxWidth: 520,
+    width: '100%',
   },
-  backButton: {
-    alignItems: 'center',
+  logoButton: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(7, 27, 73, 0.86)',
-    borderRadius: 24,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    minHeight: 48,
-    paddingHorizontal: spacing.md,
+    justifyContent: 'center',
+    minHeight: 44,
   },
-  backText: {
-    color: colors.light.text.inverse,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  pressed: {
-    opacity: 0.72,
-  },
-  formPanel: {
-    backgroundColor: colors.light.background.primary,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    flexGrow: 1,
-    paddingBottom: spacing.xl,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl,
+  pressed: { opacity: 0.72 },
+  headingBlock: {
+    marginTop: 18,
   },
   title: {
-    color: colors.light.text.primary,
-    fontSize: 30,
-    fontWeight: '800',
-    letterSpacing: -0.5,
+    color: WELCOME_COLORS.white,
+    fontFamily: fontFamilies.bold,
+    fontSize: 32,
+    letterSpacing: -0.7,
+    lineHeight: 39,
   },
   subtitle: {
-    color: colors.light.text.secondary,
-    fontSize: 16,
-    lineHeight: 24,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xl,
-  },
-  sectionHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  sectionTitle: {
-    color: colors.light.text.primary,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  sectionHint: {
-    color: colors.light.text.secondary,
-    fontSize: 12,
-  },
-  required: {
-    color: colors.light.status.danger,
-  },
-  roleCard: {
-    alignItems: 'center',
-    backgroundColor: colors.light.background.surface,
-    borderColor: colors.light.border.subtle,
-    borderRadius: 18,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.sm,
-    minHeight: 120,
-    padding: spacing.md,
-  },
-  roleCardSelected: {
-    backgroundColor: colors.light.brand.accent,
-    borderColor: colors.light.brand.secondary,
-  },
-  roleIconContainer: {
-    alignItems: 'center',
-    backgroundColor: colors.light.background.subtle,
-    borderRadius: 12,
-    height: 52,
-    justifyContent: 'center',
-    width: 52,
-  },
-  roleIconContainerSelected: {
-    backgroundColor: colors.light.background.surface,
-  },
-  roleContent: {
-    flex: 1,
-  },
-  roleTitleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  roleTitle: {
-    color: colors.light.text.primary,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  roleTag: {
-    backgroundColor: colors.light.background.surface,
-    borderRadius: 12,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  roleTagText: {
-    color: colors.light.brand.primary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  roleDescription: {
-    color: colors.light.text.secondary,
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: spacing.xs,
-  },
-  radio: {
-    alignItems: 'center',
-    backgroundColor: '#DBEAFE',
-    borderRadius: 20,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  radioSelected: {
-    backgroundColor: colors.light.brand.secondary,
-  },
-  form: {
-    marginTop: spacing.lg,
-  },
-  fieldLabel: {
-    color: colors.light.text.primary,
+    color: 'rgba(222, 235, 255, 0.74)',
+    fontFamily: fontFamilies.regular,
     fontSize: 15,
-    fontWeight: '700',
-    marginBottom: spacing.sm,
-    marginTop: spacing.md,
+    lineHeight: 22,
+    marginTop: 7,
   },
+  groupLabel: {
+    color: 'rgba(239, 246, 255, 0.9)',
+    fontFamily: fontFamilies.semibold,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 24,
+  },
+  form: { marginTop: 12 },
+  fieldLabel: {
+    color: 'rgba(242, 247, 255, 0.9)',
+    fontFamily: fontFamilies.medium,
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 7,
+    marginTop: 12,
+  },
+  required: { color: '#FCA5A5' },
   inputShell: {
-    alignItems: 'center',
-    backgroundColor: colors.light.background.input,
-    borderColor: colors.light.border.subtle,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    minHeight: 56,
-    paddingHorizontal: spacing.md,
-  },
+  alignItems: 'center',
+  flexDirection: 'row',
+
+  // Liquid Glass giống bên Login
+  backgroundColor: 'rgba(255, 255, 255, 0.02)',
+
+  borderWidth: 1,
+  borderColor: 'rgba(255, 255, 255, 0.18)',
+  borderTopColor: 'rgba(255, 255, 255, 0.38)',
+  borderBottomColor: 'rgba(143, 180, 255, 0.14)',
+
+  borderRadius: 999,
+  minHeight: 58,
+  paddingHorizontal: 18,
+  overflow: 'hidden',
+
+  shadowColor: '#06132F',
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 0.22,
+  shadowRadius: 16,
+
+  elevation: 3,
+},
   inputShellError: {
-    borderColor: colors.light.status.danger,
+  borderColor: 'rgba(248, 113, 113, 0.9)',
+  borderTopColor: 'rgba(254, 202, 202, 0.95)',
   },
   input: {
-    color: colors.light.text.primary,
+    color: WELCOME_COLORS.white,
     flex: 1,
+    fontFamily: fontFamilies.regular,
     fontSize: 16,
     minHeight: 54,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 11,
     paddingVertical: 0,
   },
   passwordToggle: {
@@ -763,103 +564,123 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 44,
   },
-  helperText: {
-    color: colors.light.text.secondary,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: spacing.xs,
+  errorSlot: {
+    minHeight: 22,
+    paddingHorizontal: 3,
   },
   errorText: {
-    color: colors.light.status.danger,
+    color: '#FCA5A5',
+    fontFamily: fontFamilies.regular,
     fontSize: 12,
     lineHeight: 18,
-    marginTop: spacing.xs,
+    paddingTop: 3,
+  },
+  helperText: {
+    color: 'rgba(203, 220, 245, 0.62)',
+    fontFamily: fontFamilies.regular,
+    fontSize: 12,
+    lineHeight: 18,
   },
   passwordStrengthHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   strengthTrack: {
-    backgroundColor: '#DBEAFE',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 4,
-    height: 6,
-    marginTop: spacing.sm,
+    height: 5,
+    marginTop: 7,
     overflow: 'hidden',
   },
   strengthValue: {
-    backgroundColor: colors.light.status.warning,
+    backgroundColor: 'rgba(143, 180, 255, 0.38)',
     height: '100%',
     width: '28%',
   },
   strengthValueValid: {
-    backgroundColor: colors.light.status.success,
+    backgroundColor: '#38BDF8',
     width: '100%',
   },
   consentRow: {
     alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
+    gap: 10,
+    marginTop: 12,
     minHeight: 48,
-    paddingVertical: spacing.xs,
+    paddingVertical: 4,
   },
   checkbox: {
     alignItems: 'center',
-    borderColor: colors.light.border.focus,
-    borderRadius: 5,
-    borderWidth: 2,
-    height: 24,
+    backgroundColor: glassColors.fill,
+    borderColor: glassColors.borderHighlight,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    height: 23,
     justifyContent: 'center',
-    width: 24,
+    width: 23,
   },
   checkboxChecked: {
-    backgroundColor: colors.light.brand.secondary,
-    borderColor: colors.light.brand.secondary,
+    backgroundColor: '#2563EB',
+    borderColor: '#7DD3FC',
   },
   consentText: {
-    color: colors.light.text.secondary,
+    color: 'rgba(229, 239, 255, 0.78)',
     flex: 1,
+    fontFamily: fontFamilies.regular,
     fontSize: 13,
     lineHeight: 20,
   },
   primaryButton: {
     alignItems: 'center',
-    backgroundColor: colors.light.brand.secondary,
-    borderRadius: 14,
+    backgroundColor: '#0878F9',
+    borderColor: 'rgba(105, 220, 255, 0.84)',
+    borderRadius: 29,
+    borderWidth: 1,
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: 9,
     justifyContent: 'center',
-    marginTop: spacing.md,
+    marginTop: 12,
     minHeight: 58,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: 18,
+    shadowColor: '#0878F9',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
   },
   primaryButtonPressed: {
-    backgroundColor: colors.light.brand.primary,
+    backgroundColor: '#0969DB',
+    shadowOpacity: 0.12,
   },
   primaryButtonText: {
-    color: colors.light.text.inverse,
+    color: WELCOME_COLORS.white,
+    flexShrink: 1,
+    fontFamily: fontFamilies.bold,
     fontSize: 16,
-    fontWeight: '800',
+    lineHeight: 22,
+    textAlign: 'center',
   },
   actionHint: {
-    color: colors.light.text.secondary,
+    color: 'rgba(203, 220, 245, 0.58)',
+    fontFamily: fontFamilies.regular,
     fontSize: 12,
     lineHeight: 18,
-    marginTop: spacing.sm,
+    marginTop: 8,
     textAlign: 'center',
   },
   loginButton: {
     alignItems: 'center',
-    minHeight: 48,
     justifyContent: 'center',
-    marginTop: spacing.lg,
+    marginTop: 18,
+    minHeight: 48,
   },
   loginHint: {
-    color: colors.light.text.secondary,
+    color: 'rgba(224, 237, 255, 0.76)',
+    fontFamily: fontFamilies.regular,
     fontSize: 14,
+    lineHeight: 21,
   },
   loginLink: {
-    color: colors.light.brand.secondary,
-    fontWeight: '800',
+    color: '#59D5FF',
+    fontFamily: fontFamilies.bold,
   },
 });

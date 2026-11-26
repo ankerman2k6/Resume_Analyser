@@ -1,0 +1,77 @@
+{
+  "type": "object",
+  "required": ["skills", "experience", "education", "certificates"],
+  "properties": {
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "category"],
+        "properties": {
+          "name": {"type": "string", "description": "Skill explicitly present in the CV."},
+          "category": {"type": "string", "description": "Skill category; use an empty string if not stated."},
+          "level": {"type": "string"},
+          "yearsOfExperience": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "experience": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["position", "company", "location", "employmentType", "startDate", "current", "description", "achievements", "technologies"],
+        "properties": {
+          "position": {"type": "string"},
+          "company": {"type": "string"},
+          "location": {"type": "string"},
+          "employmentType": {"type": "string"},
+          "startDate": {"type": "string", "description": "Keep the date precision used by the CV."},
+          "endDate": {"type": "string"},
+          "current": {"type": "boolean"},
+          "description": {"type": "string"},
+          "achievements": {"type": "array", "items": {"type": "string"}},
+          "technologies": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "education": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["degree", "major", "institution", "startDate", "endDate", "status"],
+        "properties": {
+          "degree": {"type": "string"},
+          "major": {"type": "string"},
+          "institution": {"type": "string"},
+          "startDate": {"type": "string"},
+          "endDate": {"type": "string"},
+          "status": {"type": "string"},
+          "gpa": {
+            "type": "object",
+            "required": ["value", "scale"],
+            "properties": {
+              "value": {"type": "number", "minimum": 0},
+              "scale": {"type": "integer", "minimum": 1}
+            }
+          },
+          "description": {"type": "string"}
+        }
+      }
+    },
+    "certificates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "issuer", "issueDate", "credentialId"],
+        "properties": {
+          "name": {"type": "string"},
+          "issuer": {"type": "string"},
+          "issueDate": {"type": "string"},
+          "credentialId": {"type": "string"},
+          "credentialUrl": {"type": "string"},
+          "expirationDate": {"type": "string"}
+        }
+      }
+    }
+  }
+}

@@ -65,12 +65,14 @@ class HrApplicationControllerTests {
         application.setCandidateId(new ObjectId());
         application.setCvId(new ObjectId());
         application.setStatus("interview");
-        when(details.getByJob(jobId, recruiter.getId())).thenReturn(List.of(new HrApplicationResponse(appId, jobId, application.getCandidateId().toHexString(), application.getCvId().toHexString(), "Ứng viên", "candidate@test.invalid", "0900000000", null, "interview", null, null, null)));
+        when(details.getByJob(jobId, recruiter.getId())).thenReturn(List.of(new HrApplicationResponse(appId, jobId, application.getCandidateId().toHexString(), application.getCvId().toHexString(), "Ứng viên", "candidate@test.invalid", "0900000000", null, "interview", null, null, null, List.of("Java"), 3.0)));
         mvc.perform(get("/api/hr/jobs/{id}/applications", jobId).header("Authorization", token)
                         .param("recruiterId", new ObjectId().toHexString()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value(appId))
                 .andExpect(jsonPath("$[0].jobId").value(jobId))
-                .andExpect(jsonPath("$[0].status").value("interview"));
+                .andExpect(jsonPath("$[0].status").value("interview"))
+                .andExpect(jsonPath("$[0].skills[0]").value("Java"))
+                .andExpect(jsonPath("$[0].experienceYears").value(3.0));
         verify(details).getByJob(jobId, recruiter.getId());
     }
 

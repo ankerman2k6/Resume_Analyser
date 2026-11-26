@@ -46,6 +46,7 @@ import com.resumeanalyser.backend.exception.ConflictException;
 import com.resumeanalyser.backend.exception.ForbiddenException;
 import com.resumeanalyser.backend.exception.GlobalExceptionHandler;
 import com.resumeanalyser.backend.exception.NotFoundException;
+import com.resumeanalyser.backend.service.ai.GeminiRequestException;
 import com.resumeanalyser.backend.model.User;
 import com.resumeanalyser.backend.repository.UserRepository;
 import com.resumeanalyser.backend.security.JwtAuthenticationFilter;
@@ -393,6 +394,42 @@ class CandidateControllerTests {
         mvc.perform(delete("/api/candidates/me/cvs/{id}", cvId).header("Authorization", token))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("CV_IN_USE"));
+    }
+
+    @Test
+    void parseCv_success() throws Exception {
+        String cvId = new ObjectId().toHexString();
+        CvSummaryDto parsed = new CvSummaryDto(
+                cvId,
+                "Parsed CV",
+                new CvSummaryDto.SourceInfo("uploaded", "cv.pdf", "application/pdf"),
+                new CvSummaryDto.ParseInfoDto("completed", Instant.now(), "gemini-cv-v1"),
+                List.of(new CvSummaryDto.SkillDto("Java", "Backend", null, 3)),
+                Instant.now(), Instant.now(), true, true, null);
+        when(candidateService.parseCv(any(User.class), eq(cvId))).thenReturn(parsed);
+
+        mvc.perform(post("/api/candidates/me/cvs/{id}/parse", cvId)
+                        .header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.parseInfo.status").value("completed"))
+                .andExpect(jsonPath("$.skills[0].name").value("Java"));
+
+        verify(candidateService).parseCv(any(User.class), eq(cvId));
+    }
+
+    @Test
+    void parseCv_mapsTemporaryGeminiFailureTo503() throws Exception {
+        String cvId = new ObjectId().toHexString();
+        when(candidateService.parseCv(any(User.class), eq(cvId)))
+                .thenThrow(new GeminiRequestException("upstream details", 503));
+
+        mvc.perform(post("/api/candidates/me/cvs/{id}/parse", cvId)
+                        .header("Authorization", token))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string("Retry-After", "5"))
+                .andExpect(jsonPath("$.code").value("AI_SERVICE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.message").value("Dịch vụ phân tích CV đang bận. Vui lòng thử lại sau."));
     }
 
     @Test

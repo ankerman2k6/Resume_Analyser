@@ -13,7 +13,8 @@ public record CompanyResponse(
         String size,
         String website,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String status
 ) {
     public record LocationResponse(String address, String city, String country) {}
 }

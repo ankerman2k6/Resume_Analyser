@@ -11,10 +11,23 @@ export const colors = {
       secondary: '#2563EB',
       accent: '#E0F2FE',
     },
+    surface: {
+      default: '#F8F9FF',
+      containerLowest: '#FFFFFF',
+      containerLow: '#EFF4FF',
+      container: '#E5EEFF',
+      containerHigh: '#DCE9FF',
+      containerHighest: '#D3E4FE',
+    },
+    tertiary: {
+      fixed: '#FFDDB7',
+      onFixedVariant: '#5C4220',
+    },
     text: {
       primary: '#0F172A',
       secondary: '#64748B',
       inverse: '#FFFFFF',
+      brand: '#2563EB',
     },
     border: {
       subtle: '#E2E8F0',
@@ -25,6 +38,12 @@ export const colors = {
       warning: '#F59E0B',
       danger: '#EF4444',
       info: '#0EA5E9',
+    },
+    feedback: {
+      successBackground: '#ECFDF5',
+      successText: '#047857',
+      dangerBackground: '#FEF2F2',
+      dangerText: '#B91C1C',
     },
   },
   dark: {
@@ -39,10 +58,23 @@ export const colors = {
       secondary: '#60A5FA',
       accent: 'rgba(56, 189, 248, 0.15)',
     },
+    surface: {
+      default: '#121A28',
+      containerLowest: '#1A2234',
+      containerLow: '#1E293B',
+      container: '#243248',
+      containerHigh: '#2B3D58',
+      containerHighest: '#334766',
+    },
+    tertiary: {
+      fixed: '#5C4220',
+      onFixedVariant: '#FFDDB7',
+    },
     text: {
       primary: '#F8FAFC',
       secondary: '#94A3B8',
       inverse: '#FFFFFF',
+      brand: '#60A5FA',
     },
     border: {
       subtle: 'rgba(255, 255, 255, 0.08)',
@@ -53,6 +85,12 @@ export const colors = {
       warning: '#FBBF24',
       danger: '#F87171',
       info: '#38BDF8',
+    },
+    feedback: {
+      successBackground: 'rgba(16, 185, 129, 0.15)',
+      successText: '#6EE7B7',
+      dangerBackground: 'rgba(239, 68, 68, 0.15)',
+      dangerText: '#FCA5A5',
     },
   },
 } as const;

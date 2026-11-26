@@ -4,6 +4,9 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.nio.file.*;
+import java.time.YearMonth;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -64,7 +67,8 @@ public class HrApplicationDetailsService {
                     first(profile == null ? null : profile.getFullName(), personal.get("fullName")),
                     first(user == null ? null : user.getEmail(), personal.get("email")),
                     first(profile == null ? null : profile.getPhone(), personal.get("phone")),
-                    cvUrl, app.getStatus(), app.getAppliedAt(), app.getUpdatedAt(), app.getStatusHistory());
+                    cvUrl, app.getStatus(), app.getAppliedAt(), app.getUpdatedAt(), app.getStatusHistory(),
+                    skillNames(cv), experienceYears(cv));
         }).toList();
     }
     
@@ -96,5 +100,73 @@ public class HrApplicationDetailsService {
     }
     private static String first(Object primary, Object fallback) {
         return text(primary) != null ? text(primary) : text(fallback);
+    }
+
+    private static List<String> skillNames(Cv cv) {
+        if (cv == null || cv.getSkills() == null) return List.of();
+        return cv.getSkills().stream()
+                .filter(Objects::nonNull)
+                .map(Cv.Skill::getName)
+                .map(HrApplicationDetailsService::text)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    private static Double experienceYears(Cv cv) {
+        if (cv == null || cv.getExperience() == null) return null;
+        List<YearMonth[]> periods = new ArrayList<>();
+        YearMonth now = YearMonth.now(ZoneOffset.UTC);
+        for (Cv.Experience experience : cv.getExperience()) {
+            if (experience == null) continue;
+            YearMonth start = parseMonth(experience.getStartDate(), false);
+            YearMonth end = Boolean.TRUE.equals(experience.getCurrent())
+                    ? now : parseMonth(experience.getEndDate(), true);
+            if (start != null && end != null && !end.isBefore(start)) {
+                periods.add(new YearMonth[] { start, end });
+            }
+        }
+        if (periods.isEmpty()) return null;
+        periods.sort(Comparator.comparing(period -> period[0]));
+        long months = 0;
+        YearMonth mergedStart = null;
+        YearMonth mergedEnd = null;
+        for (YearMonth[] period : periods) {
+            if (mergedStart == null) {
+                mergedStart = period[0];
+                mergedEnd = period[1];
+            } else if (!period[0].isAfter(mergedEnd.plusMonths(1))) {
+                if (period[1].isAfter(mergedEnd)) mergedEnd = period[1];
+            } else {
+                months += mergedStart.until(mergedEnd, java.time.temporal.ChronoUnit.MONTHS) + 1;
+                mergedStart = period[0];
+                mergedEnd = period[1];
+            }
+        }
+        months += mergedStart.until(mergedEnd, java.time.temporal.ChronoUnit.MONTHS) + 1;
+        return Math.round(months * 10.0 / 12.0) / 10.0;
+    }
+
+    private static YearMonth parseMonth(String value, boolean endOfPeriod) {
+        String input = text(value);
+        if (input == null) return null;
+        try {
+            if (input.matches("\\d{4}")) {
+                return YearMonth.of(Integer.parseInt(input), endOfPeriod ? 12 : 1);
+            }
+            if (input.matches("\\d{4}-\\d{2}")) return YearMonth.parse(input);
+            if (input.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                return YearMonth.from(java.time.LocalDate.parse(input));
+            }
+            if (input.matches("\\d{2}/\\d{4}")) {
+                return YearMonth.parse(input, DateTimeFormatter.ofPattern("MM/yyyy"));
+            }
+            if (input.matches("\\d{2}/\\d{2}/\\d{4}")) {
+                return YearMonth.from(java.time.LocalDate.parse(input, DateTimeFormatter.ofPattern("dd/MM/uuuu")));
+            }
+        } catch (java.time.DateTimeException | NumberFormatException ignored) {
+            return null;
+        }
+        return null;
     }
 }

@@ -16,6 +16,15 @@ public class RegisterRequest {
     private String password;
 
     private String role;
+    @Size(max = 120)
+    private String fullName;
+    @Size(max = 30)
+    private String phone;
+
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName == null ? null : fullName.trim(); }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone == null ? null : phone.trim(); }
 
     public String getEmail() {
         return email;

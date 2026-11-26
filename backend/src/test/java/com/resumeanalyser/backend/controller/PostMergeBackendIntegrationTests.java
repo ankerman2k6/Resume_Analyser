@@ -176,6 +176,83 @@ class PostMergeBackendIntegrationTests {
     }
 
     @Test
+    void registrationCreatesOwnedProfilesAndRecruiterCompanyCanBeRetried() throws Exception {
+        Document account = new Document("email", "new@example.invalid").append("password", "test-password")
+                .append("fullName", "Lan Nguyen").append("phone", "0912345678").append("role", "candidate");
+        Document registered = ok(request("POST", "/api/auth/register", null, account.toJson()), 201);
+        String candidateSession = registered.getString("token");
+        Document candidateProfile = ok(request("GET", "/api/candidates/me/profile", candidateSession, null), 200);
+        assertEquals("Lan Nguyen", candidateProfile.getString("fullName"));
+        assertEquals("0912345678", candidateProfile.getString("phone"));
+
+        account.put("role", "recruiter");
+        account.put("email", "new-hr@example.invalid");
+        registered = ok(request("POST", "/api/auth/register", null, account.toJson()), 201);
+        String recruiterSession = registered.getString("token");
+        String login = new Document("email", account.getString("email")).append("password", "test-password").toJson();
+        assertTrue(ok(request("POST", "/api/auth/login", null, login), 200).getBoolean("needsCompany"));
+        assertEquals(204, request("GET", "/api/hr/company", recruiterSession, null).statusCode());
+        Document body = new Document("name", "Example").append("industry", "IT").append("size", "10-20")
+                .append("description", "A company").append("website", "").append("logoUrl", "")
+                .append("locations", List.of(new Document("address", "123 A").append("city", "Hanoi")
+                        .append("country", "Vietnam"))).append("status", "pending")
+                .append("userId", otherRecruiter.getId());
+        assertEquals(403, request("POST", "/api/hr/company", candidateSession, body.toJson()).statusCode());
+        Document created = ok(request("POST", "/api/hr/company", recruiterSession, body.toJson()), 201);
+        assertEquals("passed", created.getString("status"));
+        body.put("name", "Ignored on retry");
+        assertEquals(created, ok(request("POST", "/api/hr/company", recruiterSession, body.toJson()), 201));
+        assertEquals(created, ok(request("GET", "/api/hr/company", recruiterSession, null), 200));
+        assertFalse(ok(request("POST", "/api/auth/login", null, login), 200).getBoolean("needsCompany"));
+        RecruiterProfile owner = recruiterProfiles.findByUserId(new ObjectId(registered.getString("id"))).orElseThrow();
+        assertEquals("Lan Nguyen", owner.getFullName());
+        assertEquals("0912345678", owner.getPhone());
+        assertEquals(created.getString("id"), owner.getCompanyId().toHexString());
+        assertEquals(otherRecruiterProfile.getCompanyId(), recruiterProfiles.findById(otherRecruiterProfile.getId())
+                .orElseThrow().getCompanyId());
+    }
+
+    @Test
+    void multipartCompanyValidatesLogoAndServesOriginalBytes() throws Exception {
+        Document account = new Document("email", "logo-hr@example.invalid").append("password", "test-password")
+                .append("role", "recruiter").append("fullName", "Van Le").append("phone", "0987654321");
+        Document registered = ok(request("POST", "/api/auth/register", null, account.toJson()), 201);
+        String token = registered.getString("token");
+        String company = new Document("name", "Công ty Huế").append("description", "Software")
+                .append("industry", "IT").append("size", "10").append("website", "")
+                .append("locations", List.of(new Document("address", "123 A").append("city", "Huế")
+                        .append("country", "Vietnam"))).toJson();
+        assertEquals(415, createWithLogo(token, company, "invalid".getBytes(StandardCharsets.UTF_8)).statusCode());
+        assertEquals(204, request("GET", "/api/hr/company", token, null).statusCode());
+        byte[] logo = Files.readAllBytes(Path.of("src/main/resources/static/company/aurora.png"));
+        assertEquals(400, createWithLogo(token, "{}", logo).statusCode());
+        Document result = ok(createWithLogo(token, company, logo), 201);
+        String path = "/api/companies/" + result.getString("id") + "/logo";
+        assertEquals("Công ty Huế", result.getString("name"));
+        assertEquals("Huế", result.getList("locations", Document.class).getFirst().getString("city"));
+        assertEquals(path, result.getString("logoUrl"));
+        assertEquals("passed", result.getString("status"));
+        assertEquals(result, ok(createWithLogo(token, company, logo), 201));
+        var download = http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)).GET().build(),
+                HttpResponse.BodyHandlers.ofByteArray());
+        assertEquals(200, download.statusCode());
+        assertEquals("image/png", download.headers().firstValue("Content-Type").orElseThrow());
+        assertArrayEquals(logo, download.body());
+    }
+
+    private HttpResponse<String> createWithLogo(String token, String company, byte[] bytes) throws Exception {
+        String boundary = "resume-test-" + UUID.randomUUID();
+        byte[] header = ("--" + boundary + "\r\nContent-Disposition: form-data; name=\"company\"\r\n\r\n"
+                + company + "\r\n--" + boundary + "\r\nContent-Disposition: form-data; name=\"logo\"; filename=\"logo.png\""
+                + "\r\nContent-Type: image/png\r\n\r\n").getBytes(StandardCharsets.UTF_8);
+        byte[] end = ("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8);
+        var upload = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/hr/company"))
+                .header("Authorization", "Bearer " + token).header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                .POST(HttpRequest.BodyPublishers.ofByteArrays(List.of(header, bytes, end))).build();
+        return http.send(upload, HttpResponse.BodyHandlers.ofString());
+    }
+
+    @Test
     void publicSearchFiltersPaginatesSortsAndEscapesPatterns() throws Exception {
         Document result = ok(request("GET", "/api/jobs/search?keyword=java&profession=it&location=hcmc&page=0&size=1", null, null), 200);
         assertEquals(1, ((Number) result.get("totalElements")).intValue());

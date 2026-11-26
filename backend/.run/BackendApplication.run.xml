@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="BackendApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+    <envs>
+      <env name="JWT_SECRET" value="jwt-authentication-test-secret-at-least-32-bytes" />
+    </envs>
+    <module name="backend" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.resumeanalyser.backend.BackendApplication" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

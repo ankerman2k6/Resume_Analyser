@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.resumeanalyser.backend.dto.PageResponse;
+import com.resumeanalyser.backend.dto.candidate.ApplyJobRequest;
 import com.resumeanalyser.backend.dto.candidate.CandidateApplicationDto;
 import com.resumeanalyser.backend.dto.candidate.CareerDto;
 import com.resumeanalyser.backend.dto.candidate.CvSummaryDto;
@@ -94,6 +95,16 @@ public class CandidateController {
                 .body(candidateService.getApplications(user, filter, page, size));
     }
 
+    @PostMapping("/jobs/{jobId}/apply")
+    public ResponseEntity<CandidateApplicationDto> applyToJob(
+            @PathVariable String jobId,
+            @Valid @RequestBody ApplyJobRequest request,
+            Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        return ResponseEntity.status(201)
+                .body(candidateService.applyToJob(user, jobId, request));
+    }
+
     @PostMapping("/applications/{applicationId}/withdraw")
     public ResponseEntity<CandidateApplicationDto> withdrawApplication(
             @PathVariable String applicationId,
@@ -146,6 +157,16 @@ public class CandidateController {
         User user = (User) authentication.getPrincipal();
         candidateService.deleteCv(user, cvId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/cvs/{cvId}/parse")
+    public ResponseEntity<CvSummaryDto> parseCv(
+            @PathVariable String cvId,
+            Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .body(candidateService.parseCv(user, cvId));
     }
 
     @GetMapping("/career")
