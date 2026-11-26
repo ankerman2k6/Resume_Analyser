@@ -59,3 +59,4 @@ cd /Users/nguyenthanhan/Resume_Analyser
 
 cd backend
 ./mvnw spring-boot:run
+#
