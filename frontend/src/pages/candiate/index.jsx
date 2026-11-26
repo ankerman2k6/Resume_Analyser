@@ -59,6 +59,9 @@ const getCompanyLogoText = (name = '') => {
   return name.slice(0,2).toUpperCase() || 'CO'
 };
 
+const getCompanyLogoFallback = (name = '') =>
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Company')}&background=e8eef5&color=163047&size=96&bold=true&format=svg`;
+
 
 // Dữ liệu mẫu danh sách công việc cho ứng viên
 
@@ -246,7 +249,21 @@ const CandidatePage = () => {
                   >
                     <div className="job-card-main">
                       <div className="job-company-logo" aria-hidden="true">
-                        {job.company?.logoUrl ? <img src={job.company.logoUrl} alt="" /> : getCompanyLogoText(job.company?.name)}
+                        {job.company?.logoUrl ? (
+                          <img
+                            src={job.company.logoUrl}
+                            alt=""
+                            onError={(event) => {
+                              event.currentTarget.onerror = () => {
+                                event.currentTarget.style.display = 'none';
+                                event.currentTarget.parentElement.textContent = getCompanyLogoText(job.company?.name);
+                              };
+                              event.currentTarget.src = getCompanyLogoFallback(job.company?.name);
+                            }}
+                          />
+                        ) : (
+                          <img src={getCompanyLogoFallback(job.company?.name)} alt="" />
+                        )}
                       </div>
                       <div className="job-details">
                         <div className="job-title-row">

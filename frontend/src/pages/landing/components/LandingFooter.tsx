@@ -68,7 +68,7 @@ function FooterDeskScene() {
 
 export function LandingFooter() {
   return (
-    <footer className="konek-story story-footer">
+    <footer id="footer" className="konek-story story-footer">
       <svg className="story-footer-flight-path" viewBox="0 0 900 120" preserveAspectRatio="none" aria-hidden="true">
         <path d="M5 82c165-87 259-65 296-18 32 40 108 36 188-2 73-34 145-52 196-39 39 10 8 53 55 58 34 4 53-9 75-22" />
       </svg>

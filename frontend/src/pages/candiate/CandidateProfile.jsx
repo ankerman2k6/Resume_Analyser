@@ -17,6 +17,9 @@ import {
 import "./CandidateProfile.css";
 import { Sparkles, CircleCheck, LoaderCircle } from "lucide-react";
 
+const getCompanyLogoFallback = (name = "") =>
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "Company")}&background=e8eef5&color=163047&size=96&bold=true&format=svg`;
+
 const formatSalary = (salary) => {
   if (!salary) return "Chưa cập nhật mức lương";
   if (salary.negotiable) return "Thỏa thuận";
@@ -837,6 +840,9 @@ const CandidateProfile = () => {
                               <img
                                 src={app.company.logoUrl}
                                 alt={app.company.name || "Logo công ty"}
+                                onError={(event) => {
+                                  event.currentTarget.src = getCompanyLogoFallback(app.company?.name);
+                                }}
                                 style={{
                                   width: "100%",
                                   height: "100%",
@@ -844,8 +850,11 @@ const CandidateProfile = () => {
                                 }}
                               />
                             ) : (
-                              app.company?.name?.slice(0, 2).toUpperCase() ||
-                              "CP"
+                              <img
+                                src={getCompanyLogoFallback(app.company?.name)}
+                                alt={app.company?.name || "Logo công ty"}
+                                style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                              />
                             )}
                           </div>
                           <div className="app-title-group">

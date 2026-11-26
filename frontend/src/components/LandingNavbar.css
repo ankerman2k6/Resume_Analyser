@@ -32,6 +32,7 @@
 }
 
 .landing-navbar-container {
+  position: relative;
   width: 100%;
   max-width: 1280px;
   margin: 0 auto;
@@ -58,14 +59,21 @@
 }
 
 .landing-navbar-logo {
+  width: 150px;
   height: 150px;
-  width: auto;
   object-fit: contain;
   transition: transform 0.2s ease;
 }
 
 .landing-navbar-brand:hover .landing-navbar-logo {
   transform: scale(1.02);
+}
+
+@media (max-width: 767px) {
+  .landing-navbar-logo {
+    width: 96px;
+    height: 96px;
+  }
 }
 
 /* Center Desktop Links */
@@ -77,8 +85,16 @@
 
 @media (min-width: 1024px) {
   .landing-navbar-links {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
-    gap: 24px;
+    gap: 28px;
+  }
+
+  .landing-navbar-actions {
+    margin-left: auto;
+    transform: translateX(22px);
   }
 }
 
@@ -90,7 +106,7 @@
   font-family: inherit;
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: #24312f;
   text-decoration: none;
   transition: color 0.15s ease;
   position: relative;
@@ -122,6 +138,78 @@
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+}
+
+.landing-account-menu {
+  position: relative;
+}
+
+.landing-account-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 10px 4px 5px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.landing-account-avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--brand-primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.landing-account-name {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-account-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 120;
+  width: 190px;
+  padding: 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.landing-account-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px 11px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.landing-account-dropdown button:hover {
+  background: var(--bg-subtle);
 }
 
 /* Quick Demo Button */
@@ -215,24 +303,6 @@
 }
 
 /* Theme Toggle */
-.landing-theme-toggle-btn {
-  background: none;
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  width: 38px;
-  height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.landing-theme-toggle-btn:hover {
-  background-color: var(--bg-subtle);
-  transform: rotate(15deg);
-}
-
 /* Mobile Toggle */
 .landing-navbar-mobile-toggle {
   display: flex;

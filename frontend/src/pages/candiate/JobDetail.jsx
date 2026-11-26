@@ -4,6 +4,9 @@ import { getCompanyDetailApi, getJobDetailApi } from '../../services/jobsService
 import { applyToJobApi, getCandidateCvsApi } from '../../services/candidateService';
 import './JobDetail.css';
 
+const getCompanyLogoFallback = (name = '') =>
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Company')}&background=e8eef5&color=163047&size=96&bold=true&format=svg`;
+
 const formatSalary = (salary) => {
   if (!salary || salary.negotiable && (!salary.min || !salary.max)) return 'Thoả thuận';
   const min = salary.min ? `${Math.round(salary.min / 1000000)} triệu` : '';
@@ -221,7 +224,11 @@ const JobDetail = () => {
         <Link className="job-detail-back" to="/candidate">← Quay lại danh sách việc làm</Link>
 
         <header className="job-detail-hero">
-          <div className="job-detail-company-mark" aria-hidden="true">{company?.logoUrl ? <img src={company.logoUrl} alt="" /> : company?.name?.slice(0, 2).toUpperCase() || 'CO'}</div>
+          <div className="job-detail-company-mark" aria-hidden="true">
+            {company?.logoUrl ? (
+              <img src={company.logoUrl} alt="" onError={(event) => { event.currentTarget.src = getCompanyLogoFallback(company?.name); }} />
+            ) : <img src={getCompanyLogoFallback(company?.name)} alt="" />}
+          </div>
           <div className="job-detail-hero-content">
             <span className="job-detail-eyebrow">{job.category || 'Cơ hội nghề nghiệp'}</span>
             {/* HIỂN THỊ API: các field job.title, job.category, job.location và job.employmentType */}
@@ -293,7 +300,11 @@ const JobDetail = () => {
               <h2>Công ty</h2>
               {company ? (
                 <Link className="job-detail-company-link" to={`/candidate/companies/${company.id}`}>
-                  <span className="job-detail-company-logo">{company.logoUrl ? <img src={company.logoUrl} alt={`Logo ${company.name}`} /> : company.name?.slice(0, 2).toUpperCase()}</span>
+                  <span className="job-detail-company-logo">
+                    {company.logoUrl ? (
+                      <img src={company.logoUrl} alt={`Logo ${company.name}`} onError={(event) => { event.currentTarget.src = getCompanyLogoFallback(company.name); }} />
+                    ) : <img src={getCompanyLogoFallback(company.name)} alt={`Logo ${company.name}`} />}
+                  </span>
                   <span className="job-detail-company-copy"><strong>{company.name}</strong><small>{company.industry || 'Công ty tuyển dụng'}</small></span>
                   <span className="job-detail-company-arrow" aria-hidden="true">→</span>
                 </Link>

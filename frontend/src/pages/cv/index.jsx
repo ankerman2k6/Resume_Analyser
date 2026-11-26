@@ -219,7 +219,8 @@ const CVUploadPage = () => {
     if (files.length === 0) return;
 
     for (const file of files) {
-      const tempId = `local-${Date.now()}-${crypto.randomUUID()}`;
+      const randomId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const tempId = `local-${randomId}`;
       const validation = await validateResumeFile(file);
 
       if (!validation.valid) {
@@ -376,6 +377,47 @@ const CVUploadPage = () => {
           </label>
 
           <TemplateCvBuilder />
+
+          <ul className="cv-file-list" aria-label="Danh sách CV đã chọn">
+            {fileItems.map((item) => {
+              const { head, tail, isTruncated } = splitFileNameMiddle(item.originalFileName);
+              return (
+                <li className="cv-file-row" key={item.id}>
+                  <svg className="cv-file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="8" y1="13" x2="16" y2="13" />
+                    <line x1="8" y1="17" x2="16" y2="17" />
+                  </svg>
+                  <div className="cv-file-body">
+                    <div className="cv-file-top">
+                      <span className="cv-file-name" title={item.originalFileName}>
+                        <span className="cv-file-name-head">{head}</span>
+                        {isTruncated && <span className="cv-file-name-tail">{tail}</span>}
+                      </span>
+                      <span className="cv-file-percent">{item.progress}%</span>
+                    </div>
+                    <div className="cv-file-bottom">
+                      {item.status === "uploading" && (
+                        <div className="cv-progress-track" aria-label={`Đang tải ${item.progress}%`}>
+                          <div className="cv-progress-fill" style={{ width: `${item.progress}%` }} />
+                        </div>
+                      )}
+                      {item.status === "uploaded" && <span className="cv-file-meta">Đã tải lên {item.uploadedAtLabel}</span>}
+                      {(item.status === "rejected" || item.status === "error") && (
+                        <span className="cv-file-error">{item.errorMessage}</span>
+                      )}
+                    </div>
+                  </div>
+                  {(item.status === "rejected" || item.status === "error") && (
+                    <button type="button" className="cv-retry-link" onClick={() => item.status === "error" ? handleRetryItem(item) : handleRemoveItem(item.id)}>
+                      {item.status === "error" ? "Thử lại" : "Bỏ"}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
 
           
         </section>

@@ -39,6 +39,13 @@
   padding: 48px;
 }
 
+.auth-logo-large {
+  width: 260px !important;
+  height: 260px !important;
+  max-width: none;
+  margin: -92px 0;
+}
+
 .register-title {
   font-size: 28px;
   font-weight: 700;

@@ -22,13 +22,24 @@ export const HrSidebar = ({ isOpen, onClose }) => {
   React.useEffect(() => {
     if (typeof document !== "undefined") {
       const checkTheme = () => {
-        const theme = document.documentElement.getAttribute("data-theme");
+        const savedTheme = localStorage.getItem("konek_theme");
+        const theme = document.documentElement.getAttribute("data-theme") || savedTheme;
         setIsDark(
           theme === "dark" ||
             document.documentElement.classList.contains("dark") ||
             document.body.classList.contains("dark"),
         );
       };
+      const savedTheme = localStorage.getItem("konek_theme");
+      if (savedTheme === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.documentElement.classList.add("dark");
+        document.body.classList.add("dark");
+      } else if (savedTheme === "light") {
+        document.documentElement.setAttribute("data-theme", "light");
+        document.documentElement.classList.remove("dark");
+        document.body.classList.remove("dark");
+      }
       checkTheme();
       const observer = new MutationObserver(checkTheme);
       observer.observe(document.documentElement, {

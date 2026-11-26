@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Tailwind v4: dark mode của dashboard phải bám theo class .dark,
+   không phụ thuộc vào theme tối của hệ điều hành. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-serif: 'Instrument Serif', Georgia, serif;
