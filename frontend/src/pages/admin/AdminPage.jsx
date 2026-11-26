@@ -303,10 +303,7 @@ export default function AdminPage() {
             >
               <Check />
               {busy
-                ? "Đang xử lý…"
-                : company
-                  ? "Duyệt công ty"
-                  : "Duyệt đăng tin"}
+                ? "Đang xử lý…" : company ? "Duyệt công ty" : "Duyệt đăng tin"}
             </button>
           </div>
         </>

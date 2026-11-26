@@ -74,7 +74,7 @@ public class AdminModerationService {
         return (mongo.find(pageQuery(status, page, size), Job.class));
     }
 
-    //Review company
+    
     public Company reviewCompany(String id, CompanyStatus status){
         if(status != CompanyStatus.failed && status != CompanyStatus.passed){
             throw new BadRequestException("Kết quả duyệt chỉ được là pass hoặc failed");
@@ -82,7 +82,7 @@ public class AdminModerationService {
 
         company(id); 
 
-        //query cho mongo để tìm ra id company và status đang incheck
+        
         Query query = Query.query(Criteria.where("_id").is(parseId(id)).and("status").is(CompanyStatus.incheck));
 
         //Updated cái gì và ở đâu
@@ -103,7 +103,7 @@ public class AdminModerationService {
     public Job approveJob(String id){
         Job job = job(id);
 
-        //lấy ra company
+        
         Company company = job.getCompanyId() == null ? null: mongo.findById(job.getCompanyId(), Company.class);
 
         if (company == null || company.getStatus() != CompanyStatus.passed) {
