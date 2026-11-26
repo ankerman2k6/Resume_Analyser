@@ -1,8 +1,9 @@
+
 name: Deploy to Home Server
 
 on:
   push:
-    branches: [ web-ver01 ]
+    branches: [web-ver01]
 
 jobs:
   deploy:
@@ -13,12 +14,24 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy with Docker Compose
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
-          cd ${{ github.workspace }}
-          
-          # Tạo file .env từ GitHub Secrets
-          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" > .env
-          
-          docker compose down || true
-          docker compose up -d --build
-          docker image prune -f
+          set -e
+          cd "$GITHUB_WORKSPACE"
+
+          # Validate secret
+          test -n "$JWT_SECRET"
+
+          # Create secure .env
+          umask 077
+          printf 'JWT_SECRET=%s\n' "$JWT_SECRET" > .env
+
+          # Validate Docker Compose configuration
+          docker compose config -q
+
+          # Build and deploy application
+          docker compose up -d --build --no-deps backend frontend
+
+          # Show deployment status
+          docker compose ps
