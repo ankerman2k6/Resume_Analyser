@@ -4,20 +4,17 @@
 # ==========================================================
 
 services:
-
-  # --- Database MongoDB (Đã đóng gói sẵn 100% dữ liệu cv_screening) ---
-  mongodb:
-    image: ${MONGO_IMAGE:-antony1552006/resume-mongodb}:${VERSION:-latest}
-    container_name: resume-mongodb
-    ports:
-      - "27017:27017"
-    volumes:
-      # Lưu trữ các dữ liệu mới tạo thêm sau này
-      - mongo-data:/data/db
-    networks:
-      - resume-network
-    restart: always
-
+  # mongodb:
+  #   image: 
+  #   container_name: resume-mongodb
+  #   # ports:
+  #   #   - "27017:27017"
+  #   volumes:
+  #     # Lưu trữ các dữ liệu mới tạo thêm sau này
+  #     - mongo-data:/data/db
+  #   networks:
+  #     - resume-network
+  #   restart: always
   # --- Backend (Spring Boot API) ---
   backend:
     image: ${BACKEND_IMAGE:-antony1552006/resume-backend}:${VERSION:-latest}
@@ -25,16 +22,16 @@ services:
       context: ./backend
     container_name: resume-backend
     ports:
-      - "8081:8080"
+      - "127.0.0.1:8081:8081"
     environment:
       # Kết nối trực tiếp tới container mongodb bên trên
-      - SPRING_MONGODB_URI=mongodb://mongodb:27017/cv_screening
-    depends_on:
-      - mongodb
+      - SPRING_MONGODB_URI=mongodb://local-mongo:27017/cv_screening
+      - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in the local .env file}
+      # Chỉ Compose local mở endpoint để Prometheus thu thập metrics.
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,prometheus
     networks:
       - resume-network
     restart: always
-
   # --- Frontend (React + Nginx) ---
   frontend:
     image: ${FRONTEND_IMAGE:-antony1552006/resume-frontend}:${VERSION:-latest}
@@ -48,13 +45,10 @@ services:
     networks:
       - resume-network
     restart: always
-
 # Volume lưu trữ dữ liệu database
 volumes:
   mongo-data:
-
 # Network kết nối 3 container
 networks:
   resume-network:
-    name: resume-network
     external: true
