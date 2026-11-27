@@ -376,8 +376,6 @@ const CVUploadPage = () => {
             </span>
           </label>
 
-          <TemplateCvBuilder />
-
           <ul className="cv-file-list" aria-label="Danh sách CV đã chọn">
             {fileItems.map((item) => {
               const { head, tail, isTruncated } = splitFileNameMiddle(item.originalFileName);
@@ -419,7 +417,8 @@ const CVUploadPage = () => {
             })}
           </ul>
 
-          
+          <TemplateCvBuilder />
+
         </section>
       </div>
 
